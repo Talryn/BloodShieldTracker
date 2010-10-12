@@ -35,7 +35,8 @@ local statusBarFormat = "%d/%d (%d%%)"
 
 local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
-local LibQTip = LibStub('LibQTip-1.0')
+local LibQTip = LibStub("LibQTip-1.0")
+local icon = LibStub("LibDBIcon-1.0")
 
 local DS_SPELL_DMG = (GetSpellInfo(49998))
 local DS_SPELL_HEAL = (GetSpellInfo(45470))
@@ -119,6 +120,9 @@ end
 
 local defaults = {
     profile = {
+		minimap = {
+			hide = true,
+		},
         verbose = false,
 		lock_status_bar = false,
 		lock_damage_bar = false,
@@ -192,6 +196,25 @@ function BloodShieldTracker:GetOptions()
 						end
 					end,
 				},
+        	    minimap = {
+                    name = L["Minimap Button"],
+                    desc = L["Toggle the minimap button"],
+                    type = "toggle",
+                    set = function(info,val)
+                        	-- Reverse the value since the stored value is to hide it
+                            self.db.profile.minimap.hide = not val
+                        	if self.db.profile.minimap.hide then
+                        		icon:Hide("BloodShieldTrackerLDB")
+                        	else
+                        		icon:Show("BloodShieldTrackerLDB")
+                        	end
+                          end,
+                    get = function(info)
+                	        -- Reverse the value since the stored value is to hide it
+                            return not self.db.profile.minimap.hide
+                          end,
+        			order = 4
+                },
             }
         }
     end
@@ -215,7 +238,11 @@ function BloodShieldTracker:OnInitialize()
     -- Register the options table
     LibStub("AceConfig-3.0"):RegisterOptionsTable("BloodShieldTracker", self:GetOptions())
 	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BloodShieldTracker", ADDON_NAME)
+
+	icon:Register("BloodShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
+
     self.statusbar = self:CreateStatusBar()
+    self.statusbar.shield_curr = 0
     self.damagebar = self:CreateDamageBar()
 	self.damagebar.lock = self.db.profile.lock_damage_bar
 	self.statusbar.lock = self.db.profile.lock_status_bar
