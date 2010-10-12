@@ -32,6 +32,8 @@ local YELLOW = "|cffffff00"
 local BLUE = "|cff0198e1"
 local ORANGE = "|cffff9933"
 local statusBarFormat = "%d/%d (%d%%)"
+local healBarFormat = "%s: %d"
+local healBarText = "Self Heal"
 
 local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
@@ -92,10 +94,6 @@ function Broker.obj:OnEnter()
         percentMinimum = numMinShields / numShields * 100
     end
 
-    -- Show number of DS shields in session
-    --   and number/% that were the minimum amount
-    -- Show the min, max, avg shield size
-    -- Show the how much of the shields were used, min,max,avg
     tooltip:AddHeader(shieldDataHdr)
     tooltip:AddSeparator(1)
     tooltip:AddLine(shieldDataLine1, numShields)
@@ -393,6 +391,10 @@ function BloodShieldTracker:CheckImpDeathStrike()
 	end
 end
 
+function BloodShieldTracker:GetMinimumDSHeal()
+    return floor(UnitHealthMax("player") * 0.1)
+end
+
 function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 	-- Once combat stats, update the damage bar.
 	updateTimer = self:ScheduleRepeatingTimer("UpdateDamageBar", 0.5)
@@ -401,8 +403,7 @@ end
 function BloodShieldTracker:PLAYER_REGEN_ENABLED()
 	-- cancel timer before hand
     self:CancelTimer(updateTimer)
-	local minimumHeal = floor(UnitHealthMax("player") / 10)
-    self.damagebar.value:SetText("Self Heal: "..minimumHeal)
+    self.damagebar.value:SetText(healBarFormat:format(healBarText, self:GetMinimumDSHeal()))
     self.damagebar:SetStatusBarColor(1, 0, 0)
     self.damagebar:SetMinMaxValues(0, 1)
     self.damagebar:SetValue(1)
@@ -412,11 +413,11 @@ function BloodShieldTracker:UpdateDamageBar()
     local recentDamage = self:GetRecentDamageTaken()
 
     local predictedHeal = recentDamage * dsHealModifier * ImpDSModifier
-    local minimumHeal = floor(UnitHealthMax("player") / 10)
+    local minimumHeal = self:GetMinimumDSHeal()
 	if recentDamage < minimumHeal then
-    	self.damagebar.value:SetText("Self Heal: "..minimumHeal)
+    	self.damagebar.value:SetText(healBarFormat:format(healBarText, minimumHeal))
 	else
-    	self.damagebar.value:SetText("Self Heal: "..predictedHeal)		
+    	self.damagebar.value:SetText(healBarFormat:format(healBarText, predictedHeal))		
 	end
 
     self.damagebar:SetMinMaxValues(0, minimumHeal)
@@ -530,7 +531,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local predictedHeal = recentDmg * dsHealModifier * ImpDSModifier
-        local minimumHeal = floor(UnitHealthMax("player") * 0.1)
+        local minimumHeal = self:GetMinimumDSHeal()
         local shieldInd = ""
         local minimumBS = floor(minimumHeal * shieldPercent)
         if minimumBS == shieldValue then
@@ -687,8 +688,7 @@ function BloodShieldTracker:CreateDamageBar()
 
     statusbar:SetMinMaxValues(0,1)
     statusbar:SetValue(1)
-	local minimumHeal = floor(UnitHealthMax("player")/10)
-    statusbar.value:SetText("Self Heal: "..minimumHeal)
+    statusbar.value:SetText(healBarFormat:format(healBarText, self:GetMinimumDSHeal()))
 
     statusbar:EnableMouse(true)
     statusbar:Hide()
