@@ -33,7 +33,6 @@ local LibQTip = LibStub('LibQTip-1.0')
 local DS_SPELL = (GetSpellInfo(49998))
 local BS_SPELL = (GetSpellInfo(77535))
 local ImpDSModifier = 1
-
 local Broker = CreateFrame("Frame")
 
 Broker.obj = LDB:NewDataObject("Blood Shield Tracker", {
@@ -176,6 +175,7 @@ function BloodShieldTracker:Unload()
 	self:UnregisterEvent("COMBAT_RATING_UPDATE")
 	self:UnregisterEvent("MASTERY_UPDATE")
 	self.damagebar:Hide()
+	self.statusbar:Hide()
 end
 
 function BloodShieldTracker:OnDisable()
@@ -199,8 +199,8 @@ function BloodShieldTracker:CheckImpDeathStrike()
 			end
 		end
 	end
-	local id,name,desc,texture,... = GetTalentTabInfo(GetPrimaryTalentTree())
-	if texture == [[Interface\\Icons\\Spell_Deathknight_BloodPresence]] then
+	local id,name,desc,texture = GetTalentTabInfo(GetPrimaryTalentTree())
+	if texture == [[Interface\Icons\Spell_Deathknight_BloodPresence]] then
 		if not IsBloodTank then self:Load() end
 		IsBloodTank = true
 	else
