@@ -25,8 +25,10 @@ local GREEN = "|cff00ff00"
 local YELLOW = "|cffffff00"
 local BLUE = "|cff0198e1"
 local ORANGE = "|cffff9933"
+local statusBarFormat = "%d/%d (%d%%)"
 
 local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
+
 local LDB = LibStub("LibDataBroker-1.1")
 local LibQTip = LibStub('LibQTip-1.0')
 
@@ -314,7 +316,12 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     if eventtype == "SWING_MISSED" and dstName == self.playerName then
         if param9 and param9 == "ABSORB" then
             if self.db.profile.verbose then
+				local damage = param10 or 0
                 self:Print("Absorbed swing for "..(param10 or "0"))
+				self.statusbar.shield_curr = self.statusbar.shield_curr - damage
+				self.statusbar:SetValue(self.statusbar.shield_curr)
+				local diff = floor( (self.statusbar.shield_curr/self.statusbar.shield_max) * 100)
+				self.statusbar.value:SetText(statusBarFormat:format(self.statusbar.shield_curr, self.statusbar.shield_max, diff))
             end
         end
     end
@@ -356,7 +363,9 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
         self.statusbar:SetMinMaxValues(0, shieldValue)
         self.statusbar:SetValue(shieldValue)
-        local statusBarFormat = "%d/%d (%d%%)"
+        
+		self.statusbar.shield_max = shieldValue
+		self.statusbar.shield_curr = shieldValue
         self.statusbar.value:SetText(statusBarFormat:format(shieldValue, shieldValue, "100"))
         self.statusbar:Show()
     end
