@@ -107,7 +107,7 @@ function BloodShieldTracker:GetOptions()
 					type = "toggle",
 					set = function(info, val) self.db.profile.lock_damage_bar = val 
 						if BloodShieldTracker.damagebar then
-							BloodShieldTracker.damagebar.locked = true
+							BloodShieldTracker.damagebar.lock = val
 						end
 					end,
                     get = function(info) return self.db.profile.lock_damage_bar end,
@@ -118,7 +118,7 @@ function BloodShieldTracker:GetOptions()
 					type = "toggle",
 					set = function(info, val) self.db.profile.lock_status_bar = val 
 						if BloodShieldTracker.statusbar then
-							BloodShieldTracker.statusbar.locked = true
+							BloodShieldTracker.statusbar.lock = val
 						end					
 					end,
                     get = function(info) return self.db.profile.lock_status_bar end,
