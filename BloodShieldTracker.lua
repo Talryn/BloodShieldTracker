@@ -30,9 +30,13 @@ local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
 local LibQTip = LibStub('LibQTip-1.0')
 
-local DS_SPELL = (GetSpellInfo(49998))
+local DS_SPELL_DMG = (GetSpellInfo(49998))
+local DS_SPELL_HEAL = (GetSpellInfo(45470))
 local BS_SPELL = (GetSpellInfo(77535))
 local ImpDSModifier = 1
+local dsHealModifier = 0.3
+local shieldPerMasteryPoint = 6.25
+
 local Broker = CreateFrame("Frame")
 
 Broker.obj = LDB:NewDataObject("Blood Shield Tracker", {
@@ -154,6 +158,7 @@ function BloodShieldTracker:OnEnable()
 	if IsBloodTank then
 		self:Load()
 	end
+
 	self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED","CheckImpDeathStrike")
 	self:RegisterEvent("CHARACTER_POINTS_CHANGED","CheckImpDeathStrike")
 	self:RegisterEvent("PLAYER_TALENT_UPDATE","CheckImpDeathStrike")
@@ -175,7 +180,6 @@ function BloodShieldTracker:Unload()
 	self:UnregisterEvent("COMBAT_RATING_UPDATE")
 	self:UnregisterEvent("MASTERY_UPDATE")
 	self.damagebar:Hide()
-	self.statusbar:Hide()
 end
 
 function BloodShieldTracker:OnDisable()
@@ -195,12 +199,12 @@ function BloodShieldTracker:CheckImpDeathStrike()
 		for i = 1, GetNumTalents(t) do
 			local talentName, _, _, _, currRank, maxRank = GetTalentInfo(t, i)
 			if talentName == (GetSpellInfo(81138)) and currRank > 0 then
-				ImpDSModifier = 1 + (.15 * currRank)
+				ImpDSModifier = 1 + (0.15 * currRank)
 			end
 		end
 	end
-	local id,name,desc,texture = GetTalentTabInfo(GetPrimaryTalentTree())
-	if texture == [[Interface\Icons\Spell_Deathknight_BloodPresence]] then
+	local id, name, desc, texture = GetTalentTabInfo(GetPrimaryTalentTree())
+	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
 		if not IsBloodTank then self:Load() end
 		IsBloodTank = true
 	else
@@ -210,7 +214,7 @@ function BloodShieldTracker:CheckImpDeathStrike()
 end
 
 function BloodShieldTracker:PLAYER_REGEN_DISABLED()
-	-- Once combat stats, update the damage bar every lastSeconds.
+	-- Once combat stats, update the damage bar.
 	updateTimer = self:ScheduleRepeatingTimer("UpdateDamageBar", 0.5)
 end
 
@@ -226,7 +230,7 @@ function BloodShieldTracker:UpdateDamageBar()
     local recentDamage = self:GetRecentDamageTaken()
     self.damagebar.value:SetText(recentDamage)
 
-    local predictedHeal = recentDamage * 0.3 * ImpDSModifier
+    local predictedHeal = recentDamage * dsHealModifier * ImpDSModifier
     local minimumHeal = floor(UnitHealthMax("player") / 10)
 
     self.damagebar:SetMinMaxValues(0, minimumHeal)
@@ -314,26 +318,30 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
         end
     end
-	if eventtype == "SPELL_CAST_SUCCESS" and srcName == self.playerName and param10 == DS_SPELL then
-        local recentDmg = self:GetRecentDamageTaken(timestamp)
-        local predictedHeal = recentDmg * 0.3 * ImpDSModifier	
-		self:Print("Estimating heal to be "..recentDmg.." before talents and glyph. "..predictedHeal)
+	if eventtype == "SPELL_CAST_SUCCESS" and srcName == self.playerName and 
+	    param10 == DS_SPELL_DMG then
+
+        if self.db.profile.verbose then
+            local recentDmg = self:GetRecentDamageTaken(timestamp)
+            local predictedHeal = recentDmg * dsHealModifier * ImpDSModifier
+            local dsHealFormat = "Estimated damage of %d will be a heal for %d"
+    		self:Print(dsHealFormat:format(recentDmg, predictedHeal))
+        end
 	end
     if eventtype == "SPELL_HEAL" and dstName == self.playerName 
-        and param10 == DS_SPELL then
+        and param10 == DS_SPELL_HEAL then
         
-        
-        local shieldPercent = masteryRating*6.25/100
+        local shieldPercent = masteryRating*shieldPerMasteryPoint/100
         local totalHeal = param12 or 0
         local overheal = param13 or 0
         local actualHeal = param12-param13
         local shieldValue = floor(totalHeal*shieldPercent)
 
         local recentDmg = self:GetRecentDamageTaken(timestamp)
-        local predictedHeal = recentDmg * 0.3 * ImpDSModifier
+        local predictedHeal = recentDmg * dsHealModifier * ImpDSModifier
         local shieldInd = ""
         local minimumHeal = floor(UnitHealthMax("player")/10)
-        local minimumBS = minimumHeal * 0.3 * ImpDSModifier
+        local minimumBS = minimumHeal * dsHealModifier * ImpDSModifier
         if minimumBS == shieldValue then
             shieldInd = "(min)"
         end
