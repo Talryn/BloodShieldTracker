@@ -42,10 +42,14 @@ local icon = LibStub("LibDBIcon-1.0")
 -- Load LibsharedMedia if it exists
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0",true)
 local default_font = "Fonts\\FRIZQT__.TTF"
-
+-- Shim if we are missing LibSharedMedia so options dont barf.
 if not LSM then
 	LSM = {}
-	LSM.HashTable = function() return {[L["Blizzard"]] = default_font} end
+	LSM.HashTable = function() 
+		ht = {} 
+		ht[L["Blizzard"]] = default_font
+		return ht
+	end
 end
 
 local DS_SPELL_DMG = (GetSpellInfo(49998))
@@ -192,6 +196,7 @@ function BloodShieldTracker:GetOptions()
 					max = 200,
 					set = function(info, val) self.db.profile.damage_bar_width = val 
 						BloodShieldTracker.damagebar:SetWidth(val)
+						BloodShieldTracker.damagebar.border:SetWidth(val+9)
 					end,
 					get = function(info, val) return self.db.profile.damage_bar_width end,
 				},
@@ -200,10 +205,12 @@ function BloodShieldTracker:GetOptions()
 					name = L["Estimated Healing bar height"],
 					desc = L["Change the height of the estimated healing bar."],	
 					type = "range",
-					min = 10,
+					min = 8,
 					max = 30,
+					step = 1,
 					set = function(info, val) self.db.profile.damage_bar_height = val 
 						BloodShieldTracker.damagebar:SetHeight(val)
+						BloodShieldTracker.damagebar.border:SetHeight(val + 8)
 					end,
 					get = function(info, val) return self.db.profile.damage_bar_height end,
 				},
@@ -214,8 +221,10 @@ function BloodShieldTracker:GetOptions()
 					type = "range",
 					min = 50,
 					max = 300,
+					step = 1,
 					set = function(info, val) self.db.profile.status_bar_width = val 
 						BloodShieldTracker.statusbar:SetWidth(val)
+						BloodShieldTracker.statusbar.border:SetWidth(val+9)
 					end,
 					get = function(info, val) return self.db.profile.status_bar_width end,
 				},
@@ -224,10 +233,12 @@ function BloodShieldTracker:GetOptions()
 					name = L["Blood Shield bar height"],
 					desc = L["Change the height of the blood shield bar."],
 					type = "range",
-					min = 50,
-					max = 300,
+					min = 10,
+					max = 30,
+					step = 1,
 					set = function(info, val) self.db.profile.status_bar_height = val 
 						BloodShieldTracker.statusbar:SetHeight(val)
+						BloodShieldTracker.statusbar.border:SetHeight(val + 8)
 					end,
 					get = function(info, val) return self.db.profile.status_bar_height end,					
 				},
@@ -238,10 +249,10 @@ function BloodShieldTracker:GetOptions()
 					type = "range",
 					min = 8,
 					max = 30,
-					set = function(info, val) self.db.profile.font_size = val 
-						local fontName, fontHeight, fontFlags = BloodShieldTracker.statusbar.value:GetFont()
-						BloodShieldTracker.statusbar.value:SetFont(fontName,val,fontFlags)
-						BloodShieldTracker.damagebar.value:SetFont(fontName,val,fontFlags)						
+					step = 1,
+					set = function(info, val) 
+						self.db.profile.font_size = val 
+						BloodShieldTracker:ResetFonts()
 					end,
 					get = function(info,val) return self.db.profile.font_size end,
 				},
@@ -265,10 +276,7 @@ function BloodShieldTracker:GetOptions()
 						if val ~= L["Blizzard"] then
 							self.db.profile.font_face = val; 
 						end
-						local fontName, fontHeight, fontFlags = BloodShieldTracker.statusbar.value:GetFont()
-						local ff = LSM:Fetch("font",val)
-						BloodShieldTracker.statusbar.value:SetFont(fontName,fontHeight,fontFlags)
-						BloodShieldTracker.damagebar.value:SetFont(fontName,fontHeight,fontFlags)						
+						BloodShieldTracker:ResetFonts()
 					end
 				},
 				config_mode = {
@@ -328,7 +336,9 @@ function BloodShieldTracker:OnInitialize()
 	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BloodShieldTracker", ADDON_NAME)
 
 	icon:Register("BloodShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
-
+	if LSM then
+		LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
+	end
     self.statusbar = self:CreateStatusBar()
     self.statusbar.shield_curr = 0
     self.damagebar = self:CreateDamageBar()
@@ -336,6 +346,27 @@ function BloodShieldTracker:OnInitialize()
 	self.statusbar.lock = self.db.profile.lock_status_bar
 	self:UpdateMastery()
 	self:CheckImpDeathStrike()
+end
+
+function BloodShieldTracker:ResetFonts()
+	local fontName, fontHeight, fontFlags = BloodShieldTracker.statusbar.value:GetFont()
+	local ff = fontName
+	if LSM and LSM.Fetch and strlen(self.db.profile.font_face) > 1 then
+		ff = LSM:Fetch("font",self.db.profile.font_face)
+	end
+	local fh = self.db.profile.font_size
+	BloodShieldTracker.statusbar.value:SetFont(ff,fh,fontFlags)
+	BloodShieldTracker.statusbar.value:SetText(BloodShieldTracker.statusbar.value:GetText())
+	BloodShieldTracker.damagebar.value:SetFont(ff,fh,fontFlags)						
+	BloodShieldTracker.damagebar.value:SetText(BloodShieldTracker.damagebar.value:GetText())
+end
+
+function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
+	if strlen(self.db.profile.font_face) > 1 and mediatype == "font" then
+		if self.db.profile.font_face == key then
+			self:ResetFonts()
+		end
+	end
 end
 
 function BloodShieldTracker:OnEnable()
@@ -599,7 +630,7 @@ function BloodShieldTracker:CreateStatusBar()
     statusbar:SetPoint("CENTER")
     statusbar:SetOrientation("HORIZONTAL")
     statusbar:SetWidth(self.db.profile.status_bar_width)
-    statusbar:SetHeight(self.db.profile.status_bar_width)
+    statusbar:SetHeight(self.db.profile.status_bar_height)
     statusbar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
     statusbar:GetStatusBarTexture():SetHorizTile(false)
     statusbar:GetStatusBarTexture():SetVertTile(false)
@@ -626,7 +657,7 @@ function BloodShieldTracker:CreateStatusBar()
     statusbar.value:SetShadowOffset(1, -1)
     statusbar.value:SetTextColor(1, 1, 1)
     statusbar.lock = false
-
+	statusbar.value:SetText(statusBarFormat:format(0, 0, "0"))
     statusbar:SetMovable()
     statusbar:RegisterForDrag("LeftButton")
     statusbar:SetScript("OnDragStart",
