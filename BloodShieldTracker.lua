@@ -29,8 +29,6 @@ local statusBarFormat = "%d/%d (%d%%)"
 
 local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 
-local LDB = LibStub("LibDataBroker-1.1")
-local LibQTip = LibStub('LibQTip-1.0')
 
 local DS_SPELL_DMG = (GetSpellInfo(49998))
 local DS_SPELL_HEAL = (GetSpellInfo(45470))
@@ -39,6 +37,9 @@ local ImpDSModifier = 1
 local dsHealModifier = 0.3
 local shieldPerMasteryPoint = 6.25
 
+
+local LDB = LibStub("LibDataBroker-1.1")
+local LibQTip = LibStub('LibQTip-1.0')
 local Broker = CreateFrame("Frame")
 
 Broker.obj = LDB:NewDataObject("Blood Shield Tracker", {
@@ -79,6 +80,7 @@ function Broker.obj:OnLeave()
 	self.tooltip = nil
 end
 
+
 local defaults = {
     profile = {
         verbose = false,
@@ -98,33 +100,62 @@ function BloodShieldTracker:GetOptions()
             args = {
                 verbose = {
                     name = L["Verbose"],
+					order = 1,
                     desc = L["Toggles the display of informational messages"],
                     type = "toggle",
                     set = function(info, val) self.db.profile.verbose = val end,
                     get = function(info) return self.db.profile.verbose end,
                 },
 				lock_damage = {
-					name = L["Lock damage bar"],
-					desc = L["Lock the damage bar from moving."],
+					name = L["Lock shield bar"],
+					desc = L["Lock the shield bar from moving."],
 					type = "toggle",
-					set = function(info, val) self.db.profile.lock_damage_bar = val 
-						if BloodShieldTracker.damagebar then
-							BloodShieldTracker.damagebar.lock = val
-						end
-					end,
-                    get = function(info) return self.db.profile.lock_damage_bar end,
-				},
-				lock_status = {
-					name = L["Lock status bar"],
-					desc = L["Lock the status bar from moving."],
-					type = "toggle",
+					order = 2,
 					set = function(info, val) self.db.profile.lock_status_bar = val 
 						if BloodShieldTracker.statusbar then
 							BloodShieldTracker.statusbar.lock = val
-						end					
+						end
 					end,
                     get = function(info) return self.db.profile.lock_status_bar end,
-				}
+				},
+				lock_status = {
+					name = L["Lock estimated healing bar"],
+					desc = L["Lock the estimated healing bar from moving."],
+					type = "toggle",
+					order = 3,
+					set = function(info, val) self.db.profile.lock_damage_bar = val 
+						if BloodShieldTracker.damagebar then
+							BloodShieldTracker.damagebar.lock = val
+						end					
+					end,
+                    get = function(info) return self.db.profile.lock_damage_bar end,
+				},
+				--status_bar_width = {
+				--	name = "Estimated Healing bar width",
+				--	desc = "Change the width of the estimated healing bar."	
+				--},
+				--status_bar_height = {
+				--	
+				--},
+				--damage_bar_width = {
+				--	
+				--},
+				--damage_bar_height = {
+				--	
+				--},
+				config_mode = {
+					name = L["Config Mode"],
+					desc = L["Toggle config mode"],
+					type = "execute",
+					order = 99,
+					func = function()
+						if BloodShieldTracker.statusbar:IsShown() then
+							BloodShieldTracker.statusbar:Hide()
+						else
+							BloodShieldTracker.statusbar:Show()
+						end
+					end,
+				},
             }
         }
     end
@@ -221,19 +252,25 @@ function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 end
 
 function BloodShieldTracker:PLAYER_REGEN_ENABLED()
-    self.damagebar.value:SetText("0")
+	-- cancel timer before hand
+    self:CancelTimer(updateTimer)
+	local minimumHeal = floor(UnitHealthMax("player") / 10)
+    self.damagebar.value:SetText("Self Heal: "..minimumHeal)
     self.damagebar:SetStatusBarColor(1, 0, 0)
     self.damagebar:SetMinMaxValues(0, 1)
     self.damagebar:SetValue(1)
-    self:CancelTimer(updateTimer)
 end
 
 function BloodShieldTracker:UpdateDamageBar()
     local recentDamage = self:GetRecentDamageTaken()
-    self.damagebar.value:SetText(recentDamage)
 
     local predictedHeal = recentDamage * dsHealModifier * ImpDSModifier
     local minimumHeal = floor(UnitHealthMax("player") / 10)
+	if recentDamage < minimumHeal then
+    	self.damagebar.value:SetText("Self Heal: "..minimumHeal)
+	else
+    	self.damagebar.value:SetText("Self Heal: "..predictedHeal)		
+	end
 
     self.damagebar:SetMinMaxValues(0, minimumHeal)
 
@@ -346,13 +383,12 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local predictedHeal = recentDmg * dsHealModifier * ImpDSModifier
-        local shieldInd = ""
         local minimumHeal = floor(UnitHealthMax("player")/10)
+        local shieldInd = ""
         local minimumBS = minimumHeal * dsHealModifier * ImpDSModifier
         if minimumBS == shieldValue then
             shieldInd = "(min)"
         end
-
         if self.db.profile.verbose then
             local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d]"
             self:Print(dsHealFormat:format(
@@ -486,7 +522,8 @@ function BloodShieldTracker:CreateDamageBar()
 
     statusbar:SetMinMaxValues(0,1)
     statusbar:SetValue(1)
-    statusbar.value:SetText("0")
+	local minimumHeal = floor(UnitHealthMax("player")/10)
+    statusbar.value:SetText("Self Heal: "..minimumHeal)
 
     statusbar:EnableMouse(true)
     statusbar:Hide()
