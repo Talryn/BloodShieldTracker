@@ -37,6 +37,8 @@ local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
 local LibQTip = LibStub("LibQTip-1.0")
 local icon = LibStub("LibDBIcon-1.0")
+-- Load LibsharedMedia if it exists
+local LSM = LibStub:GetLibrary("LibSharedMedia-3.0",true)
 
 local DS_SPELL_DMG = (GetSpellInfo(49998))
 local DS_SPELL_HEAL = (GetSpellInfo(45470))
@@ -131,9 +133,11 @@ local defaults = {
 		status_bar_width = 150,
 		status_bar_height = 15,
 		font_size = 12,
+		font_face = "",
     }
 }
 
+local default_font = "Fonts\\FRIZQT__.TTF"
 local options
 
 function BloodShieldTracker:GetOptions()
@@ -176,6 +180,7 @@ function BloodShieldTracker:GetOptions()
                     get = function(info) return self.db.profile.lock_damage_bar end,
 				},
 				status_bar_width = {
+					order = 4,
 					name = L["Estimated Healing bar width"],
 					desc = L["Change the width of the estimated healing bar."],	
 					type = "range",
@@ -187,6 +192,7 @@ function BloodShieldTracker:GetOptions()
 					get = function(info, val) return self.db.profile.damage_bar_width end,
 				},
 				status_bar_height = {
+					order = 5,
 					name = L["Estimated Healing bar height"],
 					desc = L["Change the height of the estimated healing bar."],	
 					type = "range",
@@ -198,6 +204,7 @@ function BloodShieldTracker:GetOptions()
 					get = function(info, val) return self.db.profile.damage_bar_height end,
 				},
 				damage_bar_width = {
+					order  6,
 					name = L["Blood Shield bar width"],
 					desc = L["Change the width of the blood shield bar."],	
 					type = "range",
@@ -209,6 +216,7 @@ function BloodShieldTracker:GetOptions()
 					get = function(info, val) return self.db.profile.status_bar_width end,
 				},
 				damage_bar_height = {
+					order = 7,
 					name = L["Blood Shield bar height"],
 					desc = L["Change the height of the blood shield bar."],
 					type = "range",
@@ -220,6 +228,7 @@ function BloodShieldTracker:GetOptions()
 					get = function(info, val) return self.db.profile.status_bar_height end,					
 				},
 				bar_font_size = {
+					order = 8,
 					name = L["Font size"],
 					desc = L["Font size for the bars."],
 					type = "range",
@@ -231,6 +240,29 @@ function BloodShieldTracker:GetOptions()
 						BloodShieldTracker.damagebar.value:SetFont(fontName,val,fontFlags)						
 					end,
 					get = function(info,val) return self.db.profile.font_size end,
+				},
+				bar_font = {
+					0rder = 9,
+					type = "select",
+					name = L["Font"],
+					desc = L["Font to use for this panel."],
+					values = LSM:HashTable("font"),
+					dialogControl = 'LSM30_Font',
+					disabled = function() return not IsAddOnLoaded("LibSharedMedia-3.0") end,
+					order = 40,
+					get = function() 
+						if strlen(self.db.profile.font_face) < 1 then
+							return L["Blizzard"]
+						else
+							return self.db.profile.font_face
+						end
+					end,
+					set = function(info, val) self.db.profile.font_face = val; 
+						local fontName, fontHeight, fontFlags = BloodShieldTracker.statusbar.value:GetFont()
+						local ff = LSM:Fetch("font",val)
+						BloodShieldTracker.statusbar.value:SetFont(fontName,fontHeight,fontFlags)
+						BloodShieldTracker.damagebar.value:SetFont(fontName,fontHeight,fontFlags)						
+					end
 				},
 				config_mode = {
 					name = L["Config Mode"],
@@ -573,10 +605,13 @@ function BloodShieldTracker:CreateStatusBar()
     statusbar.border:SetWidth(statusbar:GetWidth()+9)
     statusbar.border:SetHeight(statusbar:GetHeight()+8)
     statusbar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
-
+	local font = default_font
+	if LSM and LSM.Fetch and strlen(self.db.profile.font_face) then
+		font = LSM:Fetch("font",self.db.profile.font_face)
+	end
     statusbar.value = statusbar:CreateFontString(nil, "OVERLAY")
     statusbar.value:SetPoint("CENTER")
-    statusbar.value:SetFont("Fonts\\FRIZQT__.TTF", self.db.profile.font_size, "OUTLINE")
+    statusbar.value:SetFont(font, self.db.profile.font_size, "OUTLINE")
     statusbar.value:SetJustifyH("CENTER")
     statusbar.value:SetShadowOffset(1, -1)
     statusbar.value:SetTextColor(1, 1, 1)
@@ -625,7 +660,11 @@ function BloodShieldTracker:CreateDamageBar()
 
     statusbar.value = statusbar:CreateFontString(nil, "OVERLAY")
     statusbar.value:SetPoint("CENTER")
-    statusbar.value:SetFont("Fonts\\FRIZQT__.TTF", self.db.profile.font_size, "OUTLINE")
+	local font = default_font
+	if LSM and LSM.Fetch and strlen(self.db.profile.font_face) then
+		font = LSM:Fetch("font",self.db.profile.font_face)
+	end
+    statusbar.value:SetFont(font, self.db.profile.font_size, "OUTLINE")
     statusbar.value:SetJustifyH("CENTER")
     statusbar.value:SetShadowOffset(1, -1)
     statusbar.value:SetTextColor(1, 1, 1)
