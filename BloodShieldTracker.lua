@@ -242,7 +242,7 @@ function BloodShieldTracker:GetOptions()
 					get = function(info,val) return self.db.profile.font_size end,
 				},
 				bar_font = {
-					0rder = 9,
+					order = 9,
 					type = "select",
 					name = L["Font"],
 					desc = L["Font to use for this panel."],
