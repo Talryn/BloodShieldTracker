@@ -274,7 +274,11 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
         end
     end
-
+	if eventtype == "SPELL_CAST_SUCCESS" and srcName == self.playerName and param10 == DS_SPELL then
+        local recentDmg = self:GetRecentDamageTaken(timestamp)
+        local predictedHeal = recentDmg * 0.3 * 1.45		
+		self:Print("Estimating heal to be "..recentDmg.." before talents and glyph. "..predictedHeal)
+	end
     if eventtype == "SPELL_HEAL" and dstName == self.playerName 
         and param10 == DS_SPELL then
         
