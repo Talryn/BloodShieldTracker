@@ -25,6 +25,7 @@ local YELLOW = "|cffffff00"
 local BLUE = "|cff0198e1"
 local ORANGE = "|cffff9933"
 
+local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
 local LibQTip = LibStub('LibQTip-1.0')
 
@@ -70,7 +71,7 @@ end
 
 local defaults = {
     profile = {
-        verbose = true
+        verbose = false
     }
 }
 
