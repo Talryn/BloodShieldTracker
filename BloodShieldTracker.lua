@@ -126,6 +126,11 @@ local defaults = {
         verbose = false,
 		lock_status_bar = false,
 		lock_damage_bar = false,
+		damage_bar_width = 100,
+		damage_bar_height = 15,
+		status_bar_width = 150,
+		status_bar_height = 15,
+		font_size = 12,
     }
 }
 
@@ -170,19 +175,63 @@ function BloodShieldTracker:GetOptions()
 					end,
                     get = function(info) return self.db.profile.lock_damage_bar end,
 				},
-				--status_bar_width = {
-				--	name = "Estimated Healing bar width",
-				--	desc = "Change the width of the estimated healing bar."	
-				--},
-				--status_bar_height = {
-				--	
-				--},
-				--damage_bar_width = {
-				--	
-				--},
-				--damage_bar_height = {
-				--	
-				--},
+				status_bar_width = {
+					name = L["Estimated Healing bar width"],
+					desc = L["Change the width of the estimated healing bar."],	
+					type = "range",
+					min = 10,
+					max = 200,
+					set = function(info, val) self.db.profile.damage_bar_width = val 
+						BloodShieldTracker.damagebar:SetWidth(val)
+					end,
+					get = function(info, val) return self.db.profile.damage_bar_width end,
+				},
+				status_bar_height = {
+					name = L["Estimated Healing bar height"],
+					desc = L["Change the height of the estimated healing bar."],	
+					type = "range",
+					min = 10,
+					max = 30,
+					set = function(info, val) self.db.profile.damage_bar_height = val 
+						BloodShieldTracker.damagebar:SetHeight(val)
+					end,
+					get = function(info, val) return self.db.profile.damage_bar_height end,
+				},
+				damage_bar_width = {
+					name = L["Blood Shield bar width"],
+					desc = L["Change the width of the blood shield bar."],	
+					type = "range",
+					min = 50,
+					max = 300,
+					set = function(info, val) self.db.profile.status_bar_width = val 
+						BloodShieldTracker.statusbar:SetWidth(val)
+					end,
+					get = function(info, val) return self.db.profile.status_bar_width end,
+				},
+				damage_bar_height = {
+					name = L["Blood Shield bar height"],
+					desc = L["Change the height of the blood shield bar."],
+					type = "range",
+					min = 50,
+					max = 300,
+					set = function(info, val) self.db.profile.status_bar_height = val 
+						BloodShieldTracker.statusbar:SetHeight(val)
+					end,
+					get = function(info, val) return self.db.profile.status_bar_height end,					
+				},
+				bar_font_size = {
+					name = L["Font size"],
+					desc = L["Font size for the bars."],
+					type = "range",
+					min = 8,
+					max = 30,
+					set = function(info, val) self.db.profile.font_size = val 
+						local fontName, fontHeight, fontFlags = BloodShieldTracker.statusbar.value:GetFont()
+						BloodShieldTracker.statusbar.value:SetFont(fontName,val,fontFlags)
+						BloodShieldTracker.damagebar.value:SetFont(fontName,val,fontFlags)						
+					end,
+					get = function(info,val) return self.db.profile.font_size end,
+				},
 				config_mode = {
 					name = L["Config Mode"],
 					desc = L["Toggle config mode"],
@@ -507,8 +556,8 @@ function BloodShieldTracker:CreateStatusBar()
     local statusbar = CreateFrame("StatusBar", "BloodShieldTracker_StatusBar", UIParent)
     statusbar:SetPoint("CENTER")
     statusbar:SetOrientation("HORIZONTAL")
-    statusbar:SetWidth(150)
-    statusbar:SetHeight(15)
+    statusbar:SetWidth(self.db.profile.status_bar_width)
+    statusbar:SetHeight(self.db.profile.status_bar_width)
     statusbar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
     statusbar:GetStatusBarTexture():SetHorizTile(false)
     statusbar:GetStatusBarTexture():SetVertTile(false)
@@ -527,7 +576,7 @@ function BloodShieldTracker:CreateStatusBar()
 
     statusbar.value = statusbar:CreateFontString(nil, "OVERLAY")
     statusbar.value:SetPoint("CENTER")
-    statusbar.value:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
+    statusbar.value:SetFont("Fonts\\FRIZQT__.TTF", self.db.profile.font_size, "OUTLINE")
     statusbar.value:SetJustifyH("CENTER")
     statusbar.value:SetShadowOffset(1, -1)
     statusbar.value:SetTextColor(1, 1, 1)
@@ -548,14 +597,16 @@ function BloodShieldTracker:CreateStatusBar()
 
     statusbar:EnableMouse(true)
     statusbar:Hide()
+	statusbar.shield_curr = 0
+	statusbar.shield_max = 0
     return statusbar
 end
 
 function BloodShieldTracker:CreateDamageBar()
     local statusbar = CreateFrame("StatusBar", "BloodShieldTracker_DamageBar", UIParent)
     statusbar:SetPoint("CENTER", UIParent, "CENTER", 0, 100)
-    statusbar:SetWidth(100)
-    statusbar:SetHeight(15)
+    statusbar:SetWidth(self.db.profile.damage_bar_width)
+    statusbar:SetHeight(self.db.profile.damage_bar_height)
     statusbar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
     statusbar:GetStatusBarTexture():SetHorizTile(false)
     statusbar:GetStatusBarTexture():SetVertTile(false)
@@ -574,7 +625,7 @@ function BloodShieldTracker:CreateDamageBar()
 
     statusbar.value = statusbar:CreateFontString(nil, "OVERLAY")
     statusbar.value:SetPoint("CENTER")
-    statusbar.value:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
+    statusbar.value:SetFont("Fonts\\FRIZQT__.TTF", self.db.profile.font_size, "OUTLINE")
     statusbar.value:SetJustifyH("CENTER")
     statusbar.value:SetShadowOffset(1, -1)
     statusbar.value:SetTextColor(1, 1, 1)
