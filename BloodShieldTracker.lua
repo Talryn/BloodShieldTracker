@@ -135,6 +135,8 @@ function BloodShieldTracker:ChatCommand(input)
     end
 end
 
+local IsBloodTank = false
+
 function BloodShieldTracker:OnInitialize()
     -- Load the settings
     self.db = LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", defaults, "Default")
@@ -150,21 +152,34 @@ function BloodShieldTracker:OnInitialize()
 end
 
 function BloodShieldTracker:OnEnable()
-    self:RegisterEvent("PLAYER_REGEN_ENABLED")
-    self:RegisterEvent("PLAYER_REGEN_DISABLED")
-    self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-    self:RegisterEvent("COMBAT_RATING_UPDATE","UpdateMastery")
-	self:RegisterEvent("MASTERY_UPDATE","UpdateMastery")
+	if IsBloodTank then
+		self:Load()
+	end
 	self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED","CheckImpDeathStrike")
 	self:RegisterEvent("CHARACTER_POINTS_CHANGED","CheckImpDeathStrike")
 	self:RegisterEvent("PLAYER_TALENT_UPDATE","CheckImpDeathStrike")
+end
+
+function BloodShieldTracker:Load()
+	self:RegisterEvent("PLAYER_REGEN_ENABLED")
+	self:RegisterEvent("PLAYER_REGEN_DISABLED")
+	self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+	self:RegisterEvent("COMBAT_RATING_UPDATE","UpdateMastery")
+	self:RegisterEvent("MASTERY_UPDATE","UpdateMastery")
     self.damagebar:Show()
 end
 
-function BloodShieldTracker:OnDisable()
+function BloodShieldTracker:Unload()
     self:UnregisterEvent("PLAYER_REGEN_ENABLED")
     self:UnregisterEvent("PLAYER_REGEN_DISABLED")
     self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+	self:UnregisterEvent("COMBAT_RATING_UPDATE")
+	self:UnregisterEvent("MASTERY_UPDATE")
+	self.damagebar:Hide()
+end
+
+function BloodShieldTracker:OnDisable()
+	-- We dont need to unregister events as OnDisable tells all the ace embed to disable and unregister
 end
 
 -- Watch for combat rating updates so we can adjust mastery score as it changes,
@@ -185,8 +200,12 @@ function BloodShieldTracker:CheckImpDeathStrike()
 		end
 	end
 	local id,name,desc,texture,... = GetTalentTabInfo(GetPrimaryTalentTree())
-	if texture ~= [[Interface\\Icons\\Spell_Deathknight_BloodPresence]] then
-		-- TODO Hide teh bars and unregister combat events
+	if texture == [[Interface\\Icons\\Spell_Deathknight_BloodPresence]] then
+		if not IsBloodTank then self:Load() end
+		IsBloodTank = true
+	else
+		if isBloodTank then self:Unload() end
+		IsBloodTank = false
 	end
 end
 
