@@ -41,6 +41,12 @@ local LibQTip = LibStub("LibQTip-1.0")
 local icon = LibStub("LibDBIcon-1.0")
 -- Load LibsharedMedia if it exists
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0",true)
+local default_font = "Fonts\\FRIZQT__.TTF"
+
+if not LSM then
+	LSM = {}
+	LSM.HashTable = function() return {L["Blizzard"] = default_font end
+end
 
 local DS_SPELL_DMG = (GetSpellInfo(49998))
 local DS_SPELL_HEAL = (GetSpellInfo(45470))
@@ -135,7 +141,7 @@ local defaults = {
     }
 }
 
-local default_font = "Fonts\\FRIZQT__.TTF"
+
 local options
 
 function BloodShieldTracker:GetOptions()
