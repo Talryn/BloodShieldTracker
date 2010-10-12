@@ -204,7 +204,7 @@ function BloodShieldTracker:GetOptions()
 					get = function(info, val) return self.db.profile.damage_bar_height end,
 				},
 				damage_bar_width = {
-					order  6,
+					order = 6,
 					name = L["Blood Shield bar width"],
 					desc = L["Change the width of the blood shield bar."],	
 					type = "range",
