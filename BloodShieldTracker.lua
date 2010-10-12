@@ -30,8 +30,9 @@ local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
 local LibQTip = LibStub('LibQTip-1.0')
 
-local DS_SPELL = (GetSpellInfo(49924))
+local DS_SPELL = (GetSpellInfo(49998))
 local BS_SPELL = (GetSpellInfo(77535))
+local ImpDSModifier = 1
 
 local Broker = CreateFrame("Frame")
 
@@ -145,6 +146,7 @@ function BloodShieldTracker:OnInitialize()
 	self.damagebar.lock = self.db.profile.lock_damage_bar
 	self.statusbar.lock = self.db.profile.lock_status_bar
 	self:UpdateMastery()
+	self:CheckImpDeathStrike()
 end
 
 function BloodShieldTracker:OnEnable()
@@ -152,6 +154,10 @@ function BloodShieldTracker:OnEnable()
     self:RegisterEvent("PLAYER_REGEN_DISABLED")
     self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
     self:RegisterEvent("COMBAT_RATING_UPDATE","UpdateMastery")
+	self:RegisterEvent("MASTERY_UPDATE","UpdateMastery")
+	self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED","CheckImpDeathStrike")
+	self:RegisterEvent("CHARACTER_POINTS_CHANGED","CheckImpDeathStrike")
+	self:RegisterEvent("PLAYER_TALENT_UPDATE","CheckImpDeathStrike")
     self.damagebar:Show()
 end
 
@@ -165,8 +171,23 @@ end
 -- i.e. trinket procs, buffs etc .. we only need to check this when it changes instead of every time we see damage
 local GetMastery = GetMastery
 function BloodShieldTracker:UpdateMastery()
-	local masteryRating = GetMastery();
-    masteryRating = format("%.2f", masteryRating);
+    masteryRating = format("%.2f", GetMastery());
+end
+
+function BloodShieldTracker:CheckImpDeathStrike()
+	ImpDSModifier = 1
+	for t = 1, GetNumTalentTabs() do
+		for i = 1, GetNumTalents(t) do
+			local talentName, _, _, _, currRank, maxRank = GetTalentInfo(t, i)
+			if talentName == (GetSpellInfo(81138)) and currRank > 0 then
+				ImpDSModifier = 1.45
+			end
+		end
+	end
+	local id,name,desc,texture,... = GetTalentTabInfo(GetPrimaryTalentTree())
+	if texture ~= [[Interface\\Icons\\Spell_Deathknight_BloodPresence]] then
+		-- TODO Hide teh bars and unregister combat events
+	end
 end
 
 function BloodShieldTracker:PLAYER_REGEN_DISABLED()
@@ -186,7 +207,7 @@ function BloodShieldTracker:UpdateDamageBar()
     local recentDamage = self:GetRecentDamageTaken()
     self.damagebar.value:SetText(recentDamage)
 
-    local predictedHeal = recentDamage * 0.3 * 1.45
+    local predictedHeal = recentDamage * 0.3 * ImpDSModifier
     local minimumHeal = floor(UnitHealthMax("player") / 10)
 
     self.damagebar:SetMinMaxValues(0, minimumHeal)
@@ -276,7 +297,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     end
 	if eventtype == "SPELL_CAST_SUCCESS" and srcName == self.playerName and param10 == DS_SPELL then
         local recentDmg = self:GetRecentDamageTaken(timestamp)
-        local predictedHeal = recentDmg * 0.3 * 1.45		
+        local predictedHeal = recentDmg * 0.3 * ImpDSModifier	
 		self:Print("Estimating heal to be "..recentDmg.." before talents and glyph. "..predictedHeal)
 	end
     if eventtype == "SPELL_HEAL" and dstName == self.playerName 
@@ -290,10 +311,10 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         local shieldValue = floor(totalHeal*shieldPercent)
 
         local recentDmg = self:GetRecentDamageTaken(timestamp)
-        local predictedHeal = recentDmg * 0.3 * 1.45
+        local predictedHeal = recentDmg * 0.3 * ImpDSModifier
         local shieldInd = ""
         local minimumHeal = floor(UnitHealthMax("player")/10)
-        local minimumBS = minimumHeal * 0.3 * .145
+        local minimumBS = minimumHeal * 0.3 * ImpDSModifier
         if minimumBS == shieldValue then
             shieldInd = "(min)"
         end
