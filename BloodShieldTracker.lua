@@ -243,7 +243,7 @@ function BloodShieldTracker:GetOptions()
 					order = 9,
 					type = "select",
 					name = L["Font"],
-					desc = L["Font to use for this panel."],
+					desc = L["Font to use."],
 					values = LSM:HashTable("font"),
 					dialogControl = 'LSM30_Font',
 					disabled = function() return not IsAddOnLoaded("LibSharedMedia-3.0") end,
