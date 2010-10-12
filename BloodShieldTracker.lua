@@ -45,7 +45,7 @@ local default_font = "Fonts\\FRIZQT__.TTF"
 
 if not LSM then
 	LSM = {}
-	LSM.HashTable = function() return {L["Blizzard"] = default_font end
+	LSM.HashTable = function() return {[L["Blizzard"]] = default_font} end
 end
 
 local DS_SPELL_DMG = (GetSpellInfo(49998))
