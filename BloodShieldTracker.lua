@@ -180,7 +180,7 @@ function BloodShieldTracker:CheckImpDeathStrike()
 		for i = 1, GetNumTalents(t) do
 			local talentName, _, _, _, currRank, maxRank = GetTalentInfo(t, i)
 			if talentName == (GetSpellInfo(81138)) and currRank > 0 then
-				ImpDSModifier = 1.45
+				ImpDSModifier = 1 + (.15 * currRank)
 			end
 		end
 	end
