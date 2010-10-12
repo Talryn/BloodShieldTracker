@@ -165,8 +165,8 @@ end
 -- i.e. trinket procs, buffs etc .. we only need to check this when it changes instead of every time we see damage
 local GetMastery = GetMastery
 function BloodshieldTracker:UpdateMastery()
-	local mastery = GetMastery();
-    mastery = format("%.2f", mastery);
+	local masteryRating = GetMastery();
+    masteryRating = format("%.2f", masteryRating);
 end
 
 function BloodShieldTracker:PLAYER_REGEN_DISABLED()
@@ -279,7 +279,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         and param10 == DS_SPELL then
         
         
-        local shieldPercent = mastery*6.25/100
+        local shieldPercent = masteryRating*6.25/100
         local totalHeal = param12 or 0
         local overheal = param13 or 0
         local actualHeal = param12-param13
