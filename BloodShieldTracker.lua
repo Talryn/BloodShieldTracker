@@ -257,7 +257,10 @@ function BloodShieldTracker:GetOptions()
 							return self.db.profile.font_face
 						end
 					end,
-					set = function(info, val) self.db.profile.font_face = val; 
+					set = function(info, val) 
+						if val ~= L["Blizzard"] then
+							self.db.profile.font_face = val; 
+						end
 						local fontName, fontHeight, fontFlags = BloodShieldTracker.statusbar.value:GetFont()
 						local ff = LSM:Fetch("font",val)
 						BloodShieldTracker.statusbar.value:SetFont(fontName,fontHeight,fontFlags)
