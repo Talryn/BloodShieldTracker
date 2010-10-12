@@ -18,6 +18,12 @@ local lastSeconds = 5
 local damageTaken = {}
 local recentDamage = 0
 local removeList = {}
+local numShields = 0
+local numMinShields = 0
+local minShieldMaxValue = 0
+local maxShieldMaxValue = 0
+
+local shields = {}
 local lastDSSuccess = nil
 local masteryRating = 0
 
@@ -28,20 +34,19 @@ local ORANGE = "|cffff9933"
 local statusBarFormat = "%d/%d (%d%%)"
 
 local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
-
+local LDB = LibStub("LibDataBroker-1.1")
+local LibQTip = LibStub('LibQTip-1.0')
 
 local DS_SPELL_DMG = (GetSpellInfo(49998))
 local DS_SPELL_HEAL = (GetSpellInfo(45470))
 local BS_SPELL = (GetSpellInfo(77535))
+local IMP_DS_TALENT = (GetSpellInfo(81138))
 local ImpDSModifier = 1
 local dsHealModifier = 0.3
 local shieldPerMasteryPoint = 6.25
 
 
-local LDB = LibStub("LibDataBroker-1.1")
-local LibQTip = LibStub('LibQTip-1.0')
 local Broker = CreateFrame("Frame")
-
 Broker.obj = LDB:NewDataObject("Blood Shield Tracker", {
     type = "data source",
     icon = "Interface\\Icons\\Spell_DeathKnight_DeathStrike",
@@ -65,11 +70,42 @@ Broker.obj = LDB:NewDataObject("Blood Shield Tracker", {
 	end
 } )
 
+local shieldDataHdr = GREEN.."Blood Shield Data"
+local shieldDataLine1 = YELLOW.."Number of Shields:"
+local shieldDataLine2 = YELLOW.."Number of Minimum Shields:"
+local shieldDataMinShld = "%d (%d%%)"
+
+local shieldMaxValueHdr = GREEN.."Blood Shield Max Value"
+local shieldMaxValueLine1 = YELLOW.."Minimum Shield Value:"
+local shieldMaxValueLine2 = YELLOW.."Maximum Shield Value:"
+local shieldMaxValueLine3 = YELLOW.."Average Shield Value:"
+
 function Broker.obj:OnEnter()
-	local tooltip = LibQTip:Acquire("BloodShieldTrackerTooltip", 4, "LEFT", "CENTER", "CENTER", "CENTER")
+	local tooltip = LibQTip:Acquire("BloodShieldTrackerTooltip", 2, "LEFT", "RIGHT")
 	self.tooltip = tooltip 
 
-    tooltip:AddLine(YELLOW.."Damage Taken: "..(BloodShieldTracker.damageTaken or 0))
+    local percentMinimum = 0
+    if numShields > 0 then
+        percentMinimum = numMinShields / numShields * 100
+    end
+
+    -- Show number of DS shields in session
+    --   and number/% that were the minimum amount
+    -- Show the min, max, avg shield size
+    -- Show the how much of the shields were used, min,max,avg
+    tooltip:AddHeader(shieldDataHdr)
+    tooltip:AddSeparator(1)
+    tooltip:AddLine(shieldDataLine1, numShields)
+    tooltip:AddLine(shieldDataLine2, 
+        shieldDataMinShld:format(numMinShields, percentMinimum))
+
+    tooltip:AddLine()
+
+    tooltip:AddHeader(shieldMaxValueHdr)
+    tooltip:AddSeparator(1)
+    tooltip:AddLine(shieldMaxValueLine1, minShieldMaxValue)
+    tooltip:AddLine(shieldMaxValueLine2, maxShieldMaxValue)
+    tooltip:AddLine(shieldMaxValueLine3, avgShieldMaxValue)
 
 	tooltip:SmartAnchorTo(self)
 	tooltip:Show()
@@ -231,7 +267,7 @@ function BloodShieldTracker:CheckImpDeathStrike()
 	for t = 1, GetNumTalentTabs() do
 		for i = 1, GetNumTalents(t) do
 			local talentName, _, _, _, currRank, maxRank = GetTalentInfo(t, i)
-			if talentName == (GetSpellInfo(81138)) and currRank > 0 then
+			if talentName == IMP_DS_TALENT and currRank > 0 then
 				ImpDSModifier = 1 + (0.15 * currRank)
 			end
 		end
@@ -383,11 +419,12 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local predictedHeal = recentDmg * dsHealModifier * ImpDSModifier
-        local minimumHeal = floor(UnitHealthMax("player")/10)
+        local minimumHeal = floor(UnitHealthMax("player") * 0.1)
         local shieldInd = ""
-        local minimumBS = minimumHeal * dsHealModifier * ImpDSModifier
+        local minimumBS = floor(minimumHeal * shieldPercent)
         if minimumBS == shieldValue then
             shieldInd = "(min)"
+            numMinShields = numMinShields + 1
         end
         if self.db.profile.verbose then
             local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d]"
@@ -397,6 +434,14 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             self:Print(shieldFormat:format(shieldValue,shieldInd))
         end
 
+        numShields = numShields + 1
+        if minShieldMaxValue == 0 or shieldValue < minShieldMaxValue then
+            minShieldMaxValue = shieldValue
+        end
+        if shieldValue > maxShieldMaxValue then
+            maxShieldMaxValue = shieldValue
+        end
+        
         self.statusbar:SetMinMaxValues(0, shieldValue)
         self.statusbar:SetValue(shieldValue)
         
