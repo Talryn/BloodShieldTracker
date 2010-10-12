@@ -164,7 +164,7 @@ end
 -- Watch for combat rating updates so we can adjust mastery score as it changes,
 -- i.e. trinket procs, buffs etc .. we only need to check this when it changes instead of every time we see damage
 local GetMastery = GetMastery
-function BloodshieldTracker:UpdateMastery()
+function BloodShieldTracker:UpdateMastery()
 	local masteryRating = GetMastery();
     masteryRating = format("%.2f", masteryRating);
 end
