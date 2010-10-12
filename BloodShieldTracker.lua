@@ -1,4 +1,4 @@
-BloodShieldTracker = LibStub("AceAddon-3.0"):NewAddon("BloodShieldTracker", "AceConsole-3.0", "AceEvent-3.0","AceTimer-3.0")
+local BloodShieldTracker = LibStub("AceAddon-3.0"):NewAddon("BloodShieldTracker", "AceConsole-3.0", "AceEvent-3.0","AceTimer-3.0")
 
 local ADDON_NAME = ...
 local ADDON_VERSION = "@project-version@"
@@ -19,6 +19,7 @@ local damageTaken = {}
 local recentDamage = 0
 local removeList = {}
 local lastDSSuccess = nil
+local masteryRating = 0
 
 local GREEN = "|cff00ff00"
 local YELLOW = "|cffffff00"
@@ -28,6 +29,9 @@ local ORANGE = "|cffff9933"
 local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
 local LibQTip = LibStub('LibQTip-1.0')
+
+local DS_SPELL = (GetSpellInfo(49924))
+local BS_SPELL = (GetSpellInfo(77535))
 
 local Broker = CreateFrame("Frame")
 
@@ -71,7 +75,9 @@ end
 
 local defaults = {
     profile = {
-        verbose = false
+        verbose = false,
+		lock_status_bar = false,
+		lock_damage_bar = false,
     }
 }
 
@@ -90,7 +96,29 @@ function BloodShieldTracker:GetOptions()
                     type = "toggle",
                     set = function(info, val) self.db.profile.verbose = val end,
                     get = function(info) return self.db.profile.verbose end,
-                }
+                },
+				lock_damage = {
+					name = L["Lock damage bar"],
+					desc = L["Lock the damage bar from moving."],
+					type = "toggle",
+					set = function(info, val) self.db.profile.lock_damage_bar = val 
+						if BloodShieldTracker.damagebar then
+							BloodShieldTracker.damagebar.locked = true
+						end
+					end,
+                    get = function(info) return self.db.profile.lock_damage_bar end,
+				},
+				lock_status = {
+					name = L["Lock status bar"],
+					desc = L["Lock the status bar from moving."],
+					type = "toggle",
+					set = function(info, val) self.db.profile.lock_status_bar = val 
+						if BloodShieldTracker.statusbar then
+							BloodShieldTracker.statusbar.locked = true
+						end					
+					end,
+                    get = function(info) return self.db.profile.lock_status_bar end,
+				}
             }
         }
     end
@@ -109,21 +137,21 @@ end
 function BloodShieldTracker:OnInitialize()
     -- Load the settings
     self.db = LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", defaults, "Default")
-
     -- Register the options table
     LibStub("AceConfig-3.0"):RegisterOptionsTable("BloodShieldTracker", self:GetOptions())
-	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions(
-	    "BloodShieldTracker", ADDON_NAME)
-
+	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BloodShieldTracker", ADDON_NAME)
     self.statusbar = self:CreateStatusBar()
     self.damagebar = self:CreateDamageBar()
+	self.damagebar.lock = self.db.profile.lock_damage_bar
+	self.statusbar.lock = self.db.profile.lock_status_bar
+	self:UpdateMastery()
 end
 
 function BloodShieldTracker:OnEnable()
     self:RegisterEvent("PLAYER_REGEN_ENABLED")
     self:RegisterEvent("PLAYER_REGEN_DISABLED")
     self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-    
+    self:RegisterEvent("COMBAT_RATING_UPDATE","UpdateMastery")
     self.damagebar:Show()
 end
 
@@ -131,6 +159,14 @@ function BloodShieldTracker:OnDisable()
     self:UnregisterEvent("PLAYER_REGEN_ENABLED")
     self:UnregisterEvent("PLAYER_REGEN_DISABLED")
     self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+end
+
+-- Watch for combat rating updates so we can adjust mastery score as it changes,
+-- i.e. trinket procs, buffs etc .. we only need to check this when it changes instead of every time we see damage
+local GetMastery = GetMastery
+function BloodshieldTracker:UpdateMastery()
+	local mastery = GetMastery();
+    mastery = format("%.2f", mastery);
 end
 
 function BloodShieldTracker:PLAYER_REGEN_DISABLED()
@@ -240,10 +276,9 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     end
 
     if eventtype == "SPELL_HEAL" and dstName == self.playerName 
-        and param10 == "Death Strike" then
+        and param10 == DS_SPELL then
         
-        local mastery = GetMastery();
-        mastery = format("%.2f", mastery);
+        
         local shieldPercent = mastery*6.25/100
         local totalHeal = param12 or 0
         local overheal = param13 or 0
@@ -275,7 +310,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     end
 
     if eventtype == "SPELL_AURA_APPLIED" and dstName == self.playerName then
-        if param10 and param10 == "Blood Shield" then
+        if param10 and param10 == BS_SPELL then
             if self.db.profile.verbose then
                 self:Print("Blood Shield applied.")
             end
@@ -283,14 +318,14 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     end
 
     if eventtype == "SPELL_AURA_REFRESH" and dstName == self.playerName then
-        if param10 and param10 == "Blood Shield" then
+        if param10 and param10 == BS_SPELL then
             if self.db.profile.verbose then
                 self:Print("Blood Shield refreshed.")
             end
         end
     end
     if eventtype == "SPELL_AURA_REMOVED" and dstName == self.playerName then
-        if param10 and param10 == "Blood Shield" then
+        if param10 and param10 == BS_SPELL then
             if self.db.profile.verbose then
                 self:Print("Blood Shield removed.")
             end
@@ -327,12 +362,15 @@ function BloodShieldTracker:CreateStatusBar()
     statusbar.value:SetJustifyH("CENTER")
     statusbar.value:SetShadowOffset(1, -1)
     statusbar.value:SetTextColor(1, 1, 1)
-    
+    statusbar.lock = false
+
     statusbar:SetMovable()
     statusbar:RegisterForDrag("LeftButton")
     statusbar:SetScript("OnDragStart",
         function(self,button)
-            self:StartMoving()
+			if not self.lock then
+            	self:StartMoving()
+			end
         end)
     statusbar:SetScript("OnDragStop",
         function(self)
@@ -371,12 +409,14 @@ function BloodShieldTracker:CreateDamageBar()
     statusbar.value:SetJustifyH("CENTER")
     statusbar.value:SetShadowOffset(1, -1)
     statusbar.value:SetTextColor(1, 1, 1)
-    
+    statusbar.lock = false
     statusbar:SetMovable()
     statusbar:RegisterForDrag("LeftButton")
     statusbar:SetScript("OnDragStart",
         function(self,button)
-            self:StartMoving()
+			if not self.lock then
+            	self:StartMoving()
+			end
         end)
     statusbar:SetScript("OnDragStop",
         function(self)
