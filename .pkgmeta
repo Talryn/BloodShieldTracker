@@ -45,7 +45,7 @@ externals:
         tag: latest
 
     Libs/LibSharedMedia-3.0:
-        url: svn://svn.wowace.com/wow/libsharedmedia-3-0/mainline/trunk
+        url: svn://svn.wowace.com/wow/libsharedmedia-3-0/mainline/trunk/LibSharedMedia-3.0
         tag: latest
 
     Libs/LibStub:

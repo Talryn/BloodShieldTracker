@@ -665,7 +665,7 @@ function BloodShieldTracker:CreateDamageBar()
     statusbar.value = statusbar:CreateFontString(nil, "OVERLAY")
     statusbar.value:SetPoint("CENTER")
 	local font = default_font
-	if LSM and LSM.Fetch and strlen(self.db.profile.font_face) > 1then
+	if LSM and LSM.Fetch and strlen(self.db.profile.font_face) > 1 then
 		font = LSM:Fetch("font",self.db.profile.font_face)
 	end
     statusbar.value:SetFont(font, self.db.profile.font_size, "OUTLINE")
