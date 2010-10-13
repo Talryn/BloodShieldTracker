@@ -602,14 +602,14 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
     if eventtype == "SWING_MISSED" and dstName == self.playerName then
         if param9 and param9 == "ABSORB" then
+			local damage = param10 or 0
             if self.db.profile.verbose then
-				local damage = param10 or 0
                 self:Print("Absorbed swing for "..(param10 or "0"))
-				self.statusbar.shield_curr = self.statusbar.shield_curr - damage
-				self.statusbar:SetValue(self.statusbar.shield_curr)
-				local diff = floor( (self.statusbar.shield_curr/self.statusbar.shield_max) * 100)
-				self.statusbar.value:SetText(statusBarFormat:format(self.statusbar.shield_curr, self.statusbar.shield_max, diff))
             end
+			self.statusbar.shield_curr = self.statusbar.shield_curr - damage
+			self.statusbar:SetValue(self.statusbar.shield_curr)
+			local diff = floor( (self.statusbar.shield_curr/self.statusbar.shield_max) * 100)
+			self.statusbar.value:SetText(statusBarFormat:format(self.statusbar.shield_curr, self.statusbar.shield_max, diff))
         end
     end
 	if eventtype == "SPELL_CAST_SUCCESS" and srcName == self.playerName and 
