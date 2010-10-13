@@ -85,12 +85,13 @@ Broker.obj = LDB:NewDataObject("Blood Shield Tracker", {
 	end
 } )
 
-local shieldDataHdr = GREEN.."Blood Shield Data"
+local addonHdr = GREEN.."%s %s"
+local shieldDataHdr = ORANGE.."Blood Shield Data"
 local shieldDataLine1 = YELLOW.."Number of Shields:"
 local shieldDataLine2 = YELLOW.."Number of Minimum Shields:"
 local shieldDataMinShld = "%d (%d%%)"
 
-local shieldMaxValueHdr = GREEN.."Blood Shield Max Value"
+local shieldMaxValueHdr = ORANGE.."Blood Shield Max Value"
 local shieldMaxValueLine1 = YELLOW.."Minimum Shield Value:"
 local shieldMaxValueLine2 = YELLOW.."Maximum Shield Value:"
 local shieldMaxValueLine3 = YELLOW.."Average Shield Value:"
@@ -104,7 +105,11 @@ function Broker.obj:OnEnter()
         percentMinimum = numMinShields / numShields * 100
     end
 
-    tooltip:AddHeader(shieldDataHdr)
+    tooltip:AddHeader(addonHdr:format(ADDON_NAME, ADDON_VERSION))
+    tooltip:AddLine("")
+    tooltip:AddLine("")
+
+    tooltip:AddLine(shieldDataHdr)
     tooltip:AddSeparator(1)
     tooltip:AddLine(shieldDataLine1, numShields)
     tooltip:AddLine(shieldDataLine2, 
@@ -112,7 +117,7 @@ function Broker.obj:OnEnter()
 
     tooltip:AddLine()
 
-    tooltip:AddHeader(shieldMaxValueHdr)
+    tooltip:AddLine(shieldMaxValueHdr)
     tooltip:AddSeparator(1)
     tooltip:AddLine(shieldMaxValueLine1, minShieldMaxValue)
     tooltip:AddLine(shieldMaxValueLine2, maxShieldMaxValue)
