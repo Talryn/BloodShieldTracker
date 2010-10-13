@@ -381,12 +381,12 @@ function BloodShieldTracker:OnInitialize()
 	if LSM then
 		LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
 	end
-	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
     self.statusbar = self:CreateStatusBar()
     self.statusbar.shield_curr = 0
     self.damagebar = self:CreateDamageBar()
 	self.damagebar.lock = self.db.profile.lock_damage_bar
 	self.statusbar.lock = self.db.profile.lock_status_bar
+	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 	self:UpdateMastery()
 	self:CheckImpDeathStrike()
 end
