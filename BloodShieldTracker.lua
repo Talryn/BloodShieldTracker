@@ -59,7 +59,7 @@ local IMP_DS_TALENT = (GetSpellInfo(81138))
 local ImpDSModifier = 1
 local dsHealModifier = 0.3
 local shieldPerMasteryPoint = 6.25
-
+local dsHealMin = 0
 
 local Broker = CreateFrame("Frame")
 Broker.obj = LDB:NewDataObject("Blood Shield Tracker", {
@@ -381,6 +381,7 @@ function BloodShieldTracker:OnInitialize()
 	if LSM then
 		LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
 	end
+	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
     self.statusbar = self:CreateStatusBar()
     self.statusbar.shield_curr = 0
     self.damagebar = self:CreateDamageBar()
@@ -415,7 +416,6 @@ function BloodShieldTracker:OnEnable()
 	if IsBloodTank then
 		self:Load()
 	end
-
 	self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED","CheckImpDeathStrike")
 	self:RegisterEvent("CHARACTER_POINTS_CHANGED","CheckImpDeathStrike")
 	self:RegisterEvent("PLAYER_TALENT_UPDATE","CheckImpDeathStrike")
@@ -427,6 +427,7 @@ function BloodShieldTracker:Load()
 	self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 	self:RegisterEvent("COMBAT_RATING_UPDATE","UpdateMastery")
 	self:RegisterEvent("MASTERY_UPDATE","UpdateMastery")
+	self:RegisterEvent("UNIT_MAXHEALTH","UpdateMinHeal")
     self.damagebar:Show()
 end
 
@@ -446,6 +447,8 @@ end
 -- Watch for combat rating updates so we can adjust mastery score as it changes,
 -- i.e. trinket procs, buffs etc .. we only need to check this when it changes instead of every time we see damage
 local GetMastery = GetMastery
+local idle = true
+
 function BloodShieldTracker:UpdateMastery()
     masteryRating = format("%.2f", GetMastery());
 end
@@ -470,19 +473,26 @@ function BloodShieldTracker:CheckImpDeathStrike()
 	end
 end
 
-function BloodShieldTracker:GetMinimumDSHeal()
-    return floor(UnitHealthMax("player") * 0.1)
+function BloodShieldTracker:UpdateMinHeal(event,unit)
+	if unit == "player" then
+		dsHealMin = floor(UnitHealthMax("player") * 0.1)
+		if idle then
+			self.damagebar.value:SetText(healBarFormat:format(healBarText, dsHealMin))
+		end
+	end
 end
 
 function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 	-- Once combat stats, update the damage bar.
+	idle = false
 	updateTimer = self:ScheduleRepeatingTimer("UpdateDamageBar", 0.5)
 end
 
 function BloodShieldTracker:PLAYER_REGEN_ENABLED()
 	-- cancel timer before hand
     self:CancelTimer(updateTimer)
-    self.damagebar.value:SetText(healBarFormat:format(healBarText, self:GetMinimumDSHeal()))
+	idle = true 
+    self.damagebar.value:SetText(healBarFormat:format(healBarText, dsHealMin))
     self.damagebar:SetStatusBarColor(1, 0, 0)
     self.damagebar:SetMinMaxValues(0, 1)
     self.damagebar:SetValue(1)
@@ -494,7 +504,7 @@ function BloodShieldTracker:UpdateDamageBar()
     local recentDamage = self:GetRecentDamageTaken()
 
     local predictedHeal = recentDamage * dsHealModifier * ImpDSModifier
-    local minimumHeal = self:GetMinimumDSHeal()
+    local minimumHeal = dsHealMin
 	if recentDamage < minimumHeal then
     	self.damagebar.value:SetText(healBarFormat:format(healBarText, minimumHeal))
 	else
@@ -612,7 +622,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local predictedHeal = recentDmg * dsHealModifier * ImpDSModifier
-        local minimumHeal = self:GetMinimumDSHeal()
+        local minimumHeal = dsHealMin
         local shieldInd = ""
         local minimumBS = floor(minimumHeal * shieldPercent)
         if minimumBS == shieldValue then
@@ -772,7 +782,7 @@ function BloodShieldTracker:CreateDamageBar()
 
     statusbar:SetMinMaxValues(0,1)
     statusbar:SetValue(1)
-    statusbar.value:SetText(healBarFormat:format(healBarText, self:GetMinimumDSHeal()))
+    statusbar.value:SetText(healBarFormat:format(healBarText, dsHealMin))
 
     statusbar:EnableMouse(true)
     statusbar:Hide()
