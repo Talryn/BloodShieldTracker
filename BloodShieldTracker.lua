@@ -472,15 +472,9 @@ function BloodShieldTracker:CheckImpDeathStrike()
     	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
     		IsBloodTank = true
     		self:Load()
-            if self.db.profile.verbose then
-                self:Print("Blood DK detected.  Enabling addon.")
-            end
     	else
     		IsBloodTank = false
     		self:Unload()
-            if self.db.profile.verbose then
-                self:Print("No Blood DK detected.  Disabling addon.")
-            end
     	end
     else
         if self.db.profile.verbose then
