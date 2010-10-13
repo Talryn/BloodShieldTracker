@@ -134,6 +134,8 @@ local defaults = {
 			hide = true,
 		},
         verbose = false,
+        status_bar_enabled = true,
+        damage_bar_enabled = true,
 		lock_status_bar = false,
 		lock_damage_bar = false,
 		damage_bar_width = 100,
@@ -155,6 +157,11 @@ function BloodShieldTracker:GetOptions()
             handler = BloodShieldTracker,
             type = 'group',
             args = {
+        		generalOptions = {
+        			order = 0,
+        			type = "header",
+        			name = L["General Options"],
+        		},
                 verbose = {
                     name = L["Verbose"],
 					order = 1,
@@ -163,87 +170,8 @@ function BloodShieldTracker:GetOptions()
                     set = function(info, val) self.db.profile.verbose = val end,
                     get = function(info) return self.db.profile.verbose end,
                 },
-				lock_damage = {
-					name = L["Lock shield bar"],
-					desc = L["Lock the shield bar from moving."],
-					type = "toggle",
-					order = 2,
-					set = function(info, val) self.db.profile.lock_status_bar = val 
-						if BloodShieldTracker.statusbar then
-							BloodShieldTracker.statusbar.lock = val
-						end
-					end,
-                    get = function(info) return self.db.profile.lock_status_bar end,
-				},
-				lock_status = {
-					name = L["Lock estimated healing bar"],
-					desc = L["Lock the estimated healing bar from moving."],
-					type = "toggle",
-					order = 3,
-					set = function(info, val) self.db.profile.lock_damage_bar = val 
-						if BloodShieldTracker.damagebar then
-							BloodShieldTracker.damagebar.lock = val
-						end					
-					end,
-                    get = function(info) return self.db.profile.lock_damage_bar end,
-				},
-				status_bar_width = {
-					order = 4,
-					name = L["Estimated Healing bar width"],
-					desc = L["Change the width of the estimated healing bar."],	
-					type = "range",
-					min = 10,
-					max = 200,
-					set = function(info, val) self.db.profile.damage_bar_width = val 
-						BloodShieldTracker.damagebar:SetWidth(val)
-						BloodShieldTracker.damagebar.border:SetWidth(val+9)
-					end,
-					get = function(info, val) return self.db.profile.damage_bar_width end,
-				},
-				status_bar_height = {
-					order = 5,
-					name = L["Estimated Healing bar height"],
-					desc = L["Change the height of the estimated healing bar."],	
-					type = "range",
-					min = 8,
-					max = 30,
-					step = 1,
-					set = function(info, val) self.db.profile.damage_bar_height = val 
-						BloodShieldTracker.damagebar:SetHeight(val)
-						BloodShieldTracker.damagebar.border:SetHeight(val + 8)
-					end,
-					get = function(info, val) return self.db.profile.damage_bar_height end,
-				},
-				damage_bar_width = {
-					order = 6,
-					name = L["Blood Shield bar width"],
-					desc = L["Change the width of the blood shield bar."],	
-					type = "range",
-					min = 50,
-					max = 300,
-					step = 1,
-					set = function(info, val) self.db.profile.status_bar_width = val 
-						BloodShieldTracker.statusbar:SetWidth(val)
-						BloodShieldTracker.statusbar.border:SetWidth(val+9)
-					end,
-					get = function(info, val) return self.db.profile.status_bar_width end,
-				},
-				damage_bar_height = {
-					order = 7,
-					name = L["Blood Shield bar height"],
-					desc = L["Change the height of the blood shield bar."],
-					type = "range",
-					min = 10,
-					max = 30,
-					step = 1,
-					set = function(info, val) self.db.profile.status_bar_height = val 
-						BloodShieldTracker.statusbar:SetHeight(val)
-						BloodShieldTracker.statusbar.border:SetHeight(val + 8)
-					end,
-					get = function(info, val) return self.db.profile.status_bar_height end,					
-				},
 				bar_font_size = {
-					order = 8,
+					order = 2,
 					name = L["Font size"],
 					desc = L["Font size for the bars."],
 					type = "range",
@@ -257,14 +185,13 @@ function BloodShieldTracker:GetOptions()
 					get = function(info,val) return self.db.profile.font_size end,
 				},
 				bar_font = {
-					order = 9,
+					order = 3,
 					type = "select",
 					name = L["Font"],
 					desc = L["Font to use."],
 					values = LSM:HashTable("font"),
 					dialogControl = 'LSM30_Font',
 					disabled = function() return not IsAddOnLoaded("LibSharedMedia-3.0") end,
-					order = 40,
 					get = function() 
 						if strlen(self.db.profile.font_face) < 1 then
 							return L["Blizzard"]
@@ -278,19 +205,6 @@ function BloodShieldTracker:GetOptions()
 						end
 						BloodShieldTracker:ResetFonts()
 					end
-				},
-				config_mode = {
-					name = L["Config Mode"],
-					desc = L["Toggle config mode"],
-					type = "execute",
-					order = 99,
-					func = function()
-						if BloodShieldTracker.statusbar:IsShown() then
-							BloodShieldTracker.statusbar:Hide()
-						else
-							BloodShieldTracker.statusbar:Show()
-						end
-					end,
 				},
         	    minimap = {
                     name = L["Minimap Button"],
@@ -311,6 +225,134 @@ function BloodShieldTracker:GetOptions()
                           end,
         			order = 4
                 },
+				config_mode = {
+					name = L["Config Mode"],
+					desc = L["Toggle config mode"],
+					type = "execute",
+					order = 5,
+					func = function()
+						if BloodShieldTracker.statusbar:IsShown() then
+							BloodShieldTracker.statusbar:Hide()
+						else
+							BloodShieldTracker.statusbar:Show()
+						end
+					end,
+				},
+        		bloodshieldBar = {
+        			order = 10,
+        			type = "header",
+        			name = L["Blood Shield Bar"],
+        		},
+        		status_bar_enabled = {
+					name = L["Enabled"],
+					desc = L["Enable the Blood Shield Bar."],
+					type = "toggle",
+					order = 11,
+					set = function(info, val)
+					    self.db.profile.status_bar_enabled = val
+					    if not val then
+						    BloodShieldTracker.statusbar:Hide()
+						end
+					end,
+                    get = function(info) return self.db.profile.status_bar_enabled end,
+				},
+				lock_damage = {
+					name = L["Lock shield bar"],
+					desc = L["Lock the shield bar from moving."],
+					type = "toggle",
+					order = 12,
+					set = function(info, val) self.db.profile.lock_status_bar = val 
+						if BloodShieldTracker.statusbar then
+							BloodShieldTracker.statusbar.lock = val
+						end
+					end,
+                    get = function(info) return self.db.profile.lock_status_bar end,
+				},
+				damage_bar_width = {
+					order = 13,
+					name = L["Blood Shield bar width"],
+					desc = L["Change the width of the blood shield bar."],	
+					type = "range",
+					min = 50,
+					max = 300,
+					step = 1,
+					set = function(info, val) self.db.profile.status_bar_width = val 
+						BloodShieldTracker.statusbar:SetWidth(val)
+						BloodShieldTracker.statusbar.border:SetWidth(val+9)
+					end,
+					get = function(info, val) return self.db.profile.status_bar_width end,
+				},
+				damage_bar_height = {
+					order = 14,
+					name = L["Blood Shield bar height"],
+					desc = L["Change the height of the blood shield bar."],
+					type = "range",
+					min = 10,
+					max = 30,
+					step = 1,
+					set = function(info, val) self.db.profile.status_bar_height = val 
+						BloodShieldTracker.statusbar:SetHeight(val)
+						BloodShieldTracker.statusbar.border:SetHeight(val + 8)
+					end,
+					get = function(info, val) return self.db.profile.status_bar_height end,					
+				},
+        		estHealBar = {
+        			order = 20,
+        			type = "header",
+        			name = L["Estimated Healing Bar"],
+        		},
+        		damage_bar_enabled = {
+					name = L["Enabled"],
+					desc = L["Enable the Estimated Healing Bar."],
+					type = "toggle",
+					order = 21,
+					set = function(info, val)
+					    self.db.profile.damage_bar_enabled = val
+					    if not val then
+						    BloodShieldTracker.damagebar:Hide()
+						end
+					end,
+                    get = function(info) return self.db.profile.damage_bar_enabled end,
+				},
+				lock_status = {
+					name = L["Lock estimated healing bar"],
+					desc = L["Lock the estimated healing bar from moving."],
+					type = "toggle",
+					order = 22,
+					set = function(info, val) self.db.profile.lock_damage_bar = val 
+						if BloodShieldTracker.damagebar then
+							BloodShieldTracker.damagebar.lock = val
+						end					
+					end,
+                    get = function(info) return self.db.profile.lock_damage_bar end,
+				},
+				status_bar_width = {
+					order = 23,
+					name = L["Estimated Healing bar width"],
+					desc = L["Change the width of the estimated healing bar."],	
+					type = "range",
+					min = 10,
+					max = 200,
+					set = function(info, val) self.db.profile.damage_bar_width = val 
+						BloodShieldTracker.damagebar:SetWidth(val)
+						BloodShieldTracker.damagebar.border:SetWidth(val+9)
+					end,
+					get = function(info, val) return self.db.profile.damage_bar_width end,
+				},
+				status_bar_height = {
+					order = 24,
+					name = L["Estimated Healing bar height"],
+					desc = L["Change the height of the estimated healing bar."],	
+					type = "range",
+					min = 8,
+					max = 30,
+					step = 1,
+					set = function(info, val) self.db.profile.damage_bar_height = val 
+						BloodShieldTracker.damagebar:SetHeight(val)
+						BloodShieldTracker.damagebar.border:SetHeight(val + 8)
+					end,
+					get = function(info, val) return self.db.profile.damage_bar_height end,
+				},
             }
         }
     end
@@ -447,6 +489,8 @@ function BloodShieldTracker:PLAYER_REGEN_ENABLED()
 end
 
 function BloodShieldTracker:UpdateDamageBar()
+    if not self.db.profile.damage_bar_enabled then return end
+    
     local recentDamage = self:GetRecentDamageTaken()
 
     local predictedHeal = recentDamage * dsHealModifier * ImpDSModifier
@@ -590,14 +634,17 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if shieldValue > maxShieldMaxValue then
             maxShieldMaxValue = shieldValue
         end
-        
-        self.statusbar:SetMinMaxValues(0, shieldValue)
-        self.statusbar:SetValue(shieldValue)
-        
+
 		self.statusbar.shield_max = shieldValue
 		self.statusbar.shield_curr = shieldValue
-        self.statusbar.value:SetText(statusBarFormat:format(shieldValue, shieldValue, "100"))
-        self.statusbar:Show()
+        
+        if self.db.profile.status_bar_enabled then
+            self.statusbar:SetMinMaxValues(0, shieldValue)
+            self.statusbar:SetValue(shieldValue)
+        
+            self.statusbar.value:SetText(statusBarFormat:format(shieldValue, shieldValue, "100"))
+            self.statusbar:Show()
+        end
     end
 
     if eventtype == "SPELL_AURA_APPLIED" and dstName == self.playerName then
