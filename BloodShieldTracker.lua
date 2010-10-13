@@ -20,10 +20,15 @@ local recentDamage = 0
 local removeList = {}
 local numShields = 0
 local numMinShields = 0
+local numRemovedShields = 0
+local numRefreshedShields = 0
 local minShieldMaxValue = 0
 local maxShieldMaxValue = 0
+local totalShieldMaxValue = 0
+local minShieldUsedPerc = nil
+local maxShieldUsedPerc = 0
+local totalShieldUsedPerc = 0
 
-local shields = {}
 local lastDSSuccess = nil
 local masteryRating = 0
 
@@ -87,22 +92,31 @@ Broker.obj = LDB:NewDataObject("Blood Shield Tracker", {
 
 local addonHdr = GREEN.."%s %s"
 local shieldDataHdr = ORANGE.."Blood Shield Data"
-local shieldDataLine1 = YELLOW.."Number of Shields:"
+local shieldDataLine1 = YELLOW.."Shields Total/Refreshed/Removed:"
 local shieldDataLine2 = YELLOW.."Number of Minimum Shields:"
 local shieldDataMinShld = "%d (%d%%)"
+local shieldDataLine1Fmt = "%d / %d / %d"
 
 local shieldMaxValueHdr = ORANGE.."Blood Shield Max Value"
-local shieldMaxValueLine1 = YELLOW.."Minimum Shield Value:"
-local shieldMaxValueLine2 = YELLOW.."Maximum Shield Value:"
-local shieldMaxValueLine3 = YELLOW.."Average Shield Value:"
+local shieldMaxValueLine1 = YELLOW.."Min - Max / Avg:"
+local rangeWithAvgFmt = "%d - %d / %d"
+local rangeWithAvgPercFmt = "%.1f%% - %.1f%% / %.1f%%"
+
+local shieldUsageHdr = ORANGE.."Blood Shield Usage"
+local shieldUsageLine1 = YELLOW.."Usage Min - Max / Avg:"
+local percentFormat = "%.1f%%"
 
 function Broker.obj:OnEnter()
 	local tooltip = LibQTip:Acquire("BloodShieldTrackerTooltip", 2, "LEFT", "RIGHT")
 	self.tooltip = tooltip 
 
     local percentMinimum = 0
+    local avgShieldMaxValue
+    local avgShieldUsedPerc
     if numShields > 0 then
         percentMinimum = numMinShields / numShields * 100
+        avgShieldMaxValue = totalShieldMaxValue / numShields
+        avgShieldUsedPerc = totalShieldUsedPerc / numShields
     end
 
     tooltip:AddHeader(addonHdr:format(ADDON_NAME, ADDON_VERSION))
@@ -111,7 +125,8 @@ function Broker.obj:OnEnter()
 
     tooltip:AddLine(shieldDataHdr)
     tooltip:AddSeparator(1)
-    tooltip:AddLine(shieldDataLine1, numShields)
+    tooltip:AddLine(shieldDataLine1, 
+        shieldDataLine1Fmt:format(numShields,numRefreshedShields,numRemovedShields))
     tooltip:AddLine(shieldDataLine2, 
         shieldDataMinShld:format(numMinShields, percentMinimum))
 
@@ -119,9 +134,17 @@ function Broker.obj:OnEnter()
 
     tooltip:AddLine(shieldMaxValueHdr)
     tooltip:AddSeparator(1)
-    tooltip:AddLine(shieldMaxValueLine1, minShieldMaxValue)
-    tooltip:AddLine(shieldMaxValueLine2, maxShieldMaxValue)
-    tooltip:AddLine(shieldMaxValueLine3, avgShieldMaxValue)
+    tooltip:AddLine(shieldMaxValueLine1, 
+        rangeWithAvgFmt:format(
+            minShieldMaxValue, maxShieldMaxValue, avgShieldMaxValue or 0))
+
+    tooltip:AddLine()
+
+    tooltip:AddLine(shieldUsageHdr)
+    tooltip:AddSeparator(1)
+    tooltip:AddLine(shieldUsageLine1, 
+        rangeWithAvgPercFmt:format(
+            minShieldUsedPerc or 0, maxShieldUsedPerc, avgShieldUsedPerc or 0))
 
 	tooltip:SmartAnchorTo(self)
 	tooltip:Show()
@@ -642,9 +665,10 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         local minimumHeal = dsHealMin
         local shieldInd = ""
         local minimumBS = floor(minimumHeal * shieldPercent)
+        local isMinimum = false
         if minimumBS == shieldValue then
             shieldInd = "(min)"
-            numMinShields = numMinShields + 1
+            isMinimum = true
         end
         if self.db.profile.verbose then
             local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d]"
@@ -654,13 +678,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             self:Print(shieldFormat:format(shieldValue,shieldInd))
         end
 
-        numShields = numShields + 1
-        if minShieldMaxValue == 0 or shieldValue < minShieldMaxValue then
-            minShieldMaxValue = shieldValue
-        end
-        if shieldValue > maxShieldMaxValue then
-            maxShieldMaxValue = shieldValue
-        end
+        self:NewBloodShield(timestamp, shieldValue, isMinimum)
 
 		self.statusbar.shield_max = shieldValue
 		self.statusbar.shield_curr = shieldValue
@@ -684,18 +702,66 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
     if eventtype == "SPELL_AURA_REFRESH" and dstName == self.playerName then
         if param10 and param10 == BS_SPELL then
-            if self.db.profile.verbose then
-                self:Print("Blood Shield refreshed.")
-            end
+            self:BloodShieldRemoved("refreshed", timestamp)
         end
     end
     if eventtype == "SPELL_AURA_REMOVED" and dstName == self.playerName then
         if param10 and param10 == BS_SPELL then
-            if self.db.profile.verbose then
-                self:Print("Blood Shield removed.")
-            end
-            self.statusbar:Hide()
+            self:BloodShieldRemoved("removed", timestamp)
         end
+    end
+end
+
+function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, isMinimum)
+    numShields = numShields + 1
+    totalShieldMaxValue = totalShieldMaxValue + shieldValue
+
+    if isMinimum then
+        numMinShields = numMinShields + 1
+    end
+
+    if minShieldMaxValue == 0 or shieldValue < minShieldMaxValue then
+        minShieldMaxValue = shieldValue
+    end
+    if shieldValue > maxShieldMaxValue then
+        maxShieldMaxValue = shieldValue
+    end
+end
+
+function BloodShieldTracker:BloodShieldRemoved(type, timestamp)
+    local max = self.statusbar.shield_max or 0
+    local curr = self.statusbar.shield_curr or 0
+    if curr < 0 then curr = 0 end
+    local used, usedPerc = 0, 0
+    if max > 0 then
+        used = max - curr
+        usedPerc = used / max * 100
+    end
+
+    if self.db.profile.verbose then
+        local bsRemovedFmt = "Blood Shield %s [Max=%d,Used=%d,UsedPerc=%d%%]"
+        self:Print(bsRemovedFmt:format(type, max, used, usedPerc))
+    end
+
+    totalShieldUsedPerc = totalShieldUsedPerc + usedPerc
+    
+    if not minShieldUsedPerc then
+        minShieldUsedPerc = usedPerc
+    elseif usedPerc < minShieldUsedPerc then
+        minShieldUsedPerc = usedPerc
+    end
+
+    if usedPerc > maxShieldUsedPerc then
+        maxShieldUsedPerc = usedPerc
+    end
+
+    if type == "refreshed" then
+        numRefreshedShields = numRefreshedShields + 1
+    end
+
+    if type == "removed" then
+        numRemovedShields = numRemovedShields + 1
+        self.statusbar:Hide()
     end
 end
 
