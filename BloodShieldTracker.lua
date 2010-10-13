@@ -368,7 +368,7 @@ function BloodShieldTracker:ChatCommand(input)
     end
 end
 
-local IsBloodTank = false
+local IsBloodTank = true
 
 function BloodShieldTracker:OnInitialize()
     -- Load the settings
@@ -386,9 +386,6 @@ function BloodShieldTracker:OnInitialize()
     self.damagebar = self:CreateDamageBar()
 	self.damagebar.lock = self.db.profile.lock_damage_bar
 	self.statusbar.lock = self.db.profile.lock_status_bar
-	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
-	self:UpdateMastery()
-	self:CheckImpDeathStrike()
 end
 
 function BloodShieldTracker:ResetFonts()
@@ -413,9 +410,10 @@ function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 end
 
 function BloodShieldTracker:OnEnable()
-	if IsBloodTank then
-		self:Load()
-	end
+	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
+	self:UpdateMastery()
+	self:CheckImpDeathStrike()
+
 	self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED","CheckImpDeathStrike")
 	self:RegisterEvent("CHARACTER_POINTS_CHANGED","CheckImpDeathStrike")
 	self:RegisterEvent("PLAYER_TALENT_UPDATE","CheckImpDeathStrike")
@@ -463,14 +461,27 @@ function BloodShieldTracker:CheckImpDeathStrike()
 			end
 		end
 	end
-	local id, name, desc, texture = GetTalentTabInfo(GetPrimaryTalentTree())
-	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
-		if not IsBloodTank then self:Load() end
-		IsBloodTank = true
-	else
-		if isBloodTank then self:Unload() end
-		IsBloodTank = false
-	end
+	local primaryTalentTree = GetPrimaryTalentTree()
+	if primaryTalentTree then
+    	local id, name, desc, texture = GetTalentTabInfo(primaryTalentTree, false)
+    	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
+    		IsBloodTank = true
+    		self:Load()
+            if self.db.profile.verbose then
+                self:Print("Blood DK detected.  Enabling addon.")
+            end
+    	else
+    		IsBloodTank = false
+    		self:Unload()
+            if self.db.profile.verbose then
+                self:Print("No Blood DK detected.  Disabling addon.")
+            end
+    	end
+    else
+        if self.db.profile.verbose then
+            self:Print("Could not determine talents.")
+        end
+    end
 end
 
 function BloodShieldTracker:UpdateMinHeal(event,unit)
