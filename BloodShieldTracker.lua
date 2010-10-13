@@ -106,8 +106,8 @@ function Broker.obj:OnEnter()
     end
 
     tooltip:AddHeader(addonHdr:format(ADDON_NAME, ADDON_VERSION))
-    tooltip:AddLine("")
-    tooltip:AddLine("")
+    tooltip:AddLine()
+    tooltip:AddLine()
 
     tooltip:AddLine(shieldDataHdr)
     tooltip:AddSeparator(1)
@@ -431,6 +431,7 @@ function BloodShieldTracker:Load()
 	self:RegisterEvent("COMBAT_RATING_UPDATE","UpdateMastery")
 	self:RegisterEvent("MASTERY_UPDATE","UpdateMastery")
 	self:RegisterEvent("UNIT_MAXHEALTH","UpdateMinHeal")
+	self:RegisterEvent("PLAYER_DEAD")
     self.damagebar:Show()
 end
 
@@ -440,6 +441,7 @@ function BloodShieldTracker:Unload()
     self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 	self:UnregisterEvent("COMBAT_RATING_UPDATE")
 	self:UnregisterEvent("MASTERY_UPDATE")
+	self:UnregisterEvent("PLAYER_DEAD")
 	self.damagebar:Hide()
 end
 
@@ -506,6 +508,11 @@ function BloodShieldTracker:PLAYER_REGEN_ENABLED()
     self.damagebar:SetStatusBarColor(1, 0, 0)
     self.damagebar:SetMinMaxValues(0, 1)
     self.damagebar:SetValue(1)
+end
+
+function BloodShieldTracker:PLAYER_DEAD()
+    -- Just in case, hide the BS bar if the player dies
+    self.statusbar:Hide()
 end
 
 function BloodShieldTracker:UpdateDamageBar()
