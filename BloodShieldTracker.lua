@@ -8,7 +8,6 @@ local tinsert, tremove, tgetn = table.insert, table.remove, table.getn
 local pairs, ipairs = pairs, ipairs
 local floor = math.floor
 
-BloodShieldTracker.damageTaken = 0
 BloodShieldTracker.playerName = UnitName("player")
 BloodShieldTracker.statusbar = nil
 BloodShieldTracker.damagebar = nil
@@ -562,6 +561,21 @@ function BloodShieldTracker:UpdateDamageBar()
     end
 end
 
+function BloodShieldTracker:UpdateShieldBar(damage)
+	self.statusbar.shield_curr = self.statusbar.shield_curr - damage
+	if self.statusbar.shield_curr < 0 then
+	    -- This shouldn't happen but we should track if it does!
+	    if self.db.profile.verbose then
+	        local badShieldValueFmt = "Bad shield value [Cur=%d, Dmg=%d, Max=%d]"
+	        self:Print(badShieldValueFmt:format(
+	            self.statusbar.shield_curr, damage, self.statusbar.shield_max))
+	    end
+    end
+	self.statusbar:SetValue(self.statusbar.shield_curr)
+	local diff = floor( (self.statusbar.shield_curr/self.statusbar.shield_max) * 100)
+	self.statusbar.value:SetText(statusBarFormat:format(self.statusbar.shield_curr, self.statusbar.shield_max, diff))
+end
+
 function BloodShieldTracker:GetRecentDamageTaken(timestamp)
     local damage = 0
     
@@ -605,40 +619,67 @@ function BloodShieldTracker:AddDamageTaken(timestamp, damage)
     self:UpdateDamageBar()
 end
 
+function BloodShieldTracker:GetSpellSchool(school)
+    local schools = {
+        [1] = "Physical",
+        [2] = "Holy",
+        [3] = "Fire",
+        [4] = "Nature",
+        [5] = "Frost",
+        [6] = "Shadow",
+        [7] = "Arcane"
+    }
+    
+    return schools[school] or "Special"
+end
+
 function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     local event, timestamp, eventtype, srcGUID, srcName, srcFlags, dstGUID, 
         dstName, dstFlags, param9, param10, param11, param12, param13, param14,
         param15, param16, param17, param18, param19, param20 = ...
-    local damage = 0
     
-    if not event or not dstName then return end
+    if not event or not eventtype or not dstName then return end
 
     if eventtype:find("_DAMAGE") and dstName == self.playerName then
         if eventtype:find("SWING_") and param9 then
-            if self.db.profile.verbose then
-                self:Print("Swing Damage for "..param9.." ["..(param14 or "0").." absorbed]")
+            local damage, absorb = param9, param14 or 0
+
+            self:AddDamageTaken(timestamp, damage)
+            if absorb > 0 then
+                self:UpdateShieldBar(absorb)
             end
-            self.damageTaken = self.damageTaken + param9
-            self:AddDamageTaken(timestamp, param9)
+
+            if self.db.profile.verbose then
+                local swingDmgFmt = "Swing Damage for %d [%d absorbed]"
+                self:Print(swingDmgFmt:format(damage, absorb))
+            end
         elseif eventtype:find("SPELL_") then
-            if self.db.profile.verbose then
-                self:Print("Spell Damage for "..param12.." ["..(param17 or "0").." absorbed]")
+            local damage, absorb, school = param12 or 0, param17 or 0, param14 or 0
+            local schoolName = self:GetSpellSchool(school) or "N/A"
+
+            self:AddDamageTaken(timestamp, damage)
+            
+            -- If it is physical, then the shield absorbs it.
+            if school == 1 and absorb > 0 then
+                self:UpdateShieldBar(absorb)
             end
-            self.damageTaken = self.damageTaken + param12            
-            self:AddDamageTaken(timestamp, param12)
+            
+            if self.db.profile.verbose then
+                local spellDmgFmt = "Spell Damage (%s,%d) for %d [%d absorbed]"
+                self:Print(spellDmgFmt:format(schoolName, school, damage, absorb))
+            end
         end
     end    
 
     if eventtype == "SWING_MISSED" and dstName == self.playerName then
         if param9 and param9 == "ABSORB" then
 			local damage = param10 or 0
+            self:UpdateShieldBar(damage)
+
             if self.db.profile.verbose then
-                self:Print("Absorbed swing for "..(param10 or "0"))
+                local absorbFmt = "Absorbed swing for %d"
+                self:Print(absorbFmt:format(damage))
             end
-			self.statusbar.shield_curr = self.statusbar.shield_curr - damage
-			self.statusbar:SetValue(self.statusbar.shield_curr)
-			local diff = floor( (self.statusbar.shield_curr/self.statusbar.shield_max) * 100)
-			self.statusbar.value:SetText(statusBarFormat:format(self.statusbar.shield_curr, self.statusbar.shield_max, diff))
         end
     end
 	if eventtype == "SPELL_CAST_SUCCESS" and srcName == self.playerName and 
