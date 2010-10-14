@@ -477,7 +477,7 @@ local GetMastery = GetMastery
 local idle = true
 
 function BloodShieldTracker:UpdateMastery()
-    masteryRating = format("%.2f", GetMastery());
+    masteryRating = GetMastery()
 end
 
 function BloodShieldTracker:CheckImpDeathStrike()
@@ -655,6 +655,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
         elseif eventtype:find("SPELL_") then
             local damage, absorb, school = param12 or 0, param17 or 0, param14 or 0
+            local spellName = param10 or "n/a"
             local schoolName = self:GetSpellSchool(school) or "N/A"
 
             self:AddDamageTaken(timestamp, damage)
@@ -665,8 +666,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
             
             if self.db.profile.verbose then
-                local spellDmgFmt = "Spell Damage (%s,%d) for %d [%d absorbed]"
-                self:Print(spellDmgFmt:format(schoolName, school, damage, absorb))
+                local spellDmgFmt = "Spell Damage (%s-%s,%d) for %d [%d absorbed]"
+                self:Print(spellDmgFmt:format(spellName, schoolName, school, damage, absorb))
             end
         end
     end    
