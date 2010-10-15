@@ -17,6 +17,7 @@ local lastSeconds = 5
 local damageTaken = {}
 local recentDamage = 0
 local removeList = {}
+
 local numShields = 0
 local numMinShields = 0
 local numRemovedShields = 0
@@ -37,7 +38,6 @@ local BLUE = "|cff0198e1"
 local ORANGE = "|cffff9933"
 local statusBarFormat = "%d/%d (%d%%)"
 local healBarFormat = "%s: %d"
-local healBarText = "Self Heal"
 
 local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
@@ -84,7 +84,8 @@ Broker.obj = LDB:NewDataObject("Blood Shield Tracker", {
 			else
 				InterfaceOptionsFrame_OpenToCategory(BloodShieldTracker.optionsFrame)
 			end
-		elseif button == "LeftButton" then
+		elseif button == "LeftButton" and IsShiftKeyDown() then
+		    BloodShieldTracker:ResetStats()
         end
 	end
 } )
@@ -120,6 +121,7 @@ function Broker.obj:OnEnter()
 
     tooltip:AddHeader(addonHdr:format(ADDON_NAME, ADDON_VERSION))
     tooltip:AddLine()
+    tooltip:AddLine(L["Shift + Left-Click to reset."], "", 1, 1, 1)
     tooltip:AddLine()
 
     tooltip:AddLine(shieldDataHdr)
@@ -511,7 +513,7 @@ function BloodShieldTracker:UpdateMinHeal(event,unit)
 	if unit == "player" then
 		dsHealMin = floor(UnitHealthMax("player") * 0.1)
 		if idle then
-			self.damagebar.value:SetText(healBarFormat:format(healBarText, dsHealMin))
+			self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], dsHealMin))
 		end
 	end
 end
@@ -526,7 +528,7 @@ function BloodShieldTracker:PLAYER_REGEN_ENABLED()
 	-- cancel timer before hand
     self:CancelTimer(updateTimer)
 	idle = true 
-    self.damagebar.value:SetText(healBarFormat:format(healBarText, dsHealMin))
+    self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], dsHealMin))
     self.damagebar:SetStatusBarColor(1, 0, 0)
     self.damagebar:SetMinMaxValues(0, 1)
     self.damagebar:SetValue(1)
@@ -545,9 +547,9 @@ function BloodShieldTracker:UpdateDamageBar()
     local predictedHeal = recentDamage * dsHealModifier * ImpDSModifier
     local minimumHeal = dsHealMin
 	if recentDamage < minimumHeal then
-    	self.damagebar.value:SetText(healBarFormat:format(healBarText, minimumHeal))
+    	self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], minimumHeal))
 	else
-    	self.damagebar.value:SetText(healBarFormat:format(healBarText, predictedHeal))		
+    	self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], predictedHeal))		
 	end
 
     self.damagebar:SetMinMaxValues(0, minimumHeal)
@@ -653,7 +655,10 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                 local swingDmgFmt = "Swing Damage for %d [%d absorbed]"
                 self:Print(swingDmgFmt:format(damage, absorb))
             end
-        elseif eventtype:find("SPELL_") then
+        elseif eventtype:find("SPELL_") or eventtype:find("RANGE_") then
+            local type
+            if eventtype:find("SPELL_") then type = "Spell" end
+            if eventtype:find("RANGE_") then type = "Range" end        
             local damage, absorb, school = param12 or 0, param17 or 0, param14 or 0
             local spellName = param10 or "n/a"
             local schoolName = self:GetSpellSchool(school) or "N/A"
@@ -666,23 +671,42 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
             
             if self.db.profile.verbose then
-                local spellDmgFmt = "Spell Damage (%s-%s,%d) for %d [%d absorbed]"
-                self:Print(spellDmgFmt:format(spellName, schoolName, school, damage, absorb))
+                local spellDmgFmt = "%s Damage (%s-%s,%d) for %d [%d absorbed]"
+                self:Print(spellDmgFmt:format(
+                    type, spellName, schoolName, school, damage, absorb))
             end
         end
     end    
 
-    if eventtype == "SWING_MISSED" and dstName == self.playerName then
-        if param9 and param9 == "ABSORB" then
-			local damage = param10 or 0
-            self:UpdateShieldBar(damage)
+    if eventtype:find("_MISSED") and dstName == self.playerName then
+        if eventtype == "SWING_MISSED" then
+            if param9 and param9 == "ABSORB" then
+    			local damage = param10 or 0
+                self:UpdateShieldBar(damage)
 
-            if self.db.profile.verbose then
-                local absorbFmt = "Absorbed swing for %d"
-                self:Print(absorbFmt:format(damage))
+                if self.db.profile.verbose then
+                    local absorbFmt = "Absorbed swing for %d"
+                    self:Print(absorbFmt:format(damage))
+                end
+            end
+        elseif eventtype:find("SPELL_") then
+            if param12 and param12 == 'ABSORB' then
+                local damage = param13
+                local spellName, school = param10 or "n/a", param11 or 0
+                local schoolName = self:GetSpellSchool(school) or "N/A"
+                
+                if school == 1 then
+                    self:UpdateShieldBar(damage)
+                end
+
+                if self.db.profile.verbose then
+                    local absorbFmt = "Absorbed spell (%s-%s,%d) for %d"
+                    self:Print(absorbFmt:format(spellName, schoolName, school, damage))
+                end
             end
         end
     end
+
 	if eventtype == "SPELL_CAST_SUCCESS" and srcName == self.playerName and 
 	    param10 == DS_SPELL_DMG then
 
@@ -721,17 +745,6 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         end
 
         self:NewBloodShield(timestamp, shieldValue, isMinimum)
-
-		self.statusbar.shield_max = shieldValue
-		self.statusbar.shield_curr = shieldValue
-        
-        if self.db.profile.status_bar_enabled then
-            self.statusbar:SetMinMaxValues(0, shieldValue)
-            self.statusbar:SetValue(shieldValue)
-        
-            self.statusbar.value:SetText(statusBarFormat:format(shieldValue, shieldValue, "100"))
-            self.statusbar:Show()
-        end
     end
 
     if eventtype == "SPELL_AURA_APPLIED" and dstName == self.playerName then
@@ -768,6 +781,17 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, isMinimum)
     if shieldValue > maxShieldMaxValue then
         maxShieldMaxValue = shieldValue
     end
+
+	self.statusbar.shield_max = shieldValue
+	self.statusbar.shield_curr = shieldValue
+    
+    if self.db.profile.status_bar_enabled then
+        self.statusbar:SetMinMaxValues(0, shieldValue)
+        self.statusbar:SetValue(shieldValue)
+    
+        self.statusbar.value:SetText(statusBarFormat:format(shieldValue, shieldValue, "100"))
+        self.statusbar:Show()
+    end
 end
 
 function BloodShieldTracker:BloodShieldRemoved(type, timestamp)
@@ -781,8 +805,8 @@ function BloodShieldTracker:BloodShieldRemoved(type, timestamp)
     end
 
     if self.db.profile.verbose then
-        local bsRemovedFmt = "Blood Shield %s [Max=%d,Used=%d,UsedPerc=%d%%]"
-        self:Print(bsRemovedFmt:format(type, max, used, usedPerc))
+        local bsRemovedFmt = "Blood Shield %s [Usage=%d/%d %d%%]"
+        self:Print(bsRemovedFmt:format(type, used, max, usedPerc))
     end
 
     totalShieldUsedPerc = totalShieldUsedPerc + usedPerc
@@ -805,6 +829,19 @@ function BloodShieldTracker:BloodShieldRemoved(type, timestamp)
         numRemovedShields = numRemovedShields + 1
         self.statusbar:Hide()
     end
+end
+
+function BloodShieldTracker:ResetStats()
+    numShields = 0
+    numMinShields = 0
+    numRemovedShields = 0
+    numRefreshedShields = 0
+    minShieldMaxValue = 0
+    maxShieldMaxValue = 0
+    totalShieldMaxValue = 0
+    minShieldUsedPerc = nil
+    maxShieldUsedPerc = 0
+    totalShieldUsedPerc = 0
 end
 
 function BloodShieldTracker:CreateStatusBar()
@@ -907,7 +944,7 @@ function BloodShieldTracker:CreateDamageBar()
 
     statusbar:SetMinMaxValues(0,1)
     statusbar:SetValue(1)
-    statusbar.value:SetText(healBarFormat:format(healBarText, dsHealMin))
+    statusbar.value:SetText(healBarFormat:format(L["HealBarText"], dsHealMin))
 
     statusbar:EnableMouse(true)
     statusbar:Hide()
