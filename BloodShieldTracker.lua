@@ -215,8 +215,10 @@ local defaults = {
 		status_bar_bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
 		estheal_bar_min_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 		estheal_bar_min_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
+		estheal_bar_min_bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
 		estheal_bar_opt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 		estheal_bar_opt_color = {r = 0.0, g = 1.0, b = 0.0, a = 1},
+		estheal_bar_opt_bgcolor = {r = 0.0, g = 0.65, b = 0.0, a = 0.8},
 		status_bar_texture = "Blizzard",
 		estheal_bar_texture = "Blizzard",
 		status_bar_border = true,
@@ -575,8 +577,26 @@ function BloodShieldTracker:GetOptions()
 					    return c.r, c.g, c.b, c.a
 					end,					
 				},
-				estheal_bar_opt_textcolor = {
+				estheal_bar_min_bgcolor = {
 					order = 49,
+					name = L["Minimum Bar Background Color"],
+					desc = L["EstHealBarMinBackgroundColor_OptionDesc"],
+					type = "color",
+					hasAlpha = true,
+					set = function(info, r, g, b, a)
+					    local c = self.db.profile.estheal_bar_min_bgcolor
+					    c.r, c.g, c.b, c.a = r, g, b, a
+					    if self.damagebar then
+					        self:UpdateDamageBarColors(self.damagebar.minheal or true)
+					    end
+					end,
+					get = function(info)
+				        local c = self.db.profile.estheal_bar_min_bgcolor
+					    return c.r, c.g, c.b, c.a
+					end,					
+				},
+				estheal_bar_opt_textcolor = {
+					order = 50,
 					name = L["Optimal Text Color"],
 					desc = L["EstHealBarOptTextColor_OptionDesc"],
 					type = "color",
@@ -594,7 +614,7 @@ function BloodShieldTracker:GetOptions()
 					end,					
 				},
 				estheal_bar_opt_color = {
-					order = 50,
+					order = 51,
 					name = L["Optimal Bar Color"],
 					desc = L["EstHealBarOptColor_OptionDesc"],
 					type = "color",
@@ -612,7 +632,7 @@ function BloodShieldTracker:GetOptions()
 					end,					
 				},
 				estheal_bar_texture_opt = {
-					order = 51,
+					order = 53,
 					name = L["StatusBarTexture"],
 					desc = L["StatusBarTextureDesc"],
 					type = "select",
@@ -622,7 +642,7 @@ function BloodShieldTracker:GetOptions()
 					set = function(info, val) self.db.profile.estheal_bar_texture = val; BloodShieldTracker:UpdateDamageBarTexture() end
 				},
 				estheal_bar_border_visible_opt = {
-					order = 52,
+					order = 54,
 					name = L["ShowBorder"],
 					desc = L["ShowBorderDesc"],
 					type = "toggle",
@@ -630,7 +650,7 @@ function BloodShieldTracker:GetOptions()
 					set = function(info, val) self.db.profile.estheal_bar_border = val; self:UpdateDamageBarBorder() end,
 				},
 				estheal_bar_visible_opt = {
-					order = 53,
+					order = 55,
 					name = L["ShowBar"],
 					desc = L["ShowBarDesc"],
 					type = "toggle",
@@ -638,7 +658,7 @@ function BloodShieldTracker:GetOptions()
 					set = function(info,val) self.db.profile.estheal_bar_shown = val; self:UpdateDamageBarVisiblity() end,
 				},
 				estheal_bar_scaling = {
-					order = 54,
+					order = 56,
 					name = L["Scale"],
 					desc = L["ScaleDesc"],
 					type = "range",
@@ -1350,13 +1370,15 @@ function BloodShieldTracker:UpdateDamageBarColors(min)
     if min then
         local bc = self.db.profile.estheal_bar_min_color
         self.damagebar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-        self.damagebar.bg:SetVertexColor(bc.r, bc.g, bc.b, bc.a)
+        local bgc = self.db.profile.estheal_bar_min_bgcolor
+        self.damagebar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
         local tc = self.db.profile.estheal_bar_min_textcolor
         self.damagebar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
     else
         local bc = self.db.profile.estheal_bar_opt_color
         self.damagebar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-        self.damagebar.bg:SetVertexColor(bc.r, bc.g, bc.b, bc.a)
+        local bgc = self.db.profile.estheal_bar_opt_bgcolor
+        self.damagebar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
         local tc = self.db.profile.estheal_bar_opt_textcolor
         self.damagebar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
     end
@@ -1442,7 +1464,8 @@ function BloodShieldTracker:CreateDamageBar()
     statusbar.bg = statusbar:CreateTexture(nil, "BACKGROUND")
     statusbar.bg:SetTexture(bt)
     statusbar.bg:SetAllPoints(true)
-    statusbar.bg:SetVertexColor(bc.r, bc.g, bc.b, bc.a)
+    local bgc = self.db.profile.estheal_bar_min_bgcolor
+    statusbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
     statusbar.border = statusbar:CreateTexture(nil, "BACKGROUND")
     statusbar.border:SetPoint("CENTER")
     statusbar.border:SetWidth(statusbar:GetWidth()+9)
