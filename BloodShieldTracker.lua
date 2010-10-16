@@ -6,7 +6,7 @@ local ADDON_VERSION = "@project-version@"
 -- Local versions for performance
 local tinsert, tremove, tgetn = table.insert, table.remove, table.getn
 local pairs, ipairs = pairs, ipairs
-local floor = math.floor
+local floor, ceil = math.floor, math.ceil
 
 BloodShieldTracker.playerName = UnitName("player")
 BloodShieldTracker.statusbar = nil
@@ -64,6 +64,50 @@ local ImpDSModifier = 1
 local dsHealModifier = 0.3
 local shieldPerMasteryPoint = 6.25
 local dsHealMin = 0
+
+local HELLSCREAM_BUFF_05 = 73816
+local HELLSCREAM_BUFF_10 = 73818
+local HELLSCREAM_BUFF_15 = 73819
+local HELLSCREAM_BUFF_20 = 73820
+local HELLSCREAM_BUFF_25 = 73821
+local HELLSCREAM_BUFF_30 = 73822
+local hellscreamBuffs = {
+    [HELLSCREAM_BUFF_05] = 0.05,
+    [HELLSCREAM_BUFF_10] = 0.10,
+    [HELLSCREAM_BUFF_15] = 0.15,
+    [HELLSCREAM_BUFF_20] = 0.20,
+    [HELLSCREAM_BUFF_25] = 0.25,
+    [HELLSCREAM_BUFF_30] = 0.30,    
+}
+local HELLSCREAM_BUFF = (GetSpellInfo(HELLSCREAM_BUFF_30))
+local WRYNN_BUFF_05 = 73816
+local WRYNN_BUFF_10 = 73818
+local WRYNN_BUFF_15 = 73819
+local WRYNN_BUFF_20 = 73820
+local WRYNN_BUFF_25 = 73821
+local WRYNN_BUFF_30 = 73822
+local wrynnBuffs = {
+    [WRYNN_BUFF_05] = 0.05,
+    [WRYNN_BUFF_10] = 0.10,
+    [WRYNN_BUFF_15] = 0.15,
+    [WRYNN_BUFF_20] = 0.20,
+    [WRYNN_BUFF_25] = 0.25,
+    [WRYNN_BUFF_30] = 0.30,    
+}
+local WRYNN_BUFF = (GetSpellInfo(WRYNN_BUFF_30))
+local VB_BUFF = (GetSpellInfo(55233))
+local VB_GLYPH_ID = 58676
+local iccBuff = false
+local iccBuffAmt = 0.0
+local vbBuff = false
+local vbGlyphed = false
+local vbGlyphedHealthInc = 0.0
+local vbGlyphedHealingInc = 0.4
+local vbUnglyphedHealthInc = 0.15
+local vbUnglyphedHealingInc = 0.25
+local vbHealthInc = 0.0
+local vbHealingInc = 0.0
+
 
 local Broker = CreateFrame("Frame")
 Broker.obj = LDB:NewDataObject("Blood Shield Tracker", {
@@ -156,6 +200,7 @@ function Broker.obj:OnLeave()
 	self.tooltip = nil
 end
 
+local configMode = false
 
 local defaults = {
     profile = {
@@ -165,6 +210,7 @@ local defaults = {
         verbose = false,
         status_bar_enabled = true,
         damage_bar_enabled = true,
+        hide_damage_bar_ooc = true,
 		lock_status_bar = false,
 		lock_damage_bar = false,
 		damage_bar_width = 100,
@@ -173,6 +219,12 @@ local defaults = {
 		status_bar_height = 15,
 		font_size = 12,
 		font_face = "",
+		status_bar_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
+		status_bar_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+		estheal_bar_min_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+		estheal_bar_min_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
+		estheal_bar_opt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+		estheal_bar_opt_color = {r = 0.0, g = 1.0, b = 0.0, a = 1},
     }
 }
 
@@ -260,10 +312,15 @@ function BloodShieldTracker:GetOptions()
 					type = "execute",
 					order = 5,
 					func = function()
-						if BloodShieldTracker.statusbar:IsShown() then
-							BloodShieldTracker.statusbar:Hide()
+					    configMode = not configMode
+						if configMode then
+							self.statusbar:Show()
+							self.damagebar:Show()
 						else
-							BloodShieldTracker.statusbar:Show()
+							self.statusbar:Hide()
+							if self.damagebar.hideooc and not InCombatLockdown() then
+							    self.damagebar:Hide()
+                            end
 						end
 					end,
 				},
@@ -285,7 +342,7 @@ function BloodShieldTracker:GetOptions()
 					end,
                     get = function(info) return self.db.profile.status_bar_enabled end,
 				},
-				lock_damage = {
+				lock_status_bar = {
 					name = L["Lock shield bar"],
 					desc = L["Lock the shield bar from moving."],
 					type = "toggle",
@@ -297,7 +354,7 @@ function BloodShieldTracker:GetOptions()
 					end,
                     get = function(info) return self.db.profile.lock_status_bar end,
 				},
-				damage_bar_width = {
+				status_bar_width = {
 					order = 13,
 					name = L["Blood Shield bar width"],
 					desc = L["Change the width of the blood shield bar."],	
@@ -311,7 +368,7 @@ function BloodShieldTracker:GetOptions()
 					end,
 					get = function(info, val) return self.db.profile.status_bar_width end,
 				},
-				damage_bar_height = {
+				status_bar_height = {
 					order = 14,
 					name = L["Blood Shield bar height"],
 					desc = L["Change the height of the blood shield bar."],
@@ -325,12 +382,44 @@ function BloodShieldTracker:GetOptions()
 					end,
 					get = function(info, val) return self.db.profile.status_bar_height end,					
 				},
+				status_bar_textcolor = {
+					order = 15,
+					name = L["Text Color"],
+					desc = L["BloodShieldBarTextColor_OptionDesc"],
+					type = "color",
+					hasAlpha = true,
+					set = function(info, r, g, b, a)
+					    local c = self.db.profile.status_bar_textcolor
+					    c.r, c.g, c.b, c.a = r, g, b, a
+					    self:UpdateShieldBarGraphics()
+					end,
+					get = function(info)
+				        local c = self.db.profile.status_bar_textcolor
+					    return c.r, c.g, c.b, c.a
+					end,					
+				},
+				status_bar_color = {
+					order = 16,
+					name = L["Bar Color"],
+					desc = L["BloodShieldBarColor_OptionDesc"],
+					type = "color",
+					hasAlpha = true,
+					set = function(info, r, g, b, a)
+					    local c = self.db.profile.status_bar_color
+					    c.r, c.g, c.b, c.a = r, g, b, a
+					    self:UpdateShieldBarGraphics()
+					end,
+					get = function(info)
+				        local c = self.db.profile.status_bar_color
+					    return c.r, c.g, c.b, c.a
+					end,					
+				},
         		estHealBar = {
         			order = 20,
         			type = "header",
         			name = L["Estimated Healing Bar"],
         		},
-        		damage_bar_enabled = {
+        		estheal_bar_enabled = {
 					name = L["Enabled"],
 					desc = L["Enable the Estimated Healing Bar."],
 					type = "toggle",
@@ -343,7 +432,7 @@ function BloodShieldTracker:GetOptions()
 					end,
                     get = function(info) return self.db.profile.damage_bar_enabled end,
 				},
-				lock_status = {
+				lock_estheal_bar = {
 					name = L["Lock estimated healing bar"],
 					desc = L["Lock the estimated healing bar from moving."],
 					type = "toggle",
@@ -355,8 +444,27 @@ function BloodShieldTracker:GetOptions()
 					end,
                     get = function(info) return self.db.profile.lock_damage_bar end,
 				},
-				status_bar_width = {
+				hide_damage_bar_ooc = {
+					name = L["Hide out of combat"],
+					desc = L["HideOOC_OptionDesc"],
+					type = "toggle",
 					order = 23,
+					set = function(info, val) self.db.profile.hide_damage_bar_ooc = val 
+						if BloodShieldTracker.damagebar then
+							BloodShieldTracker.damagebar.hideooc = val
+							if not InCombatLockdown() then
+							    if val then
+							        self.damagebar:Hide()
+						        else
+						            self.damagebar:Show()
+					            end
+					        end
+						end					
+					end,
+                    get = function(info) return self.db.profile.hide_damage_bar_ooc end,
+				},
+				estheal_bar_width = {
+					order = 24,
 					name = L["Estimated Healing bar width"],
 					desc = L["Change the width of the estimated healing bar."],	
 					type = "range",
@@ -368,8 +476,8 @@ function BloodShieldTracker:GetOptions()
 					end,
 					get = function(info, val) return self.db.profile.damage_bar_width end,
 				},
-				status_bar_height = {
-					order = 24,
+				estheal_bar_height = {
+					order = 25,
 					name = L["Estimated Healing bar height"],
 					desc = L["Change the height of the estimated healing bar."],	
 					type = "range",
@@ -381,6 +489,78 @@ function BloodShieldTracker:GetOptions()
 						BloodShieldTracker.damagebar.border:SetHeight(val + 8)
 					end,
 					get = function(info, val) return self.db.profile.damage_bar_height end,
+				},
+				estheal_bar_min_textcolor = {
+					order = 26,
+					name = L["Minimum Text Color"],
+					desc = L["EstHealBarMinTextColor_OptionDesc"],
+					type = "color",
+					hasAlpha = true,
+					set = function(info, r, g, b, a)
+					    local c = self.db.profile.estheal_bar_min_textcolor
+					    c.r, c.g, c.b, c.a = r, g, b, a
+					    if self.damagebar then
+					        self:UpdateDamageBarColors(self.damagebar.minheal or true)
+					    end
+					end,
+					get = function(info)
+				        local c = self.db.profile.estheal_bar_min_textcolor
+					    return c.r, c.g, c.b, c.a
+					end,					
+				},
+				estheal_bar_min_color = {
+					order = 27,
+					name = L["Minimum Bar Color"],
+					desc = L["EstHealBarMinColor_OptionDesc"],
+					type = "color",
+					hasAlpha = true,
+					set = function(info, r, g, b, a)
+					    local c = self.db.profile.estheal_bar_min_color
+					    c.r, c.g, c.b, c.a = r, g, b, a
+					    if self.damagebar then
+					        self:UpdateDamageBarColors(self.damagebar.minheal or true)
+					    end
+					end,
+					get = function(info)
+				        local c = self.db.profile.estheal_bar_min_color
+					    return c.r, c.g, c.b, c.a
+					end,					
+				},
+				estheal_bar_opt_textcolor = {
+					order = 26,
+					name = L["Optimal Text Color"],
+					desc = L["EstHealBarOptTextColor_OptionDesc"],
+					type = "color",
+					hasAlpha = true,
+					set = function(info, r, g, b, a)
+					    local c = self.db.profile.estheal_bar_opt_textcolor
+					    c.r, c.g, c.b, c.a = r, g, b, a
+					    if self.damagebar then
+					        self:UpdateDamageBarColors(self.damagebar.minheal or true)
+					    end
+					end,
+					get = function(info)
+				        local c = self.db.profile.estheal_bar_opt_textcolor
+					    return c.r, c.g, c.b, c.a
+					end,					
+				},
+				estheal_bar_opt_color = {
+					order = 27,
+					name = L["Optimal Bar Color"],
+					desc = L["EstHealBarOptColor_OptionDesc"],
+					type = "color",
+					hasAlpha = true,
+					set = function(info, r, g, b, a)
+					    local c = self.db.profile.estheal_bar_opt_color
+					    c.r, c.g, c.b, c.a = r, g, b, a
+					    if self.damagebar then
+					        self:UpdateDamageBarColors(self.damagebar.minheal or true)
+					    end
+					end,
+					get = function(info)
+				        local c = self.db.profile.estheal_bar_opt_color
+					    return c.r, c.g, c.b, c.a
+					end,					
 				},
             }
         }
@@ -415,6 +595,8 @@ function BloodShieldTracker:OnInitialize()
     self.damagebar = self:CreateDamageBar()
 	self.damagebar.lock = self.db.profile.lock_damage_bar
 	self.statusbar.lock = self.db.profile.lock_status_bar
+	self.damagebar.hideooc = self.db.profile.hide_damage_bar_ooc
+	self.damagebar.minheal = true
 end
 
 function BloodShieldTracker:ResetFonts()
@@ -446,6 +628,9 @@ function BloodShieldTracker:OnEnable()
 	self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED","CheckImpDeathStrike")
 	self:RegisterEvent("CHARACTER_POINTS_CHANGED","CheckImpDeathStrike")
 	self:RegisterEvent("PLAYER_TALENT_UPDATE","CheckImpDeathStrike")
+	self:RegisterEvent("GLYPH_ADDED", "CheckGlyphs")
+	self:RegisterEvent("GLYPH_REMOVED", "CheckGlyphs")
+	self:RegisterEvent("GLYPH_UPDATED", "CheckGlyphs")
 end
 
 function BloodShieldTracker:Load()
@@ -456,7 +641,12 @@ function BloodShieldTracker:Load()
 	self:RegisterEvent("MASTERY_UPDATE","UpdateMastery")
 	self:RegisterEvent("UNIT_MAXHEALTH","UpdateMinHeal")
 	self:RegisterEvent("PLAYER_DEAD")
-    self.damagebar:Show()
+	self:RegisterEvent("UNIT_AURA")
+    self:RegisterEvent("PLAYER_ENTERING_WORLD", "CheckAuras")
+    self:RegisterEvent("PLAYER_ALIVE", "CheckAuras")
+    if not self.damagebar.hideooc or InCombatLockdown() then
+        self.damagebar:Show()
+    end
 end
 
 function BloodShieldTracker:Unload()
@@ -466,6 +656,9 @@ function BloodShieldTracker:Unload()
 	self:UnregisterEvent("COMBAT_RATING_UPDATE")
 	self:UnregisterEvent("MASTERY_UPDATE")
 	self:UnregisterEvent("PLAYER_DEAD")
+	self:UnregisterEvent("UNIT_AURA")
+    self:UnregisterEvent("PLAYER_ENTERING_WORLD")
+    self:UnregisterEvent("PLAYER_ALIVE")
 	self.damagebar:Hide()
 end
 
@@ -507,11 +700,25 @@ function BloodShieldTracker:CheckImpDeathStrike()
             self:Print("Could not determine talents.")
         end
     end
+
+    self:CheckGlyphs()
+end
+
+function BloodShieldTracker:CheckGlyphs()
+    vbGlyphed = false
+    for id = 1, GetNumGlyphSockets() do
+        local enabled, glyphType, glyphTooltipIndex, 
+            glyphSpell, iconFilename = GetGlyphSocketInfo(id, nil)
+        if enabled and glyphSpell == VB_GLYPH_ID then
+            vbGlyphed = true
+        end
+    end
 end
 
 function BloodShieldTracker:UpdateMinHeal(event,unit)
 	if unit == "player" then
-		dsHealMin = floor(UnitHealthMax("player") * 0.1)
+		dsHealMin = ceil(
+		    (UnitHealthMax("player") * 0.1 * (1+iccBuffAmt) * (1+vbHealingInc))-0.5)
 		if idle then
 			self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], dsHealMin))
 		end
@@ -522,6 +729,9 @@ function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 	-- Once combat stats, update the damage bar.
 	idle = false
 	updateTimer = self:ScheduleRepeatingTimer("UpdateDamageBar", 0.5)
+	if self.damagebar then
+	    self.damagebar:Show()
+    end
 end
 
 function BloodShieldTracker:PLAYER_REGEN_ENABLED()
@@ -529,14 +739,24 @@ function BloodShieldTracker:PLAYER_REGEN_ENABLED()
     self:CancelTimer(updateTimer)
 	idle = true 
     self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], dsHealMin))
-    self.damagebar:SetStatusBarColor(1, 0, 0)
+    self.damagebar.minheal = true
+    self:UpdateDamageBarColors(true)
     self.damagebar:SetMinMaxValues(0, 1)
     self.damagebar:SetValue(1)
+    
+    if self.damagebar.hideooc then
+        self.damagebar:Hide()
+    end
 end
 
 function BloodShieldTracker:PLAYER_DEAD()
     -- Just in case, hide the BS bar if the player dies
+    self:CheckAuras()
     self.statusbar:Hide()
+    -- Hide the heal bar if configured to do so for OOC
+    if self.damagebar.hideooc then
+        self.damagebar:Hide()
+    end
 end
 
 function BloodShieldTracker:UpdateDamageBar()
@@ -555,26 +775,30 @@ function BloodShieldTracker:UpdateDamageBar()
     self.damagebar:SetMinMaxValues(0, minimumHeal)
 
     if predictedHeal > minimumHeal then
-        self.damagebar:SetStatusBarColor(0, 1, 0)
+        self.damagebar.minheal = false
+        self:UpdateDamageBarColors(false)
         self.damagebar:SetValue(minimumHeal)        
     else
-        self.damagebar:SetStatusBarColor(1, 0, 0)        
+        self.damagebar.minheal = true
+        self:UpdateDamageBarColors(true)
         self.damagebar:SetValue(predictedHeal)
     end
 end
 
 function BloodShieldTracker:UpdateShieldBar(damage)
 	self.statusbar.shield_curr = self.statusbar.shield_curr - damage
-	if self.statusbar.shield_curr < 0 then
-	    -- This shouldn't happen but we should track if it does!
-	    if self.db.profile.verbose then
-	        local badShieldValueFmt = "Bad shield value [Cur=%d, Dmg=%d, Max=%d]"
-	        self:Print(badShieldValueFmt:format(
-	            self.statusbar.shield_curr, damage, self.statusbar.shield_max))
-	    end
+	if self.statusbar.shield_curr < 0 and self.db.profile.verbose then
+        local badShieldValueFmt = "Bad shield value [Cur=%d, Dmg=%d, Max=%d]"
+        self:Print(badShieldValueFmt:format(
+            self.statusbar.shield_curr, damage, self.statusbar.shield_max))
     end
 	self.statusbar:SetValue(self.statusbar.shield_curr)
-	local diff = floor( (self.statusbar.shield_curr/self.statusbar.shield_max) * 100)
+	local diff
+	if self.statusbar.shield_max > 0 then
+	    diff = ceil((self.statusbar.shield_curr/self.statusbar.shield_max*100)-0.5)
+    else
+        diff = 0
+    end
 	self.statusbar.value:SetText(statusBarFormat:format(self.statusbar.shield_curr, self.statusbar.shield_max, diff))
 end
 
@@ -646,14 +870,14 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if eventtype:find("SWING_") and param9 then
             local damage, absorb = param9, param14 or 0
 
-            self:AddDamageTaken(timestamp, damage)
-            if absorb > 0 then
-                self:UpdateShieldBar(absorb)
-            end
-
             if self.db.profile.verbose then
                 local swingDmgFmt = "Swing Damage for %d [%d absorbed]"
                 self:Print(swingDmgFmt:format(damage, absorb))
+            end
+
+            self:AddDamageTaken(timestamp, damage)
+            if absorb > 0 then
+                self:UpdateShieldBar(absorb)
             end
         elseif eventtype:find("SPELL_") or eventtype:find("RANGE_") then
             local type
@@ -664,17 +888,17 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             local schoolName = self:GetSpellSchool(school) or "N/A"
 
             self:AddDamageTaken(timestamp, damage)
-            
-            -- If it is physical, then the shield absorbs it.
-            if school == 1 and absorb > 0 then
-                self:UpdateShieldBar(absorb)
-            end
-            
+
             if self.db.profile.verbose then
                 local spellDmgFmt = "%s Damage (%s-%s,%d) for %d [%d absorbed]"
                 self:Print(spellDmgFmt:format(
                     type, spellName, schoolName, school, damage, absorb))
             end
+
+            -- If it is physical, then the shield absorbs it.
+            if school == 1 and absorb > 0 then
+                self:UpdateShieldBar(absorb)
+            end            
         end
     end    
 
@@ -682,26 +906,27 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if eventtype == "SWING_MISSED" then
             if param9 and param9 == "ABSORB" then
     			local damage = param10 or 0
-                self:UpdateShieldBar(damage)
 
                 if self.db.profile.verbose then
                     local absorbFmt = "Absorbed swing for %d"
                     self:Print(absorbFmt:format(damage))
                 end
+
+                self:UpdateShieldBar(damage)
             end
         elseif eventtype:find("SPELL_") then
             if param12 and param12 == 'ABSORB' then
                 local damage = param13
                 local spellName, school = param10 or "n/a", param11 or 0
                 local schoolName = self:GetSpellSchool(school) or "N/A"
-                
-                if school == 1 then
-                    self:UpdateShieldBar(damage)
-                end
 
                 if self.db.profile.verbose then
                     local absorbFmt = "Absorbed spell (%s-%s,%d) for %d"
                     self:Print(absorbFmt:format(spellName, schoolName, school, damage))
+                end
+                
+                if school == 1 then
+                    self:UpdateShieldBar(damage)
                 end
             end
         end
@@ -712,7 +937,9 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
         if self.db.profile.verbose then
             local recentDmg = self:GetRecentDamageTaken(timestamp)
-            local predictedHeal = recentDmg * dsHealModifier * ImpDSModifier
+            local predictedHeal = ceil(
+                (recentDmg * dsHealModifier * ImpDSModifier * 
+                    (1+iccBuffAmt) * (1+vbHealingInc))-0.5)
             local dsHealFormat = "Estimated damage of %d will be a heal for %d"
     		self:Print(dsHealFormat:format(recentDmg, predictedHeal))
         end
@@ -724,15 +951,25 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         local totalHeal = param12 or 0
         local overheal = param13 or 0
         local actualHeal = param12-param13
-        local shieldValue = floor(totalHeal*shieldPercent)
+        -- Apparently the BS value server-side is calculated from the last
+        -- five seconds of data since the DS heal is affected by modifiers
+        -- and debuffs.  Because we cannot reliably calculate the server-
+        -- side last five seconds of damage, we will take the heal and work
+        -- backwards.  The forumula below attempts to factor in various
+        -- healing buffs.
+        local shieldValue = ceil((totalHeal*shieldPercent / 
+            (1+iccBuffAmt) / (1+vbHealingInc))-0.5)
 
         local recentDmg = self:GetRecentDamageTaken(timestamp)
-        local predictedHeal = recentDmg * dsHealModifier * ImpDSModifier
+        local predictedHeal = ceil(
+            (recentDmg * dsHealModifier * ImpDSModifier * 
+                (1+iccBuffAmt) * (1+vbHealingInc))-0.5)
         local minimumHeal = dsHealMin
         local shieldInd = ""
-        local minimumBS = floor(minimumHeal * shieldPercent)
+        local minimumBS = ceil((minimumHeal * shieldPercent / 
+            (1+iccBuffAmt) / (1+vbHealingInc))-0.5)
         local isMinimum = false
-        if minimumBS == shieldValue then
+        if totalHeal == minimumHeal then
             shieldInd = "(min)"
             isMinimum = true
         end
@@ -844,6 +1081,89 @@ function BloodShieldTracker:ResetStats()
     totalShieldUsedPerc = 0
 end
 
+function BloodShieldTracker:UNIT_AURA(...)
+    local event, unit = ...
+    if unit == "player" then
+        self:CheckAuras()
+    end
+end
+
+function BloodShieldTracker:CheckAuras()
+    local name, rank, icon, count, dispelType, duration, expires,
+        caster, stealable, consolidate, spellId
+
+    local iccBuffFound = false
+
+    -- Check for Hellscream's Warsong ICC buff
+    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+        consolidate,spellId = UnitAura("player", HELLSCREAM_BUFF)
+    if spellId then
+        iccBuffFound = true
+        iccBuff = true
+        iccBuffAmt = hellscreamBuffs[spellId] or hellscreamBuffs[HELLSCREAM_BUFF_30]
+    end
+
+    -- Check for Strength of Wrynn ICC buff
+    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+        consolidate,spellId = UnitAura("player", WRYNN_BUFF)
+    if spellId then
+        iccBuffFound = true
+        iccBuff = true
+        iccBuffAmt = wrynnBuffs[spellId] or wrynnBuffs[WRYNN_BUFF_30]
+    end
+
+    -- If the ICC buff isn't present, reset the values
+    if not iccBuffFound then
+        iccBuff = false
+        iccBuffAmt = 0.0
+    end
+
+    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+        consolidate,spellId = UnitAura("player", VB_BUFF)
+    if name then
+        vbBuff = true
+        if vbGlyphed then
+            vbHealthInc = vbGlyphedHealthInc
+            vbHealingInc = vbGlyphedHealingInc
+        else
+            vbHealthInc = vbUnglyphedHealthInc
+            vbHealingInc = vbUnglyphedHealingInc
+        end
+    else
+        vbBuff = false
+        vbHealthInc = 0.0
+        vbHealingInc = 0.0
+    end
+
+    self:UpdateMinHeal("CheckAura", "player")
+end
+
+function BloodShieldTracker:UpdateShieldBarGraphics()
+    if self.statusbar then
+        local bc = self.db.profile.status_bar_color
+        self.statusbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+        self.statusbar.bg:SetVertexColor(bc.r, bc.g, bc.b, bc.a)
+        local tc = self.db.profile.status_bar_textcolor
+        self.statusbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    end
+end
+
+function BloodShieldTracker:UpdateDamageBarColors(min)
+    if min then
+        local bc = self.db.profile.estheal_bar_min_color
+        self.damagebar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+        self.damagebar.bg:SetVertexColor(bc.r, bc.g, bc.b, bc.a)
+        local tc = self.db.profile.estheal_bar_min_textcolor
+        self.damagebar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    else
+        local bc = self.db.profile.estheal_bar_opt_color
+        self.damagebar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+        self.damagebar.bg:SetVertexColor(bc.r, bc.g, bc.b, bc.a)
+        local tc = self.db.profile.estheal_bar_opt_textcolor
+        self.damagebar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    end
+end
+
 function BloodShieldTracker:CreateStatusBar()
     local statusbar = CreateFrame("StatusBar", "BloodShieldTracker_StatusBar", UIParent)
     statusbar:SetPoint("CENTER")
@@ -853,12 +1173,13 @@ function BloodShieldTracker:CreateStatusBar()
     statusbar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
     statusbar:GetStatusBarTexture():SetHorizTile(false)
     statusbar:GetStatusBarTexture():SetVertTile(false)
-    statusbar:SetStatusBarColor(1, 0, 0)
+    local bc = self.db.profile.status_bar_color
+    statusbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
 
     statusbar.bg = statusbar:CreateTexture(nil, "BACKGROUND")
     statusbar.bg:SetTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
     statusbar.bg:SetAllPoints(true)
-    statusbar.bg:SetVertexColor(0.65, 0, 0)
+    statusbar.bg:SetVertexColor(bc.r, bc.g, bc.b, bc.a)
 
     statusbar.border = statusbar:CreateTexture(nil, "BACKGROUND")
     statusbar.border:SetPoint("CENTER")
@@ -874,7 +1195,8 @@ function BloodShieldTracker:CreateStatusBar()
     statusbar.value:SetFont(font, self.db.profile.font_size, "OUTLINE")
     statusbar.value:SetJustifyH("CENTER")
     statusbar.value:SetShadowOffset(1, -1)
-    statusbar.value:SetTextColor(1, 1, 1)
+    local tc = self.db.profile.status_bar_textcolor
+    statusbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
     statusbar.lock = false
 	statusbar.value:SetText(statusBarFormat:format(0, 0, "0"))
     statusbar:SetMovable()
@@ -905,12 +1227,13 @@ function BloodShieldTracker:CreateDamageBar()
     statusbar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
     statusbar:GetStatusBarTexture():SetHorizTile(false)
     statusbar:GetStatusBarTexture():SetVertTile(false)
-    statusbar:SetStatusBarColor(1, 0, 0)
+    local bc = self.db.profile.estheal_bar_min_color
+    statusbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
 
     statusbar.bg = statusbar:CreateTexture(nil, "BACKGROUND")
     statusbar.bg:SetTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
     statusbar.bg:SetAllPoints(true)
-    statusbar.bg:SetVertexColor(0.65, 0, 0)
+    statusbar.bg:SetVertexColor(bc.r, bc.g, bc.b, bc.a)
 
     statusbar.border = statusbar:CreateTexture(nil, "BACKGROUND")
     statusbar.border:SetPoint("CENTER")
@@ -927,7 +1250,8 @@ function BloodShieldTracker:CreateDamageBar()
     statusbar.value:SetFont(font, self.db.profile.font_size, "OUTLINE")
     statusbar.value:SetJustifyH("CENTER")
     statusbar.value:SetShadowOffset(1, -1)
-    statusbar.value:SetTextColor(1, 1, 1)
+    local tc = self.db.profile.estheal_bar_min_textcolor
+    statusbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
     statusbar.lock = false
     statusbar:SetMovable()
     statusbar:RegisterForDrag("LeftButton")
