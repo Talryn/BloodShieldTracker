@@ -224,6 +224,8 @@ local defaults = {
 		status_bar_shown = true,
 		est_heal_x = 0, est_heal_y = 0,
 		shield_bar_x = 0, shield_bar_y = 0,
+		estheal_bar_scale = 1,
+		status_bar_scale = 1,
     }
 }
 
@@ -432,9 +434,20 @@ function BloodShieldTracker:GetOptions()
 					get = function() return self.db.profile.status_bar_shown end,
 					set = function(info,val) self.db.profile.status_bar_shown = val; self:UpdateShieldBarVisiblity() end,
 				},
+				status_bar_scaling = {
+					order = 20,
+					name = L["Scale"],
+					desc = L["ScaleDesc"],
+					type = "range",
+					min = 0.1,
+					max = 3,
+					step = 0.1,
+					get = function() return self.db.profile.status_bar_scale end,
+					set = function(info, val) self.db.profile.status_bar_scale = val; self.statusbar:SetScale(val); end
+				},
 				-- Estimated Healing
         		estHealBar = {
-        			order = 20,
+        			order = 41,
         			type = "header",
         			name = L["Estimated Healing Bar"],
         		},
@@ -442,7 +455,7 @@ function BloodShieldTracker:GetOptions()
 					name = L["Enabled"],
 					desc = L["Enable the Estimated Healing Bar."],
 					type = "toggle",
-					order = 21,
+					order = 42,
 					set = function(info, val)
 					    self.db.profile.damage_bar_enabled = val
 					    if not val then
@@ -455,7 +468,7 @@ function BloodShieldTracker:GetOptions()
 					name = L["Lock estimated healing bar"],
 					desc = L["Lock the estimated healing bar from moving."],
 					type = "toggle",
-					order = 22,
+					order = 43,
 					set = function(info, val) self.db.profile.lock_damage_bar = val 
 						if BloodShieldTracker.damagebar then
 							BloodShieldTracker.damagebar.lock = val
@@ -467,7 +480,7 @@ function BloodShieldTracker:GetOptions()
 					name = L["Hide out of combat"],
 					desc = L["HideOOC_OptionDesc"],
 					type = "toggle",
-					order = 23,
+					order = 44,
 					set = function(info, val) self.db.profile.hide_damage_bar_ooc = val 
 						if BloodShieldTracker.damagebar then
 							BloodShieldTracker.damagebar.hideooc = val
@@ -483,7 +496,7 @@ function BloodShieldTracker:GetOptions()
                     get = function(info) return self.db.profile.hide_damage_bar_ooc end,
 				},
 				estheal_bar_width = {
-					order = 24,
+					order = 45,
 					name = L["Estimated Healing bar width"],
 					desc = L["Change the width of the estimated healing bar."],	
 					type = "range",
@@ -496,7 +509,7 @@ function BloodShieldTracker:GetOptions()
 					get = function(info, val) return self.db.profile.damage_bar_width end,
 				},
 				estheal_bar_height = {
-					order = 25,
+					order = 46,
 					name = L["Estimated Healing bar height"],
 					desc = L["Change the height of the estimated healing bar."],	
 					type = "range",
@@ -510,7 +523,7 @@ function BloodShieldTracker:GetOptions()
 					get = function(info, val) return self.db.profile.damage_bar_height end,
 				},
 				estheal_bar_min_textcolor = {
-					order = 26,
+					order = 47,
 					name = L["Minimum Text Color"],
 					desc = L["EstHealBarMinTextColor_OptionDesc"],
 					type = "color",
@@ -528,7 +541,7 @@ function BloodShieldTracker:GetOptions()
 					end,					
 				},
 				estheal_bar_min_color = {
-					order = 27,
+					order = 48,
 					name = L["Minimum Bar Color"],
 					desc = L["EstHealBarMinColor_OptionDesc"],
 					type = "color",
@@ -546,7 +559,7 @@ function BloodShieldTracker:GetOptions()
 					end,					
 				},
 				estheal_bar_opt_textcolor = {
-					order = 26,
+					order = 49,
 					name = L["Optimal Text Color"],
 					desc = L["EstHealBarOptTextColor_OptionDesc"],
 					type = "color",
@@ -564,7 +577,7 @@ function BloodShieldTracker:GetOptions()
 					end,					
 				},
 				estheal_bar_opt_color = {
-					order = 27,
+					order = 50,
 					name = L["Optimal Bar Color"],
 					desc = L["EstHealBarOptColor_OptionDesc"],
 					type = "color",
@@ -582,7 +595,7 @@ function BloodShieldTracker:GetOptions()
 					end,					
 				},
 				estheal_bar_texture_opt = {
-					order = 28,
+					order = 51,
 					name = L["StatusBarTexture"],
 					desc = L["StatusBarTextureDesc"],
 					type = "select",
@@ -592,7 +605,7 @@ function BloodShieldTracker:GetOptions()
 					set = function(info, val) self.db.profile.estheal_bar_texture = val; BloodShieldTracker:UpdateDamageBarTexture() end
 				},
 				estheal_bar_border_visible_opt = {
-					order = 29,
+					order = 52,
 					name = L["ShowBorder"],
 					desc = L["ShowBorderDesc"],
 					type = "toggle",
@@ -600,12 +613,23 @@ function BloodShieldTracker:GetOptions()
 					set = function(info, val) self.db.profile.estheal_bar_border = val; self:UpdateDamageBarBorder() end,
 				},
 				estheal_bar_visible_opt = {
-					order = 30,
+					order = 53,
 					name = L["ShowBar"],
 					desc = L["ShowBarDesc"],
 					type = "toggle",
 					get = function() return self.db.profile.estheal_bar_shown end,
 					set = function(info,val) self.db.profile.estheal_bar_shown = val; self:UpdateDamageBarVisiblity() end,
+				},
+				estheal_bar_scaling = {
+					order = 54,
+					name = L["Scale"],
+					desc = L["ScaleDesc"],
+					type = "range",
+					min = 0.1,
+					max = 3,
+					step = 0.1,
+					get = function() return self.db.profile.estheal_bar_scale end,
+					set = function(info, val) self.db.profile.estheal_bar_scale = val; self.damagebar:SetScale(val); end
 				}
             }
         }}}
@@ -1323,6 +1347,7 @@ end
 function BloodShieldTracker:CreateStatusBar()
     local statusbar = CreateFrame("StatusBar", "BloodShieldTracker_StatusBar", UIParent)
     statusbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.shield_bar_x, self.db.profile.shield_bar_y)
+	statusbar:SetScale(self.db.profile.status_bar_scale)
     statusbar:SetOrientation("HORIZONTAL")
     statusbar:SetWidth(self.db.profile.status_bar_width)
     statusbar:SetHeight(self.db.profile.status_bar_height)
@@ -1370,8 +1395,8 @@ function BloodShieldTracker:CreateStatusBar()
 			x, y = x * scale, y * scale
 			x = x - GetScreenWidth()/2
 			y = y - GetScreenHeight()/2
-			x = x * scale
-			y = y * scale	
+			x = x / self:GetScale()
+			y = y / self:GetScale()
 			BloodShieldTracker.db.profile.shield_bar_x, BloodShieldTracker.db.profile.shield_bar_y = x, y
 			self:SetUserPlaced(false);
         end)
@@ -1384,7 +1409,9 @@ end
 
 function BloodShieldTracker:CreateDamageBar()
     local statusbar = CreateFrame("StatusBar", "BloodShieldTracker_DamageBar", UIParent)
+	local scale = self.db.profile.estheal_bar_scale
     statusbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.est_heal_x, self.db.profile.est_heal_y)
+	statusbar:SetScale(scale)
     statusbar:SetWidth(self.db.profile.damage_bar_width)
     statusbar:SetHeight(self.db.profile.damage_bar_height)
 	local bt = LSM:Fetch("statusbar",self.db.profile.estheal_bar_texture)
@@ -1430,8 +1457,8 @@ function BloodShieldTracker:CreateDamageBar()
 			x, y = x * scale, y * scale
 			x = x - GetScreenWidth()/2
 			y = y - GetScreenHeight()/2
-			x = x * scale
-			y = y * scale	
+			x = x / self:GetScale()
+			y = y / self:GetScale()
 			BloodShieldTracker.db.profile.est_heal_x, BloodShieldTracker.db.profile.est_heal_y = x, y
 			self:SetUserPlaced(false);
         end)
