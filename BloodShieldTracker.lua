@@ -43,9 +43,10 @@ local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
 local LibQTip = LibStub("LibQTip-1.0")
 local icon = LibStub("LibDBIcon-1.0")
--- Load LibsharedMedia if it exists
-local LSM = LibStub:GetLibrary("LibSharedMedia-3.0",true)
+-- Load LibsharedMedia we package it with the addon so it should be available
+local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
 local default_font = "Fonts\\FRIZQT__.TTF"
+local default_bar_texture = "Interface\\TARGETINGFRAME\\UI-StatusBar"
 -- Shim if we are missing LibSharedMedia so options dont barf.
 if not LSM then
 	LSM = {}
@@ -61,6 +62,7 @@ local DS_SPELL_HEAL = (GetSpellInfo(45470))
 local BS_SPELL = (GetSpellInfo(77535))
 local IMP_DS_TALENT = (GetSpellInfo(81138))
 local ImpDSModifier = 1
+local HasVampTalent = false
 local dsHealModifier = 0.3
 local shieldPerMasteryPoint = 6.25
 local dsHealMin = 0
@@ -225,6 +227,14 @@ local defaults = {
 		estheal_bar_min_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
 		estheal_bar_opt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 		estheal_bar_opt_color = {r = 0.0, g = 1.0, b = 0.0, a = 1},
+		status_bar_texture = "",
+		estheal_bar_texture = "",
+		status_bar_border = true,
+		estheal_bar_border = true,
+		estheal_bar_shown = true,
+		status_bar_shown = true,
+		est_heal_x = 0, est_heal_y = 0,
+		shield_bar_x = 0, shield_bar_y = 0,
     }
 }
 
@@ -237,7 +247,12 @@ function BloodShieldTracker:GetOptions()
             name = "BloodShieldTracker",
             handler = BloodShieldTracker,
             type = 'group',
+			childGroups = "tree",
             args = {
+				core = {
+					name = "",
+					type = "group",
+					args = {
         		generalOptions = {
         			order = 0,
         			type = "header",
@@ -414,6 +429,45 @@ function BloodShieldTracker:GetOptions()
 					    return c.r, c.g, c.b, c.a
 					end,					
 				},
+				status_bar_texture_opt = {
+					order = 17,
+					name = L["StatusBarTexture"],
+					desc = L["StatusBarTextureDesc"],
+					type = "select",
+					values = LSM:HashTable("statusbar"),
+					dialogControl = 'LSM30_Statusbar',
+					disabled = function() return not IsAddOnLoaded("LibSharedMedia-3.0") end,
+					get = function() 
+						if strlen(self.db.profile.status_bar_texture) < 1 then
+							return L["Blizzard"]
+						else
+							return self.db.profile.status_bar_texture
+						end
+					end,
+					set = function(info, val) 
+						if val ~= L["Blizzard"] then
+							self.db.profile.status_bar_texture = val; 
+						end
+						BloodShieldTracker:UpdateShieldBarTexture()
+					end
+				},
+				status_bar_border_visible_opt = {
+					order = 18,
+					name = L["ShowBorder"],
+					desc = L["ShowBorderDesc"],
+					type = "toggle",
+					get = function() return self.db.profile.status_bar_border end,
+					set = function(info, val) self.db.profile.status_bar_border = val; self:UpdateShieldBarBorder() end,
+				},
+				status_bar_visible_opt = {
+					order = 19,
+					name = L["ShowBar"],
+					desc = L["ShowBarDesc"],
+					type = "toggle",
+					get = function() return self.db.profile.status_bar_shown end,
+					set = function(info,val) self.db.profile.status_bar_shown = val; self:UpdateShieldBarVisiblity() end,
+				},
+				-- Estimated Healing
         		estHealBar = {
         			order = 20,
         			type = "header",
@@ -562,10 +616,48 @@ function BloodShieldTracker:GetOptions()
 					    return c.r, c.g, c.b, c.a
 					end,					
 				},
+				estheal_bar_texture_opt = {
+					order = 28,
+					name = L["StatusBarTexture"],
+					desc = L["StatusBarTextureDesc"],
+					type = "select",
+					values = LSM:HashTable("statusbar"),
+					dialogControl = 'LSM30_Statusbar',
+					disabled = function() return not IsAddOnLoaded("LibSharedMedia-3.0") end,
+					get = function() 
+						if strlen(self.db.profile.estheal_bar_texture) < 1 then
+							return L["Blizzard"]
+						else
+							return self.db.profile.estheal_bar_texture
+						end
+					end,
+					set = function(info, val) 
+						if val ~= L["Blizzard"] then
+							self.db.profile.estheal_bar_texture = val; 
+						end
+						BloodShieldTracker:UpdateDamageBarTexture()
+					end
+				},
+				estheal_bar_border_visible_opt = {
+					order = 29,
+					name = L["ShowBorder"],
+					desc = L["ShowBorderDesc"],
+					type = "toggle",
+					get = function() return self.db.profile.estheal_bar_border end,
+					set = function(info, val) self.db.profile.estheal_bar_border = val; self:UpdateDamageBarBorder() end,
+				},
+				estheal_bar_visible_opt = {
+					order = 30,
+					name = L["ShowBar"],
+					desc = L["ShowBarDesc"],
+					type = "toggle",
+					get = function() return self.db.profile.estheal_bar_shown end,
+					set = function(info,val) self.db.profile.estheal_bar_shown = val; self:UpdateDamageBarVisiblity() end,
+				}
             }
-        }
+        }}}
+	options.args.profile = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
     end
-    
     return options
 end
 
@@ -583,9 +675,10 @@ function BloodShieldTracker:OnInitialize()
     -- Load the settings
     self.db = LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", defaults, "Default")
     -- Register the options table
-    LibStub("AceConfig-3.0"):RegisterOptionsTable("BloodShieldTracker", self:GetOptions())
-	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BloodShieldTracker", ADDON_NAME)
-
+	local options = self:GetOptions()
+    LibStub("AceConfig-3.0"):RegisterOptionsTable("BloodShieldTracker", options)
+	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BloodShieldTracker", ADDON_NAME,nil, "core")
+	LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BloodShieldTracker", options.args.profile.name,ADDON_NAME,"profile")
 	icon:Register("BloodShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
 	if LSM then
 		LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
@@ -597,6 +690,29 @@ function BloodShieldTracker:OnInitialize()
 	self.statusbar.lock = self.db.profile.lock_status_bar
 	self.damagebar.hideooc = self.db.profile.hide_damage_bar_ooc
 	self.damagebar.minheal = true
+	self.db.RegisterCallback(self, "OnProfileChanged", "Reset")
+	self.db.RegisterCallback(self, "OnProfileCopied", "Reset")
+	self.db.RegisterCallback(self, "OnProfileReset", "Reset")
+end
+
+function BloodShieldTracker:Reset()
+	-- Reset positions
+	if self.damagebar then
+		self.damagebar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.est_heal_x, self.db.profile.est_heal_y)
+		self:UpdateDamageBarTexture()
+		self:UpdateDamageBarBorder()
+		self:UpdateDamageBarVisiblity()
+		self:UpdateDamageBarColors()
+	end
+	if self.statusbar then
+		self.statusbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.shield_bar_x, self.db.profile.shield_bar_y)
+		self:UpdateShieldBarTexture()
+		self:UpdateShieldBarBorder()
+		self:UpdateShieldBarVisiblity()
+		self:UpdateShieldBarColors()
+	end
+	self:ResetsFonts()
+	self:ResetStats()
 end
 
 function BloodShieldTracker:ResetFonts()
@@ -616,6 +732,14 @@ function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 	if strlen(self.db.profile.font_face) > 1 and mediatype == "font" then
 		if self.db.profile.font_face == key then
 			self:ResetFonts()
+		end
+	end
+	if mediatype == "statusbar" then
+		if self.db.profile.estheal_bar_shown then
+			self:UpdateDamageBarTexture()
+		end
+		if self.db.profile.status_bar_shown then
+			self:UpdateShieldBarTexture()
 		end
 	end
 end
@@ -647,6 +771,7 @@ function BloodShieldTracker:Load()
     if not self.damagebar.hideooc or InCombatLockdown() then
         self.damagebar:Show()
     end
+	self:UpdateDamageBarVisiblity()
 end
 
 function BloodShieldTracker:Unload()
@@ -683,6 +808,9 @@ function BloodShieldTracker:CheckImpDeathStrike()
 			if talentName == IMP_DS_TALENT and currRank > 0 then
 				ImpDSModifier = 1 + (0.15 * currRank)
 			end
+			if talentName == VB_BUFF and currRank > 0 then
+				HasVampTalent = true
+			end
 		end
 	end
 	local primaryTalentTree = GetPrimaryTalentTree()
@@ -700,12 +828,14 @@ function BloodShieldTracker:CheckImpDeathStrike()
             self:Print("Could not determine talents.")
         end
     end
-
-    self:CheckGlyphs()
+	if HasVampTalent then
+    	self:CheckGlyphs()
+	end
 end
 
 function BloodShieldTracker:CheckGlyphs()
     vbGlyphed = false
+	if not HasVampTalent then return end -- Dont bother with glyph check if he doesnt have the talent
     for id = 1, GetNumGlyphSockets() do
         local enabled, glyphType, glyphTooltipIndex, 
             glyphSpell, iconFilename = GetGlyphSocketInfo(id, nil)
@@ -1122,6 +1252,8 @@ function BloodShieldTracker:CheckAuras()
         consolidate,spellId = UnitAura("player", VB_BUFF)
     if name then
         vbBuff = true
+		-- No Need to check how much bonus health we get from VB since we listen
+		-- for Unit Max Health updates
         if vbGlyphed then
             vbHealthInc = vbGlyphedHealthInc
             vbHealingInc = vbGlyphedHealingInc
@@ -1137,6 +1269,84 @@ function BloodShieldTracker:CheckAuras()
 
     self:UpdateMinHeal("CheckAura", "player")
 end
+
+function BloodShieldTracker:UpdateShieldBarVisiblity()
+	if self.statusbar then
+		local show = self.db.profile.status_bar_shown
+		if not show then
+			self.statusbar:SetStatusBarTexture("")
+			self.statusbar.bg:SetTexture("")
+			self.statusbar.border:Hide()
+		else
+			self:UpdateShieldBarTexture()
+			self:UpdateShieldBarBorder()
+		end
+	end
+end
+
+function BloodShieldTracker:UpdateDamageBarVisiblity()
+	if self.damagebar then
+		local show = self.db.profile.estheal_bar_shown
+		if not show then
+			self.damagebar:SetStatusBarTexture("")
+			self.damagebar.bg:SetTexture("")
+			self.damagebar.border:Hide()
+		else
+			self:UpdateDamageBarTexture()
+			self:UpdateDamageBarBorder()
+		end
+	end
+end
+
+-- show/hide borders
+function BloodShieldTracker:UpdateShieldBarBorder()
+	if self.statusbar then
+		if self.db.profile.status_bar_border then
+			self.statusbar.border:Show()
+		else
+			self.statusbar.border:Hide()
+		end
+	end
+end
+function BloodShieldTracker:UpdateDamageBarBorder()
+	if self.damagebar then
+		if self.db.profile.estheal_bar_border then
+			self.damagebar.border:Show()
+		else
+			self.damagebar.border:Hide()
+		end
+	end
+end
+
+-- Update Status bar status texture
+function BloodShieldTracker:UpdateShieldBarTexture()
+	if self.statusbar then
+		local bt = default_bar_texture
+		if LSM and LSM.Fetch and strlen(self.db.profile.status_bar_texture) > 1 then
+			bt = LSM:Fetch("statusbar",self.db.profile.status_bar_texture)
+		end
+		self.statusbar:SetStatusBarTexture(bt)
+		self.statusbar.bg:SetTexture(bt)
+	    self.statusbar:GetStatusBarTexture():SetHorizTile(false)
+	    self.statusbar:GetStatusBarTexture():SetVertTile(false)
+		self:UpdateShieldBarGraphics()
+	end
+end
+-- Update EstHeal bar status texture
+function BloodShieldTracker:UpdateDamageBarTexture()
+	if self.damagebar then
+		local bt = default_bar_texture
+		if LSM and LSM.Fetch and strlen(self.db.profile.estheal_bar_texture) > 1 then
+			bt = LSM:Fetch("statusbar",self.db.profile.estheal_bar_texture)
+		end
+		self.damagebar:SetStatusBarTexture(bt)
+		self.damagebar.bg:SetTexture(bt)
+	    self.damagebar:GetStatusBarTexture():SetHorizTile(false)
+	    self.damagebar:GetStatusBarTexture():SetVertTile(false)
+		self:UpdateDamageBarColors(true)
+	end
+end
+
 
 function BloodShieldTracker:UpdateShieldBarGraphics()
     if self.statusbar then
@@ -1166,26 +1376,31 @@ end
 
 function BloodShieldTracker:CreateStatusBar()
     local statusbar = CreateFrame("StatusBar", "BloodShieldTracker_StatusBar", UIParent)
-    statusbar:SetPoint("CENTER")
+    statusbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.shield_bar_x, self.db.profile.shield_bar_y)
     statusbar:SetOrientation("HORIZONTAL")
     statusbar:SetWidth(self.db.profile.status_bar_width)
     statusbar:SetHeight(self.db.profile.status_bar_height)
-    statusbar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
+	local bt = default_bar_texture
+	if LSM and LSM.Fetch and strlen(self.db.profile.status_bar_texture) > 1 then
+		bt = LSM:Fetch("statusbar",self.db.profile.status_bar_texture)
+	end
+    statusbar:SetStatusBarTexture(bt)
     statusbar:GetStatusBarTexture():SetHorizTile(false)
     statusbar:GetStatusBarTexture():SetVertTile(false)
     local bc = self.db.profile.status_bar_color
     statusbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-
     statusbar.bg = statusbar:CreateTexture(nil, "BACKGROUND")
-    statusbar.bg:SetTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
+    statusbar.bg:SetTexture(bt)
     statusbar.bg:SetAllPoints(true)
     statusbar.bg:SetVertexColor(bc.r, bc.g, bc.b, bc.a)
-
     statusbar.border = statusbar:CreateTexture(nil, "BACKGROUND")
     statusbar.border:SetPoint("CENTER")
     statusbar.border:SetWidth(statusbar:GetWidth()+9)
     statusbar.border:SetHeight(statusbar:GetHeight()+8)
     statusbar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
+	if not self.db.profile.status_bar_border then
+		statusbar.border:Hide()
+	end
 	local font = default_font
 	if LSM and LSM.Fetch and strlen(self.db.profile.font_face) > 1 then
 		font = LSM:Fetch("font",self.db.profile.font_face)
@@ -1210,8 +1425,16 @@ function BloodShieldTracker:CreateStatusBar()
     statusbar:SetScript("OnDragStop",
         function(self)
             self:StopMovingOrSizing()
+			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
+			local x, y = self:GetCenter()
+			x, y = x * scale, y * scale
+			x = x - GetScreenWidth()/2
+			y = y - GetScreenHeight()/2
+			x = x * scale
+			y = y * scale	
+			BloodShieldTracker.db.profile.shield_bar_x, BloodShieldTracker.db.profile.shield_bar_y = x, y
+			self:SetUserPlaced(false);
         end)
-
     statusbar:EnableMouse(true)
     statusbar:Hide()
 	statusbar.shield_curr = 0
@@ -1221,26 +1444,30 @@ end
 
 function BloodShieldTracker:CreateDamageBar()
     local statusbar = CreateFrame("StatusBar", "BloodShieldTracker_DamageBar", UIParent)
-    statusbar:SetPoint("CENTER", UIParent, "CENTER", 0, 100)
+    statusbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.est_heal_x, self.db.profile.est_heal_y)
     statusbar:SetWidth(self.db.profile.damage_bar_width)
     statusbar:SetHeight(self.db.profile.damage_bar_height)
-    statusbar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
+	local bt = default_bar_texture
+	if LSM and LSM.Fetch and strlen(self.db.profile.estheal_bar_texture) > 1 then
+		bt = LSM:Fetch("statusbar",self.db.profile.estheal_bar_texture)
+	end
+    statusbar:SetStatusBarTexture(bt)
     statusbar:GetStatusBarTexture():SetHorizTile(false)
     statusbar:GetStatusBarTexture():SetVertTile(false)
     local bc = self.db.profile.estheal_bar_min_color
     statusbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-
     statusbar.bg = statusbar:CreateTexture(nil, "BACKGROUND")
-    statusbar.bg:SetTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
+    statusbar.bg:SetTexture(bt)
     statusbar.bg:SetAllPoints(true)
     statusbar.bg:SetVertexColor(bc.r, bc.g, bc.b, bc.a)
-
     statusbar.border = statusbar:CreateTexture(nil, "BACKGROUND")
     statusbar.border:SetPoint("CENTER")
     statusbar.border:SetWidth(statusbar:GetWidth()+9)
     statusbar.border:SetHeight(statusbar:GetHeight()+8)
     statusbar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
-
+	if not self.db.profile.estheal_bar_border then
+		statusbar.border:Hide()
+	end
     statusbar.value = statusbar:CreateFontString(nil, "OVERLAY")
     statusbar.value:SetPoint("CENTER")
 	local font = default_font
@@ -1264,12 +1491,20 @@ function BloodShieldTracker:CreateDamageBar()
     statusbar:SetScript("OnDragStop",
         function(self)
             self:StopMovingOrSizing()
+			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
+			local x, y = self:GetCenter()
+			x, y = x * scale, y * scale
+			x = x - GetScreenWidth()/2
+			y = y - GetScreenHeight()/2
+			x = x * scale
+			y = y * scale	
+			BloodShieldTracker.db.profile.est_heal_x, BloodShieldTracker.db.profile.est_heal_y = x, y
+			self:SetUserPlaced(false);
         end)
 
     statusbar:SetMinMaxValues(0,1)
     statusbar:SetValue(1)
     statusbar.value:SetText(healBarFormat:format(L["HealBarText"], dsHealMin))
-
     statusbar:EnableMouse(true)
     statusbar:Hide()
     return statusbar
