@@ -217,7 +217,7 @@ local defaults = {
 		estheal_bar_opt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 		estheal_bar_opt_color = {r = 0.0, g = 1.0, b = 0.0, a = 1},
 		status_bar_texture = "Blizzard",
-		estheal_bar_texture = "",
+		estheal_bar_texture = "Blizzard",
 		status_bar_border = true,
 		estheal_bar_border = true,
 		estheal_bar_shown = true,
