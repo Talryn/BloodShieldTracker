@@ -212,6 +212,7 @@ local defaults = {
 		font_face = "Friz Quadrata TT",
 		status_bar_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
 		status_bar_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+		status_bar_bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
 		estheal_bar_min_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 		estheal_bar_min_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
 		estheal_bar_opt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
@@ -222,7 +223,7 @@ local defaults = {
 		estheal_bar_border = true,
 		estheal_bar_shown = true,
 		status_bar_shown = true,
-		est_heal_x = 0, est_heal_y = 0,
+		est_heal_x = 0, est_heal_y = -40,
 		shield_bar_x = 0, shield_bar_y = 0,
 		estheal_bar_scale = 1,
 		status_bar_scale = 1,
@@ -408,8 +409,24 @@ function BloodShieldTracker:GetOptions()
 					    return c.r, c.g, c.b, c.a
 					end,					
 				},
-				status_bar_texture_opt = {
+				status_bar_bgcolor = {
 					order = 17,
+					name = L["Bar Depleted Color"],
+					desc = L["BloodShieldDepletedBarColor_OptionDesc"],
+					type = "color",
+					hasAlpha = true,
+					set = function(info, r, g, b, a)
+					    local c = self.db.profile.status_bar_bgcolor
+					    c.r, c.g, c.b, c.a = r, g, b, a
+					    self:UpdateShieldBarGraphics()
+					end,
+					get = function(info)
+				        local c = self.db.profile.status_bar_bgcolor
+					    return c.r, c.g, c.b, c.a
+					end,					
+				},
+				status_bar_texture_opt = {
+					order = 18,
 					name = L["StatusBarTexture"],
 					desc = L["StatusBarTextureDesc"],
 					type = "select",
@@ -419,7 +436,7 @@ function BloodShieldTracker:GetOptions()
 					set = function(info, val) self.db.profile.status_bar_texture = val; BloodShieldTracker:UpdateShieldBarTexture()	end
 				},
 				status_bar_border_visible_opt = {
-					order = 18,
+					order = 19,
 					name = L["ShowBorder"],
 					desc = L["ShowBorderDesc"],
 					type = "toggle",
@@ -427,7 +444,7 @@ function BloodShieldTracker:GetOptions()
 					set = function(info, val) self.db.profile.status_bar_border = val; self:UpdateShieldBarBorder() end,
 				},
 				status_bar_visible_opt = {
-					order = 19,
+					order = 20,
 					name = L["ShowBar"],
 					desc = L["ShowBarDesc"],
 					type = "toggle",
@@ -435,7 +452,7 @@ function BloodShieldTracker:GetOptions()
 					set = function(info,val) self.db.profile.status_bar_shown = val; self:UpdateShieldBarVisiblity() end,
 				},
 				status_bar_scaling = {
-					order = 20,
+					order = 21,
 					name = L["Scale"],
 					desc = L["ScaleDesc"],
 					type = "range",
@@ -686,9 +703,9 @@ function BloodShieldTracker:Reset()
 		self:UpdateShieldBarTexture()
 		self:UpdateShieldBarBorder()
 		self:UpdateShieldBarVisiblity()
-		self:UpdateShieldBarColors()
+		self:UpdateShieldBarGraphics()
 	end
-	self:ResetsFonts()
+	self:ResetFonts()
 	self:ResetStats()
 end
 
@@ -1322,7 +1339,8 @@ function BloodShieldTracker:UpdateShieldBarGraphics()
     if self.statusbar then
         local bc = self.db.profile.status_bar_color
         self.statusbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-        self.statusbar.bg:SetVertexColor(bc.r, bc.g, bc.b, bc.a)
+        local bgc = self.db.profile.status_bar_bgcolor
+        self.statusbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
         local tc = self.db.profile.status_bar_textcolor
         self.statusbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
     end
@@ -1360,7 +1378,8 @@ function BloodShieldTracker:CreateStatusBar()
     statusbar.bg = statusbar:CreateTexture(nil, "BACKGROUND")
     statusbar.bg:SetTexture(bt)
     statusbar.bg:SetAllPoints(true)
-    statusbar.bg:SetVertexColor(bc.r, bc.g, bc.b, bc.a)
+    local bgc = self.db.profile.status_bar_bgcolor
+    statusbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
     statusbar.border = statusbar:CreateTexture(nil, "BACKGROUND")
     statusbar.border:SetPoint("CENTER")
     statusbar.border:SetWidth(statusbar:GetWidth()+9)
