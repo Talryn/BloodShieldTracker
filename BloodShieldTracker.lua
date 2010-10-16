@@ -45,17 +45,6 @@ local LibQTip = LibStub("LibQTip-1.0")
 local icon = LibStub("LibDBIcon-1.0")
 -- Load LibsharedMedia we package it with the addon so it should be available
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
-local default_font = "Fonts\\FRIZQT__.TTF"
-local default_bar_texture = "Interface\\TARGETINGFRAME\\UI-StatusBar"
--- Shim if we are missing LibSharedMedia so options dont barf.
-if not LSM then
-	LSM = {}
-	LSM.HashTable = function() 
-		ht = {} 
-		ht[L["Blizzard"]] = default_font
-		return ht
-	end
-end
 
 local DS_SPELL_DMG = (GetSpellInfo(49998))
 local DS_SPELL_HEAL = (GetSpellInfo(45470))
@@ -220,14 +209,14 @@ local defaults = {
 		status_bar_width = 150,
 		status_bar_height = 15,
 		font_size = 12,
-		font_face = "",
+		font_face = "Friz Quadrata TT",
 		status_bar_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
 		status_bar_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 		estheal_bar_min_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 		estheal_bar_min_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
 		estheal_bar_opt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 		estheal_bar_opt_color = {r = 0.0, g = 1.0, b = 0.0, a = 1},
-		status_bar_texture = "",
+		status_bar_texture = "Blizzard",
 		estheal_bar_texture = "",
 		status_bar_border = true,
 		estheal_bar_border = true,
@@ -287,20 +276,8 @@ function BloodShieldTracker:GetOptions()
 					desc = L["Font to use."],
 					values = LSM:HashTable("font"),
 					dialogControl = 'LSM30_Font',
-					disabled = function() return not IsAddOnLoaded("LibSharedMedia-3.0") end,
-					get = function() 
-						if strlen(self.db.profile.font_face) < 1 then
-							return L["Blizzard"]
-						else
-							return self.db.profile.font_face
-						end
-					end,
-					set = function(info, val) 
-						if val ~= L["Blizzard"] then
-							self.db.profile.font_face = val; 
-						end
-						BloodShieldTracker:ResetFonts()
-					end
+					get = function() return self.db.profile.font_face end,
+					set = function(info, val) self.db.profile.font_face = val; BloodShieldTracker:ResetFonts() end
 				},
         	    minimap = {
                     name = L["Minimap Button"],
@@ -436,18 +413,8 @@ function BloodShieldTracker:GetOptions()
 					type = "select",
 					values = LSM:HashTable("statusbar"),
 					dialogControl = 'LSM30_Statusbar',
-					disabled = function() return not IsAddOnLoaded("LibSharedMedia-3.0") end,
-					get = function() 
-						if strlen(self.db.profile.status_bar_texture) < 1 then
-							return L["Blizzard"]
-						else
-							return self.db.profile.status_bar_texture
-						end
-					end,
-					set = function(info, val) 
-						self.db.profile.status_bar_texture = val; 
-						BloodShieldTracker:UpdateShieldBarTexture()
-					end
+					get = function() return self.db.profile.status_bar_texture	end,
+					set = function(info, val) self.db.profile.status_bar_texture = val; BloodShieldTracker:UpdateShieldBarTexture()	end
 				},
 				status_bar_border_visible_opt = {
 					order = 18,
@@ -621,18 +588,8 @@ function BloodShieldTracker:GetOptions()
 					type = "select",
 					values = LSM:HashTable("statusbar"),
 					dialogControl = 'LSM30_Statusbar',
-					disabled = function() return not IsAddOnLoaded("LibSharedMedia-3.0") end,
-					get = function() 
-						if strlen(self.db.profile.estheal_bar_texture) < 1 then
-							return L["Blizzard"]
-						else
-							return self.db.profile.estheal_bar_texture
-						end
-					end,
-					set = function(info, val) 
-						self.db.profile.estheal_bar_texture = val; 
-						BloodShieldTracker:UpdateDamageBarTexture()
-					end
+					get = function() return self.db.profile.estheal_bar_texture	end,
+					set = function(info, val) self.db.profile.estheal_bar_texture = val; BloodShieldTracker:UpdateDamageBarTexture() end
 				},
 				estheal_bar_border_visible_opt = {
 					order = 29,
@@ -688,10 +645,7 @@ function BloodShieldTracker:OnInitialize()
 	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BloodShieldTracker", ADDON_NAME,nil, "core")
 	LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BloodShieldTracker", options.args.profile.name,ADDON_NAME,"profile")
 	icon:Register("BloodShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
-
-	if LSM then
-		LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
-	end
+	LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
 end
 
 function BloodShieldTracker:Reset()
@@ -716,10 +670,7 @@ end
 
 function BloodShieldTracker:ResetFonts()
 	local fontName, fontHeight, fontFlags = BloodShieldTracker.statusbar.value:GetFont()
-	local ff = fontName
-	if LSM and LSM.Fetch and strlen(self.db.profile.font_face) > 1 then
-		ff = LSM:Fetch("font",self.db.profile.font_face)
-	end
+	local ff = LSM:Fetch("font",self.db.profile.font_face)
 	local fh = self.db.profile.font_size
 	BloodShieldTracker.statusbar.value:SetFont(ff,fh,fontFlags)
 	BloodShieldTracker.statusbar.value:SetText(BloodShieldTracker.statusbar.value:GetText())
@@ -1333,10 +1284,7 @@ end
 -- Update EstHeal bar status texture
 function BloodShieldTracker:UpdateDamageBarTexture()
 	if self.damagebar then
-		local bt = default_bar_texture
-		if LSM and LSM.Fetch and strlen(self.db.profile.estheal_bar_texture) > 1 then
-			bt = LSM:Fetch("statusbar",self.db.profile.estheal_bar_texture)
-		end
+		local bt = LSM:Fetch("statusbar",self.db.profile.estheal_bar_texture)
 		self.damagebar:SetStatusBarTexture(bt)
 		self.damagebar.bg:SetTexture(bt)
 	    self.damagebar:GetStatusBarTexture():SetHorizTile(false)
@@ -1378,10 +1326,7 @@ function BloodShieldTracker:CreateStatusBar()
     statusbar:SetOrientation("HORIZONTAL")
     statusbar:SetWidth(self.db.profile.status_bar_width)
     statusbar:SetHeight(self.db.profile.status_bar_height)
-	local bt = default_bar_texture
-	if LSM and LSM.Fetch and strlen(self.db.profile.status_bar_texture) > 1 then
-		bt = LSM:Fetch("statusbar",self.db.profile.status_bar_texture)
-	end
+	local bt = LSM:Fetch("statusbar",self.db.profile.status_bar_texture)
     statusbar:SetStatusBarTexture(bt)
     statusbar:GetStatusBarTexture():SetHorizTile(false)
     statusbar:GetStatusBarTexture():SetVertTile(false)
@@ -1399,10 +1344,7 @@ function BloodShieldTracker:CreateStatusBar()
 	if not self.db.profile.status_bar_border then
 		statusbar.border:Hide()
 	end
-	local font = default_font
-	if LSM and LSM.Fetch and strlen(self.db.profile.font_face) > 1 then
-		font = LSM:Fetch("font",self.db.profile.font_face)
-	end
+	local font = LSM:Fetch("font",self.db.profile.font_face)
     statusbar.value = statusbar:CreateFontString(nil, "OVERLAY")
     statusbar.value:SetPoint("CENTER")
     statusbar.value:SetFont(font, self.db.profile.font_size, "OUTLINE")
@@ -1445,11 +1387,8 @@ function BloodShieldTracker:CreateDamageBar()
     statusbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.est_heal_x, self.db.profile.est_heal_y)
     statusbar:SetWidth(self.db.profile.damage_bar_width)
     statusbar:SetHeight(self.db.profile.damage_bar_height)
-	local bt = default_bar_texture
-	if LSM and LSM.Fetch and strlen(self.db.profile.estheal_bar_texture) > 1 then
-		bt = LSM:Fetch("statusbar",self.db.profile.estheal_bar_texture)
-	end
-    statusbar:SetStatusBarTexture(bt)
+	local bt = LSM:Fetch("statusbar",self.db.profile.estheal_bar_texture)
+   	statusbar:SetStatusBarTexture(bt)
     statusbar:GetStatusBarTexture():SetHorizTile(false)
     statusbar:GetStatusBarTexture():SetVertTile(false)
     local bc = self.db.profile.estheal_bar_min_color
@@ -1468,10 +1407,7 @@ function BloodShieldTracker:CreateDamageBar()
 	end
     statusbar.value = statusbar:CreateFontString(nil, "OVERLAY")
     statusbar.value:SetPoint("CENTER")
-	local font = default_font
-	if LSM and LSM.Fetch and strlen(self.db.profile.font_face) > 1 then
-		font = LSM:Fetch("font",self.db.profile.font_face)
-	end
+	local font = LSM:Fetch("font",self.db.profile.font_face)
     statusbar.value:SetFont(font, self.db.profile.font_size, "OUTLINE")
     statusbar.value:SetJustifyH("CENTER")
     statusbar.value:SetShadowOffset(1, -1)
