@@ -445,9 +445,7 @@ function BloodShieldTracker:GetOptions()
 						end
 					end,
 					set = function(info, val) 
-						if val ~= L["Blizzard"] then
-							self.db.profile.status_bar_texture = val; 
-						end
+						self.db.profile.status_bar_texture = val; 
 						BloodShieldTracker:UpdateShieldBarTexture()
 					end
 				},
@@ -632,9 +630,7 @@ function BloodShieldTracker:GetOptions()
 						end
 					end,
 					set = function(info, val) 
-						if val ~= L["Blizzard"] then
-							self.db.profile.estheal_bar_texture = val; 
-						end
+						self.db.profile.estheal_bar_texture = val; 
 						BloodShieldTracker:UpdateDamageBarTexture()
 					end
 				},
