@@ -101,11 +101,11 @@ local vbHealingInc = 0.0
 
 
 local Broker = CreateFrame("Frame")
-Broker.obj = LDB:NewDataObject("Blood Shield Tracker", {
+Broker.obj = LDB:NewDataObject(GetAddOnMetadata(ADDON_NAME,"Title"), {
     type = "data source",
     icon = "Interface\\Icons\\Spell_DeathKnight_DeathStrike",
-    label = ADDON_NAME,
-    text = ADDON_NAME,
+    label = GetAddOnMetadata(ADDON_NAME,"Title"),
+    text = GetAddOnMetadata(ADDON_NAME,"Title"),
     barValue = 0,
     barR = 0,
     barG = 0,
@@ -154,7 +154,7 @@ function Broker.obj:OnEnter()
         avgShieldUsedPerc = totalShieldUsedPerc / numShields
     end
 
-    tooltip:AddHeader(addonHdr:format(ADDON_NAME, ADDON_VERSION))
+    tooltip:AddHeader(addonHdr:format(GetAddOnMetadata(ADDON_NAME,"Title"), ADDON_VERSION))
     tooltip:AddLine()
     tooltip:AddLine(L["Shift + Left-Click to reset."], "", 1, 1, 1)
     tooltip:AddLine()
@@ -233,7 +233,7 @@ local options
 function BloodShieldTracker:GetOptions()
     if not options then
         options = {
-            name = "BloodShieldTracker",
+            name = GetAddOnMetadata(ADDON_NAME,"Title"),
             handler = BloodShieldTracker,
             type = 'group',
 			childGroups = "tree",
