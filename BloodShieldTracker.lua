@@ -670,15 +670,7 @@ local IsBloodTank = true
 function BloodShieldTracker:OnInitialize()
     -- Load the settings
     self.db = LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", defaults, "Default")
-    -- Register the options table
-	local options = self:GetOptions()
-    LibStub("AceConfig-3.0"):RegisterOptionsTable("BloodShieldTracker", options)
-	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BloodShieldTracker", ADDON_NAME,nil, "core")
-	LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BloodShieldTracker", options.args.profile.name,ADDON_NAME,"profile")
-	icon:Register("BloodShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
-	if LSM then
-		LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
-	end
+	-- Create our bars
     self.statusbar = self:CreateStatusBar()
     self.statusbar.shield_curr = 0
     self.damagebar = self:CreateDamageBar()
@@ -686,9 +678,20 @@ function BloodShieldTracker:OnInitialize()
 	self.statusbar.lock = self.db.profile.lock_status_bar
 	self.damagebar.hideooc = self.db.profile.hide_damage_bar_ooc
 	self.damagebar.minheal = true
+	-- Register for profile callbacks
 	self.db.RegisterCallback(self, "OnProfileChanged", "Reset")
 	self.db.RegisterCallback(self, "OnProfileCopied", "Reset")
 	self.db.RegisterCallback(self, "OnProfileReset", "Reset")
+	-- Register Options
+	local options = self:GetOptions()
+    LibStub("AceConfig-3.0"):RegisterOptionsTable("BloodShieldTracker", options)
+	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BloodShieldTracker", ADDON_NAME,nil, "core")
+	LibStub("AceConfigDialog-3.0"):AddToBlizOptions("BloodShieldTracker", options.args.profile.name,ADDON_NAME,"profile")
+	icon:Register("BloodShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
+
+	if LSM then
+		LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
+	end
 end
 
 function BloodShieldTracker:Reset()
@@ -744,7 +747,6 @@ function BloodShieldTracker:OnEnable()
 	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 	self:UpdateMastery()
 	self:CheckImpDeathStrike()
-
 	self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED","CheckImpDeathStrike")
 	self:RegisterEvent("CHARACTER_POINTS_CHANGED","CheckImpDeathStrike")
 	self:RegisterEvent("PLAYER_TALENT_UPDATE","CheckImpDeathStrike")
