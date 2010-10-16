@@ -126,19 +126,19 @@ Broker.obj = LDB:NewDataObject("Blood Shield Tracker", {
 } )
 
 local addonHdr = GREEN.."%s %s"
-local shieldDataHdr = ORANGE.."Blood Shield Data"
-local shieldDataLine1 = YELLOW.."Shields Total/Refreshed/Removed:"
-local shieldDataLine2 = YELLOW.."Number of Minimum Shields:"
+local shieldDataHdr = ORANGE..L["Blood Shield Data"]
+local shieldDataLine1 = YELLOW..L["Shields Total/Refreshed/Removed:"]
+local shieldDataLine2 = YELLOW..L["Number of Minimum Shields:"]
 local shieldDataMinShld = "%d (%d%%)"
 local shieldDataLine1Fmt = "%d / %d / %d"
 
-local shieldMaxValueHdr = ORANGE.."Blood Shield Max Value"
-local shieldMaxValueLine1 = YELLOW.."Min - Max / Avg:"
+local shieldMaxValueHdr = ORANGE..L["Blood Shield Max Value"]
+local shieldMaxValueLine1 = YELLOW..L["Min - Max / Avg:"]
 local rangeWithAvgFmt = "%d - %d / %d"
 local rangeWithAvgPercFmt = "%.1f%% - %.1f%% / %.1f%%"
 
-local shieldUsageHdr = ORANGE.."Blood Shield Usage"
-local shieldUsageLine1 = YELLOW.."Usage Min - Max / Avg:"
+local shieldUsageHdr = ORANGE..L["Blood Shield Usage"]
+local shieldUsageLine1 = YELLOW..L["Usage Min - Max / Avg:"]
 local percentFormat = "%.1f%%"
 
 function Broker.obj:OnEnter()
