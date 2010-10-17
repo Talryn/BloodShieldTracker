@@ -252,39 +252,26 @@ function BloodShieldTracker:GetOptions()
 					name = L["General Options"],
 					type = "group",
 					args = {
+					    description = {
+					        order = 1,
+					        type = "description",
+					        name = L["BloodShieldTracker_Desc"],
+					    },
+					    generalOptions = {
+					        order = 2,
+					        type = "header",
+					        name = L["General Options"],
+					    },
                         verbose = {
                             name = L["Verbose"],
-        					order = 1,
+        					order = 10,
                             desc = L["Toggles the display of informational messages"],
                             type = "toggle",
                             set = function(info, val) self.db.profile.verbose = val end,
                             get = function(info) return self.db.profile.verbose end,
                         },
-        				bar_font_size = {
-        					order = 2,
-        					name = L["Font size"],
-        					desc = L["Font size for the bars."],
-        					type = "range",
-        					min = 8,
-        					max = 30,
-        					step = 1,
-        					set = function(info, val) 
-        						self.db.profile.font_size = val 
-        						BloodShieldTracker:ResetFonts()
-        					end,
-        					get = function(info,val) return self.db.profile.font_size end,
-        				},
-        				bar_font = {
-        					order = 3,
-        					type = "select",
-        					name = L["Font"],
-        					desc = L["Font to use."],
-        					values = LSM:HashTable("font"),
-        					dialogControl = 'LSM30_Font',
-        					get = function() return self.db.profile.font_face end,
-        					set = function(info, val) self.db.profile.font_face = val; BloodShieldTracker:ResetFonts() end
-        				},
                 	    minimap = {
+                			order = 20,
                             name = L["Minimap Button"],
                             desc = L["Toggle the minimap button"],
                             type = "toggle",
@@ -301,13 +288,12 @@ function BloodShieldTracker:GetOptions()
                         	        -- Reverse the value since the stored value is to hide it
                                     return not self.db.profile.minimap.hide
                                   end,
-                			order = 4
                         },
         				config_mode = {
         					name = L["Config Mode"],
         					desc = L["Toggle config mode"],
         					type = "execute",
-        					order = 5,
+        					order = 30,
         					func = function()
         					    configMode = not configMode
         						if configMode then
@@ -321,6 +307,35 @@ function BloodShieldTracker:GetOptions()
         						end
         					end,
         				},
+					    fonts = {
+					        order = 40,
+					        type = "header",
+					        name = L["Font"],
+					    },
+        				bar_font_size = {
+        					order = 50,
+        					name = L["Font size"],
+        					desc = L["Font size for the bars."],
+        					type = "range",
+        					min = 8,
+        					max = 30,
+        					step = 1,
+        					set = function(info, val) 
+        						self.db.profile.font_size = val 
+        						BloodShieldTracker:ResetFonts()
+        					end,
+        					get = function(info,val) return self.db.profile.font_size end,
+        				},
+        				bar_font = {
+        					order = 60,
+        					type = "select",
+        					name = L["Font"],
+        					desc = L["Font to use."],
+        					values = LSM:HashTable("font"),
+        					dialogControl = 'LSM30_Font',
+        					get = function() return self.db.profile.font_face end,
+        					set = function(info, val) self.db.profile.font_face = val; BloodShieldTracker:ResetFonts() end
+        				},
         			},
         		},
         		shieldBarOpts = {
@@ -329,11 +344,21 @@ function BloodShieldTracker:GetOptions()
         			name = L["Blood Shield Bar"],
         			desc = L["Blood Shield Bar"],
         			args = {
+					    description = {
+					        order = 1,
+					        type = "description",
+					        name = L["BloodShieldBar_Desc"],
+					    },
+                        generalOptions = {
+                            order = 2,
+                            type = "header",
+                            name = L["General Options"],
+                        },
                 		status_bar_enabled = {
         					name = L["Enabled"],
         					desc = L["Enable the Blood Shield Bar."],
         					type = "toggle",
-        					order = 11,
+        					order = 10,
         					set = function(info, val)
         					    self.db.profile.status_bar_enabled = val
         					    if not val then
@@ -343,10 +368,10 @@ function BloodShieldTracker:GetOptions()
                             get = function(info) return self.db.profile.status_bar_enabled end,
         				},
         				lock_status_bar = {
-        					name = L["Lock shield bar"],
+        					name = L["Lock bar"],
         					desc = L["Lock the shield bar from moving."],
         					type = "toggle",
-        					order = 12,
+        					order = 20,
         					set = function(info, val) self.db.profile.lock_status_bar = val 
         						if BloodShieldTracker.statusbar then
         							BloodShieldTracker.statusbar.lock = val
@@ -354,9 +379,14 @@ function BloodShieldTracker:GetOptions()
         					end,
                             get = function(info) return self.db.profile.lock_status_bar end,
         				},
+                        dimensions = {
+                            order = 29,
+                            type = "header",
+                            name = L["Dimensions"],
+                        },
         				status_bar_width = {
-        					order = 13,
-        					name = L["Blood Shield bar width"],
+        					order = 30,
+        					name = L["Width"],
         					desc = L["Change the width of the blood shield bar."],	
         					type = "range",
         					min = 50,
@@ -369,8 +399,8 @@ function BloodShieldTracker:GetOptions()
         					get = function(info, val) return self.db.profile.status_bar_width end,
         				},
         				status_bar_height = {
-        					order = 14,
-        					name = L["Blood Shield bar height"],
+        					order = 40,
+        					name = L["Height"],
         					desc = L["Change the height of the blood shield bar."],
         					type = "range",
         					min = 10,
@@ -382,8 +412,24 @@ function BloodShieldTracker:GetOptions()
         					end,
         					get = function(info, val) return self.db.profile.status_bar_height end,					
         				},
+        				status_bar_scaling = {
+        					order = 45,
+        					name = L["Scale"],
+        					desc = L["ScaleDesc"],
+        					type = "range",
+        					min = 0.1,
+        					max = 3,
+        					step = 0.1,
+        					get = function() return self.db.profile.status_bar_scale end,
+        					set = function(info, val) self.db.profile.status_bar_scale = val; self.statusbar:SetScale(val); end
+        				},
+                        colors = {
+                            order = 49,
+                            type = "header",
+                            name = L["Colors"],
+                        },
         				status_bar_textcolor = {
-        					order = 15,
+        					order = 50,
         					name = L["Text Color"],
         					desc = L["BloodShieldBarTextColor_OptionDesc"],
         					type = "color",
@@ -399,7 +445,7 @@ function BloodShieldTracker:GetOptions()
         					end,					
         				},
         				status_bar_color = {
-        					order = 16,
+        					order = 60,
         					name = L["Bar Color"],
         					desc = L["BloodShieldBarColor_OptionDesc"],
         					type = "color",
@@ -415,7 +461,7 @@ function BloodShieldTracker:GetOptions()
         					end,					
         				},
         				status_bar_bgcolor = {
-        					order = 17,
+        					order = 70,
         					name = L["Bar Depleted Color"],
         					desc = L["BloodShieldDepletedBarColor_OptionDesc"],
         					type = "color",
@@ -430,9 +476,14 @@ function BloodShieldTracker:GetOptions()
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
+                        appearance = {
+                            order = 79,
+                            type = "header",
+                            name = L["Appearance"],
+                        },
         				status_bar_texture_opt = {
-        					order = 18,
-        					name = L["StatusBarTexture"],
+        					order = 80,
+        					name = L["Texture"],
         					desc = L["StatusBarTextureDesc"],
         					type = "select",
         					values = LSM:HashTable("statusbar"),
@@ -441,7 +492,7 @@ function BloodShieldTracker:GetOptions()
         					set = function(info, val) self.db.profile.status_bar_texture = val; BloodShieldTracker:UpdateShieldBarTexture()	end
         				},
         				status_bar_border_visible_opt = {
-        					order = 19,
+        					order = 90,
         					name = L["ShowBorder"],
         					desc = L["ShowBorderDesc"],
         					type = "toggle",
@@ -449,23 +500,12 @@ function BloodShieldTracker:GetOptions()
         					set = function(info, val) self.db.profile.status_bar_border = val; self:UpdateShieldBarBorder() end,
         				},
         				status_bar_visible_opt = {
-        					order = 20,
+        					order = 100,
         					name = L["ShowBar"],
         					desc = L["ShowBarDesc"],
         					type = "toggle",
         					get = function() return self.db.profile.status_bar_shown end,
         					set = function(info,val) self.db.profile.status_bar_shown = val; self:UpdateShieldBarVisiblity() end,
-        				},
-        				status_bar_scaling = {
-        					order = 21,
-        					name = L["Scale"],
-        					desc = L["ScaleDesc"],
-        					type = "range",
-        					min = 0.1,
-        					max = 3,
-        					step = 0.1,
-        					get = function() return self.db.profile.status_bar_scale end,
-        					set = function(info, val) self.db.profile.status_bar_scale = val; self.statusbar:SetScale(val); end
         				},
         			},
     			},
@@ -476,11 +516,21 @@ function BloodShieldTracker:GetOptions()
     			    desc = L["Estimated Healing Bar"],
     			    args = {
         				-- Estimated Healing
+					    description = {
+					        order = 1,
+					        type = "description",
+					        name = L["EstimatedHealingBar_Desc"],
+					    },
+                        generalOptions = {
+                            order = 2,
+                            type = "header",
+                            name = L["General Options"],
+                        },
                 		estheal_bar_enabled = {
         					name = L["Enabled"],
         					desc = L["Enable the Estimated Healing Bar."],
         					type = "toggle",
-        					order = 42,
+        					order = 10,
         					set = function(info, val)
         					    self.db.profile.damage_bar_enabled = val
         					    if not val then
@@ -490,10 +540,10 @@ function BloodShieldTracker:GetOptions()
                             get = function(info) return self.db.profile.damage_bar_enabled end,
         				},
         				lock_estheal_bar = {
-        					name = L["Lock estimated healing bar"],
+        					name = L["Lock bar"],
         					desc = L["Lock the estimated healing bar from moving."],
         					type = "toggle",
-        					order = 43,
+        					order = 20,
         					set = function(info, val) self.db.profile.lock_damage_bar = val 
         						if BloodShieldTracker.damagebar then
         							BloodShieldTracker.damagebar.lock = val
@@ -505,7 +555,7 @@ function BloodShieldTracker:GetOptions()
         					name = L["Hide out of combat"],
         					desc = L["HideOOC_OptionDesc"],
         					type = "toggle",
-        					order = 44,
+        					order = 30,
         					set = function(info, val) self.db.profile.hide_damage_bar_ooc = val 
         						if BloodShieldTracker.damagebar then
         							BloodShieldTracker.damagebar.hideooc = val
@@ -520,9 +570,14 @@ function BloodShieldTracker:GetOptions()
         					end,
                             get = function(info) return self.db.profile.hide_damage_bar_ooc end,
         				},
+                        dimensions = {
+                            order = 39,
+                            type = "header",
+                            name = L["Dimensions"],
+                        },
         				estheal_bar_width = {
-        					order = 45,
-        					name = L["Estimated Healing bar width"],
+        					order = 40,
+        					name = L["Width"],
         					desc = L["Change the width of the estimated healing bar."],	
         					type = "range",
         					min = 10,
@@ -534,8 +589,8 @@ function BloodShieldTracker:GetOptions()
         					get = function(info, val) return self.db.profile.damage_bar_width end,
         				},
         				estheal_bar_height = {
-        					order = 46,
-        					name = L["Estimated Healing bar height"],
+        					order = 50,
+        					name = L["Height"],
         					desc = L["Change the height of the estimated healing bar."],	
         					type = "range",
         					min = 8,
@@ -547,8 +602,24 @@ function BloodShieldTracker:GetOptions()
         					end,
         					get = function(info, val) return self.db.profile.damage_bar_height end,
         				},
+        				estheal_bar_scaling = {
+        					order = 55,
+        					name = L["Scale"],
+        					desc = L["ScaleDesc"],
+        					type = "range",
+        					min = 0.1,
+        					max = 3,
+        					step = 0.1,
+        					get = function() return self.db.profile.estheal_bar_scale end,
+        					set = function(info, val) self.db.profile.estheal_bar_scale = val; self.damagebar:SetScale(val); end
+        				},
+                        colorsMinimum = {
+                            order = 59,
+                            type = "header",
+                            name = L["Colors for Minimum Heal"],
+                        },
         				estheal_bar_min_textcolor = {
-        					order = 47,
+        					order = 60,
         					name = L["Minimum Text Color"],
         					desc = L["EstHealBarMinTextColor_OptionDesc"],
         					type = "color",
@@ -566,7 +637,7 @@ function BloodShieldTracker:GetOptions()
         					end,					
         				},
         				estheal_bar_min_color = {
-        					order = 48,
+        					order = 70,
         					name = L["Minimum Bar Color"],
         					desc = L["EstHealBarMinColor_OptionDesc"],
         					type = "color",
@@ -584,7 +655,7 @@ function BloodShieldTracker:GetOptions()
         					end,					
         				},
         				estheal_bar_min_bgcolor = {
-        					order = 49,
+        					order = 80,
         					name = L["Minimum Bar Background Color"],
         					desc = L["EstHealBarMinBackgroundColor_OptionDesc"],
         					type = "color",
@@ -601,8 +672,13 @@ function BloodShieldTracker:GetOptions()
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
+                        colorsOptimal = {
+                            order = 89,
+                            type = "header",
+                            name = L["Colors for Optimal Heal"],
+                        },
         				estheal_bar_opt_textcolor = {
-        					order = 50,
+        					order = 90,
         					name = L["Optimal Text Color"],
         					desc = L["EstHealBarOptTextColor_OptionDesc"],
         					type = "color",
@@ -620,7 +696,7 @@ function BloodShieldTracker:GetOptions()
         					end,					
         				},
         				estheal_bar_opt_color = {
-        					order = 51,
+        					order = 100,
         					name = L["Optimal Bar Color"],
         					desc = L["EstHealBarOptColor_OptionDesc"],
         					type = "color",
@@ -637,9 +713,14 @@ function BloodShieldTracker:GetOptions()
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
+                        appearance = {
+                            order = 109,
+                            type = "header",
+                            name = L["Appearance"],
+                        },
         				estheal_bar_texture_opt = {
-        					order = 53,
-        					name = L["StatusBarTexture"],
+        					order = 110,
+        					name = L["Texture"],
         					desc = L["StatusBarTextureDesc"],
         					type = "select",
         					values = LSM:HashTable("statusbar"),
@@ -648,7 +729,7 @@ function BloodShieldTracker:GetOptions()
         					set = function(info, val) self.db.profile.estheal_bar_texture = val; BloodShieldTracker:UpdateDamageBarTexture() end
         				},
         				estheal_bar_border_visible_opt = {
-        					order = 54,
+        					order = 120,
         					name = L["ShowBorder"],
         					desc = L["ShowBorderDesc"],
         					type = "toggle",
@@ -656,24 +737,13 @@ function BloodShieldTracker:GetOptions()
         					set = function(info, val) self.db.profile.estheal_bar_border = val; self:UpdateDamageBarBorder() end,
         				},
         				estheal_bar_visible_opt = {
-        					order = 55,
+        					order = 130,
         					name = L["ShowBar"],
         					desc = L["ShowBarDesc"],
         					type = "toggle",
         					get = function() return self.db.profile.estheal_bar_shown end,
         					set = function(info,val) self.db.profile.estheal_bar_shown = val; self:UpdateDamageBarVisiblity() end,
         				},
-        				estheal_bar_scaling = {
-        					order = 56,
-        					name = L["Scale"],
-        					desc = L["ScaleDesc"],
-        					type = "range",
-        					min = 0.1,
-        					max = 3,
-        					step = 0.1,
-        					get = function() return self.db.profile.estheal_bar_scale end,
-        					set = function(info, val) self.db.profile.estheal_bar_scale = val; self.damagebar:SetScale(val); end
-        				}
         			}
         		}
             }
@@ -687,7 +757,7 @@ function BloodShieldTracker:ChatCommand(input)
     if not input or input:trim() == "" then
         self:ShowOptions()
     else
-        LibStub("AceConfigCmd-3.0").HandleCommand(BloodShieldTracker, "bst", "BloodShieldTracker", input)
+        --LibStub("AceConfigCmd-3.0").HandleCommand(BloodShieldTracker, "bst", "BloodShieldTracker", input)
     end
 end
 
@@ -723,6 +793,10 @@ function BloodShieldTracker:OnInitialize()
 	    displayName, L["Estimated Healing Bar"], ADDON_NAME, "estHealBarOpts")
 	ACD:AddToBlizOptions(
 	    displayName, options.args.profile.name, ADDON_NAME, "profile")
+
+    -- Register the chat command
+    self:RegisterChatCommand("bst", "ChatCommand")
+    self:RegisterChatCommand("bloodshield", "ChatCommand")
 
 	icon:Register("BloodShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
 	LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
