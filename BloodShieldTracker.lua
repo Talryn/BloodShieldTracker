@@ -786,13 +786,13 @@ function BloodShieldTracker:OnInitialize()
     self.optionsFrame = {}
     local ACD = LibStub("AceConfigDialog-3.0")
 	self.optionsFrame.Main = ACD:AddToBlizOptions(
-	    displayName, ADDON_NAME, nil, "core")
+	    displayName, displayName, nil, "core")
 	self.optionsFrame.ShieldBar = ACD:AddToBlizOptions(
-	    displayName, L["Blood Shield Bar"], ADDON_NAME, "shieldBarOpts")
+	    displayName, L["Blood Shield Bar"], displayName, "shieldBarOpts")
 	self.optionsFrame.EstHealBar = ACD:AddToBlizOptions(
-	    displayName, L["Estimated Healing Bar"], ADDON_NAME, "estHealBarOpts")
+	    displayName, L["Estimated Healing Bar"], displayName, "estHealBarOpts")
 	ACD:AddToBlizOptions(
-	    displayName, options.args.profile.name, ADDON_NAME, "profile")
+	    displayName, options.args.profile.name, displayName, "profile")
 
     -- Register the chat command
     self:RegisterChatCommand("bst", "ChatCommand")
