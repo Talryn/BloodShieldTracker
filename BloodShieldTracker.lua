@@ -928,7 +928,7 @@ function BloodShieldTracker:CheckImpDeathStrike()
     	end
     else
         if self.db.profile.verbose then
-            self:Print("Could not determine talents.")
+            self:Print(L["Could not determine talents."])
         end
     end
 	if HasVampTalent then
