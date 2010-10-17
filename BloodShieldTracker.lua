@@ -1424,10 +1424,7 @@ end
 -- Update Status bar status texture
 function BloodShieldTracker:UpdateShieldBarTexture()
 	if self.statusbar then
-		local bt = default_bar_texture
-		if LSM and LSM.Fetch and strlen(self.db.profile.status_bar_texture) > 1 then
-			bt = LSM:Fetch("statusbar",self.db.profile.status_bar_texture)
-		end
+		local bt = LSM:Fetch("statusbar",self.db.profile.status_bar_texture)
 		self.statusbar:SetStatusBarTexture(bt)
 		self.statusbar.bg:SetTexture(bt)
 	    self.statusbar:GetStatusBarTexture():SetHorizTile(false)
