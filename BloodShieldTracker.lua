@@ -570,7 +570,8 @@ function BloodShieldTracker:GetOptions()
         					desc = L["HideOOC_OptionDesc"],
         					type = "toggle",
         					order = 30,
-        					set = function(info, val) self.db.profile.hide_damage_bar_ooc = val 
+        					set = function(info, val)
+        					    self.db.profile.hide_damage_bar_ooc = val 
         						if BloodShieldTracker.damagebar then
         							BloodShieldTracker.damagebar.hideooc = val
         							if not InCombatLockdown() then
@@ -1059,6 +1060,8 @@ function BloodShieldTracker:UpdateDamageBar()
 end
 
 function BloodShieldTracker:UpdateShieldBar(damage)
+    if not IsBloodTank then return end
+
 	self.statusbar.shield_curr = self.statusbar.shield_curr - damage
 	if self.statusbar.shield_curr < 0 and self.db.profile.verbose then
         local badShieldValueFmt = "Bad shield value [Cur=%d, Dmg=%d, Max=%d]"
@@ -1278,6 +1281,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 end
 
 function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, isMinimum)
+    if not IsBloodTank then return end
+
     numShields = numShields + 1
     totalShieldMaxValue = totalShieldMaxValue + shieldValue
 
@@ -1305,6 +1310,8 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, isMinimum)
 end
 
 function BloodShieldTracker:BloodShieldRemoved(type, timestamp)
+    if not IsBloodTank then return end
+
     local max = self.statusbar.shield_max or 0
     local curr = self.statusbar.shield_curr or 0
     if curr < 0 then curr = 0 end
