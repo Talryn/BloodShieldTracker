@@ -199,6 +199,7 @@ local defaults = {
 			hide = true,
 		},
         verbose = false,
+        enable_only_for_blood = true,
         status_bar_enabled = true,
         damage_bar_enabled = true,
         hide_damage_bar_ooc = true,
@@ -262,13 +263,18 @@ function BloodShieldTracker:GetOptions()
 					        type = "header",
 					        name = L["General Options"],
 					    },
-                        verbose = {
-                            name = L["Verbose"],
+                        enable_only_for_blood = {
+                            name = L["Only for Blood DK"],
         					order = 10,
-                            desc = L["Toggles the display of informational messages"],
+                            desc = L["OnlyForBlood_OptionDesc"],
                             type = "toggle",
-                            set = function(info, val) self.db.profile.verbose = val end,
-                            get = function(info) return self.db.profile.verbose end,
+                            set = function(info, val)
+                                self.db.profile.enable_only_for_blood = val
+                                self:CheckImpDeathStrike()
+                            end,
+                            get = function(info)
+                                return self.db.profile.enable_only_for_blood
+                            end,
                         },
                 	    minimap = {
                 			order = 20,
@@ -289,11 +295,19 @@ function BloodShieldTracker:GetOptions()
                                     return not self.db.profile.minimap.hide
                                   end,
                         },
+                        verbose = {
+                            name = L["Verbose"],
+        					order = 30,
+                            desc = L["Toggles the display of informational messages"],
+                            type = "toggle",
+                            set = function(info, val) self.db.profile.verbose = val end,
+                            get = function(info) return self.db.profile.verbose end,
+                        },
         				config_mode = {
         					name = L["Config Mode"],
         					desc = L["Toggle config mode"],
         					type = "execute",
-        					order = 30,
+        					order = 40,
         					func = function()
         					    configMode = not configMode
         						if configMode then
@@ -761,6 +775,7 @@ function BloodShieldTracker:ChatCommand(input)
     end
 end
 
+local isDK = nil
 local IsBloodTank = true
 
 function BloodShieldTracker:OnInitialize()
@@ -768,10 +783,10 @@ function BloodShieldTracker:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", defaults, "Default")
 	-- Create our bars
     self.statusbar = self:CreateStatusBar()
+	self.statusbar.lock = self.db.profile.lock_status_bar
     self.statusbar.shield_curr = 0
     self.damagebar = self:CreateDamageBar()
 	self.damagebar.lock = self.db.profile.lock_damage_bar
-	self.statusbar.lock = self.db.profile.lock_status_bar
 	self.damagebar.hideooc = self.db.profile.hide_damage_bar_ooc
 	self.damagebar.minheal = true
 	-- Register for profile callbacks
@@ -806,6 +821,8 @@ function BloodShieldTracker:Reset()
 	-- Reset positions
 	if self.damagebar then
 		self.damagebar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.est_heal_x, self.db.profile.est_heal_y)
+    	self.damagebar.lock = self.db.profile.lock_damage_bar
+    	self.damagebar.hideooc = self.db.profile.hide_damage_bar_ooc
 		self:UpdateDamageBarTexture()
 		self:UpdateDamageBarBorder()
 		self:UpdateDamageBarVisiblity()
@@ -813,6 +830,7 @@ function BloodShieldTracker:Reset()
 	end
 	if self.statusbar then
 		self.statusbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.shield_bar_x, self.db.profile.shield_bar_y)
+    	self.statusbar.lock = self.db.profile.lock_status_bar
 		self:UpdateShieldBarTexture()
 		self:UpdateShieldBarBorder()
 		self:UpdateShieldBarVisiblity()
@@ -849,6 +867,7 @@ function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 end
 
 function BloodShieldTracker:OnEnable()
+    self:CheckClass()
 	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 	self:UpdateMastery()
 	self:CheckImpDeathStrike()
@@ -903,37 +922,58 @@ function BloodShieldTracker:UpdateMastery()
     masteryRating = GetMastery()
 end
 
-function BloodShieldTracker:CheckImpDeathStrike()
-	ImpDSModifier = 1
-	for t = 1, GetNumTalentTabs() do
-		for i = 1, GetNumTalents(t) do
-			local talentName, _, _, _, currRank, maxRank = GetTalentInfo(t, i)
-			if talentName == IMP_DS_TALENT and currRank > 0 then
-				ImpDSModifier = 1 + (0.15 * currRank)
-			end
-			if talentName == VB_BUFF and currRank > 0 then
-				HasVampTalent = true
-			end
-		end
-	end
-	local primaryTalentTree = GetPrimaryTalentTree()
-	if primaryTalentTree then
-    	local id, name, desc, texture = GetTalentTabInfo(primaryTalentTree, false)
-    	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
-    		IsBloodTank = true
-    		self:Load()
-    	else
-    		IsBloodTank = false
-    		self:Unload()
-    	end
-    else
-        if self.db.profile.verbose then
-            self:Print(L["Could not determine talents."])
+function BloodShieldTracker:CheckClass()
+    local class, className = UnitClass("player")
+    if className then
+        if (className == 'DEATH KNIGHT' or className == 'DEATHKNIGHT') then
+            isDK = true
+        else
+            isDK = false
         end
     end
-	if HasVampTalent then
-    	self:CheckGlyphs()
+end
+
+function BloodShieldTracker:CheckImpDeathStrike()
+    if not isDK then
+        self:CheckClass()
+    end
+
+	ImpDSModifier = 1
+	if isDK then
+    	for t = 1, GetNumTalentTabs() do
+    		for i = 1, GetNumTalents(t) do
+    			local talentName, _, _, _, currRank, maxRank = GetTalentInfo(t, i)
+    			if talentName == IMP_DS_TALENT and currRank > 0 then
+    				ImpDSModifier = 1 + (0.15 * currRank)
+    			end
+    			if talentName == VB_BUFF and currRank > 0 then
+    				HasVampTalent = true
+    			end
+    		end
+    	end
+    	local primaryTalentTree = GetPrimaryTalentTree()
+    	if primaryTalentTree then
+        	local id, name, desc, texture = GetTalentTabInfo(primaryTalentTree, false)
+        	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
+        		IsBloodTank = true
+        	else
+        		IsBloodTank = false
+        	end
+        else
+            if self.db.profile.verbose then
+                self:Print(L["Could not determine talents."])
+            end
+        end
+    	if HasVampTalent then
+        	self:CheckGlyphs()
+    	end
 	end
+
+	if IsBloodTank or (isDK and not self.db.profile.enable_only_for_blood) then
+	    self:Load()
+    else
+        self:Unload()
+    end
 end
 
 function BloodShieldTracker:CheckGlyphs()
