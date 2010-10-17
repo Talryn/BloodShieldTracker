@@ -577,7 +577,7 @@ function BloodShieldTracker:GetOptions()
         							if not InCombatLockdown() then
         							    if val then
         							        self.damagebar:Hide()
-        						        else
+        						        elseif self:IsEnabled() then
         						            self.damagebar:Show()
         					            end
         					        end
@@ -891,7 +891,7 @@ function BloodShieldTracker:Load()
 	self:RegisterEvent("UNIT_AURA")
     self:RegisterEvent("PLAYER_ENTERING_WORLD", "CheckAuras")
     self:RegisterEvent("PLAYER_ALIVE", "CheckAuras")
-    if not self.damagebar.hideooc or InCombatLockdown() then
+    if self:IsEnabled() and (not self.damagebar.hideooc or InCombatLockdown()) then
         self.damagebar:Show()
     end
 	self:UpdateDamageBarVisiblity()
@@ -903,6 +903,7 @@ function BloodShieldTracker:Unload()
     self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 	self:UnregisterEvent("COMBAT_RATING_UPDATE")
 	self:UnregisterEvent("MASTERY_UPDATE")
+	self:UnregisterEvent("UNIT_MAXHEALTH")
 	self:UnregisterEvent("PLAYER_DEAD")
 	self:UnregisterEvent("UNIT_AURA")
     self:UnregisterEvent("PLAYER_ENTERING_WORLD")
@@ -935,7 +936,7 @@ function BloodShieldTracker:CheckClass()
 end
 
 function BloodShieldTracker:CheckImpDeathStrike()
-    if not isDK then
+    if isDK == nil then
         self:CheckClass()
     end
 
@@ -968,12 +969,22 @@ function BloodShieldTracker:CheckImpDeathStrike()
     	if HasVampTalent then
         	self:CheckGlyphs()
     	end
+    else
+        IsBloodTank = false
 	end
 
-	if IsBloodTank or (isDK and not self.db.profile.enable_only_for_blood) then
+	if self:IsEnabled() then
 	    self:Load()
     else
         self:Unload()
+    end
+end
+
+function BloodShieldTracker:IsEnabled()
+    if IsBloodTank or (isDK and not self.db.profile.enable_only_for_blood) then
+        return true
+    else
+        return false
     end
 end
 
@@ -1002,15 +1013,17 @@ end
 function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 	-- Once combat stats, update the damage bar.
 	idle = false
-	updateTimer = self:ScheduleRepeatingTimer("UpdateDamageBar", 0.5)
-	if self.damagebar then
+	if self.damagebar and self:IsEnabled() then
+    	updateTimer = self:ScheduleRepeatingTimer("UpdateDamageBar", 0.5)
 	    self.damagebar:Show()
     end
 end
 
 function BloodShieldTracker:PLAYER_REGEN_ENABLED()
 	-- cancel timer before hand
-    self:CancelTimer(updateTimer)
+	if updateTimer then
+        self:CancelTimer(updateTimer)
+    end
 	idle = true 
     self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], dsHealMin))
     self.damagebar.minheal = true
