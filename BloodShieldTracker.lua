@@ -12,6 +12,9 @@ BloodShieldTracker.playerName = UnitName("player")
 BloodShieldTracker.statusbar = nil
 BloodShieldTracker.damagebar = nil
 
+local isDK = nil
+local IsBloodTank = true
+
 local updateTimer = nil
 local lastSeconds = 5
 local damageTaken = {}
@@ -936,9 +939,6 @@ function BloodShieldTracker:ChatCommand(input)
         --LibStub("AceConfigCmd-3.0").HandleCommand(BloodShieldTracker, "bst", "BloodShieldTracker", input)
     end
 end
-
-local isDK = nil
-local IsBloodTank = true
 
 function BloodShieldTracker:OnInitialize()
     -- Load the settings
