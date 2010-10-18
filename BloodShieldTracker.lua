@@ -348,7 +348,10 @@ function BloodShieldTracker:GetOptions()
         					values = LSM:HashTable("font"),
         					dialogControl = 'LSM30_Font',
         					get = function() return self.db.profile.font_face end,
-        					set = function(info, val) self.db.profile.font_face = val; BloodShieldTracker:ResetFonts() end
+        					set = function(info, val) 
+        					    self.db.profile.font_face = val
+        					    self:ResetFonts()
+        					end
         				},
         			},
         		},
@@ -386,7 +389,8 @@ function BloodShieldTracker:GetOptions()
         					desc = L["Lock the shield bar from moving."],
         					type = "toggle",
         					order = 20,
-        					set = function(info, val) self.db.profile.lock_status_bar = val 
+        					set = function(info, val)
+        					    self.db.profile.lock_status_bar = val 
         						if BloodShieldTracker.statusbar then
         							BloodShieldTracker.statusbar.lock = val
         						end
@@ -406,11 +410,14 @@ function BloodShieldTracker:GetOptions()
         					min = 50,
         					max = 300,
         					step = 1,
-        					set = function(info, val) self.db.profile.status_bar_width = val 
-        						BloodShieldTracker.statusbar:SetWidth(val)
-        						BloodShieldTracker.statusbar.border:SetWidth(val+9)
+        					set = function(info, val)
+        					    self.db.profile.status_bar_width = val 
+        						self.statusbar:SetWidth(val)
+        						self.statusbar.border:SetWidth(val+9)
         					end,
-        					get = function(info, val) return self.db.profile.status_bar_width end,
+        					get = function(info, val)
+        					    return self.db.profile.status_bar_width
+        					end,
         				},
         				status_bar_height = {
         					order = 40,
@@ -420,11 +427,14 @@ function BloodShieldTracker:GetOptions()
         					min = 10,
         					max = 30,
         					step = 1,
-        					set = function(info, val) self.db.profile.status_bar_height = val 
-        						BloodShieldTracker.statusbar:SetHeight(val)
-        						BloodShieldTracker.statusbar.border:SetHeight(val + 8)
+        					set = function(info, val)
+        					    self.db.profile.status_bar_height = val 
+        						self.statusbar:SetHeight(val)
+        						self.statusbar.border:SetHeight(val + 8)
         					end,
-        					get = function(info, val) return self.db.profile.status_bar_height end,					
+        					get = function(info, val)
+        					    return self.db.profile.status_bar_height
+        					end,					
         				},
         				status_bar_scaling = {
         					order = 45,
@@ -435,7 +445,10 @@ function BloodShieldTracker:GetOptions()
         					max = 3,
         					step = 0.1,
         					get = function() return self.db.profile.status_bar_scale end,
-        					set = function(info, val) self.db.profile.status_bar_scale = val; self.statusbar:SetScale(val); end
+        					set = function(info, val)
+        					    self.db.profile.status_bar_scale = val
+        					    self.statusbar:SetScale(val)
+        					end
         				},
                         colors = {
                             order = 49,
@@ -502,16 +515,26 @@ function BloodShieldTracker:GetOptions()
         					type = "select",
         					values = LSM:HashTable("statusbar"),
         					dialogControl = 'LSM30_Statusbar',
-        					get = function() return self.db.profile.status_bar_texture	end,
-        					set = function(info, val) self.db.profile.status_bar_texture = val; BloodShieldTracker:UpdateShieldBarTexture()	end
+        					get = function()
+        					    return self.db.profile.status_bar_texture
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.status_bar_texture = val
+        					    self:UpdateShieldBarTexture()
+        					end
         				},
         				status_bar_border_visible_opt = {
         					order = 90,
         					name = L["ShowBorder"],
         					desc = L["ShowBorderDesc"],
         					type = "toggle",
-        					get = function() return self.db.profile.status_bar_border end,
-        					set = function(info, val) self.db.profile.status_bar_border = val; self:UpdateShieldBarBorder() end,
+        					get = function()
+        					    return self.db.profile.status_bar_border
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.status_bar_border = val
+        					    self:UpdateShieldBarBorder()
+        					end,
         				},
         				status_bar_visible_opt = {
         					order = 100,
@@ -519,7 +542,10 @@ function BloodShieldTracker:GetOptions()
         					desc = L["ShowBarDesc"],
         					type = "toggle",
         					get = function() return self.db.profile.status_bar_shown end,
-        					set = function(info,val) self.db.profile.status_bar_shown = val; self:UpdateShieldBarVisiblity() end,
+        					set = function(info,val) 
+        				        self.db.profile.status_bar_shown = val
+        				        self:UpdateShieldBarVisibility()
+        				    end,
         				},
         			},
     			},
@@ -548,7 +574,7 @@ function BloodShieldTracker:GetOptions()
         					set = function(info, val)
         					    self.db.profile.damage_bar_enabled = val
         					    if not val then
-        						    BloodShieldTracker.damagebar:Hide()
+        						    self.damagebar:Hide()
         						end
         					end,
                             get = function(info) return self.db.profile.damage_bar_enabled end,
@@ -583,7 +609,9 @@ function BloodShieldTracker:GetOptions()
         					        end
         						end					
         					end,
-                            get = function(info) return self.db.profile.hide_damage_bar_ooc end,
+                            get = function(info)
+                                return self.db.profile.hide_damage_bar_ooc
+                            end,
         				},
                         dimensions = {
                             order = 39,
@@ -597,11 +625,14 @@ function BloodShieldTracker:GetOptions()
         					type = "range",
         					min = 10,
         					max = 200,
-        					set = function(info, val) self.db.profile.damage_bar_width = val 
-        						BloodShieldTracker.damagebar:SetWidth(val)
-        						BloodShieldTracker.damagebar.border:SetWidth(val+9)
+        					set = function(info, val)
+        					    self.db.profile.damage_bar_width = val 
+        						self.damagebar:SetWidth(val)
+        						self.damagebar.border:SetWidth(val+9)
         					end,
-        					get = function(info, val) return self.db.profile.damage_bar_width end,
+        					get = function(info, val)
+        					    return self.db.profile.damage_bar_width
+        					end,
         				},
         				estheal_bar_height = {
         					order = 50,
@@ -611,11 +642,14 @@ function BloodShieldTracker:GetOptions()
         					min = 8,
         					max = 30,
         					step = 1,
-        					set = function(info, val) self.db.profile.damage_bar_height = val 
-        						BloodShieldTracker.damagebar:SetHeight(val)
-        						BloodShieldTracker.damagebar.border:SetHeight(val + 8)
+        					set = function(info, val)
+        					    self.db.profile.damage_bar_height = val 
+        						self.damagebar:SetHeight(val)
+        						self.damagebar.border:SetHeight(val + 8)
         					end,
-        					get = function(info, val) return self.db.profile.damage_bar_height end,
+        					get = function(info, val)
+        					    return self.db.profile.damage_bar_height
+        					end,
         				},
         				estheal_bar_scaling = {
         					order = 55,
@@ -625,8 +659,13 @@ function BloodShieldTracker:GetOptions()
         					min = 0.1,
         					max = 3,
         					step = 0.1,
-        					get = function() return self.db.profile.estheal_bar_scale end,
-        					set = function(info, val) self.db.profile.estheal_bar_scale = val; self.damagebar:SetScale(val); end
+        					get = function()
+        					    return self.db.profile.estheal_bar_scale
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.estheal_bar_scale = val
+        					    self.damagebar:SetScale(val)
+        					end
         				},
                         colorsMinimum = {
                             order = 59,
@@ -643,7 +682,8 @@ function BloodShieldTracker:GetOptions()
         					    local c = self.db.profile.estheal_bar_min_textcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
         					    if self.damagebar then
-        					        self:UpdateDamageBarColors(self.damagebar.minheal or true)
+        					        self:UpdateDamageBarColors(
+        					            self.damagebar.minheal or true)
         					    end
         					end,
         					get = function(info)
@@ -661,7 +701,8 @@ function BloodShieldTracker:GetOptions()
         					    local c = self.db.profile.estheal_bar_min_color
         					    c.r, c.g, c.b, c.a = r, g, b, a
         					    if self.damagebar then
-        					        self:UpdateDamageBarColors(self.damagebar.minheal or true)
+        					        self:UpdateDamageBarColors(
+        					            self.damagebar.minheal or true)
         					    end
         					end,
         					get = function(info)
@@ -679,7 +720,8 @@ function BloodShieldTracker:GetOptions()
         					    local c = self.db.profile.estheal_bar_min_bgcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
         					    if self.damagebar then
-        					        self:UpdateDamageBarColors(self.damagebar.minheal or true)
+        					        self:UpdateDamageBarColors(
+        					            self.damagebar.minheal or true)
         					    end
         					end,
         					get = function(info)
@@ -702,7 +744,8 @@ function BloodShieldTracker:GetOptions()
         					    local c = self.db.profile.estheal_bar_opt_textcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
         					    if self.damagebar then
-        					        self:UpdateDamageBarColors(self.damagebar.minheal or true)
+        					        self:UpdateDamageBarColors(
+        					            self.damagebar.minheal or true)
         					    end
         					end,
         					get = function(info)
@@ -720,7 +763,8 @@ function BloodShieldTracker:GetOptions()
         					    local c = self.db.profile.estheal_bar_opt_color
         					    c.r, c.g, c.b, c.a = r, g, b, a
         					    if self.damagebar then
-        					        self:UpdateDamageBarColors(self.damagebar.minheal or true)
+        					        self:UpdateDamageBarColors(
+        					            self.damagebar.minheal or true)
         					    end
         					end,
         					get = function(info)
@@ -740,24 +784,39 @@ function BloodShieldTracker:GetOptions()
         					type = "select",
         					values = LSM:HashTable("statusbar"),
         					dialogControl = 'LSM30_Statusbar',
-        					get = function() return self.db.profile.estheal_bar_texture	end,
-        					set = function(info, val) self.db.profile.estheal_bar_texture = val; BloodShieldTracker:UpdateDamageBarTexture() end
+        					get = function()
+        					    return self.db.profile.estheal_bar_texture
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.estheal_bar_texture = val
+        					    self:UpdateDamageBarTexture()
+        					end
         				},
         				estheal_bar_border_visible_opt = {
         					order = 120,
         					name = L["ShowBorder"],
         					desc = L["ShowBorderDesc"],
         					type = "toggle",
-        					get = function() return self.db.profile.estheal_bar_border end,
-        					set = function(info, val) self.db.profile.estheal_bar_border = val; self:UpdateDamageBarBorder() end,
+        					get = function()
+        					    return self.db.profile.estheal_bar_border
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.estheal_bar_border = val
+        					    self:UpdateDamageBarBorder()
+        					end,
         				},
         				estheal_bar_visible_opt = {
         					order = 130,
         					name = L["ShowBar"],
         					desc = L["ShowBarDesc"],
         					type = "toggle",
-        					get = function() return self.db.profile.estheal_bar_shown end,
-        					set = function(info,val) self.db.profile.estheal_bar_shown = val; self:UpdateDamageBarVisiblity() end,
+        					get = function()
+        					    return self.db.profile.estheal_bar_shown
+        					end,
+        					set = function(info,val)
+        					    self.db.profile.estheal_bar_shown = val
+        					    self:UpdateDamageBarVisibility()
+        					end,
         				},
         			}
         		}
@@ -826,7 +885,7 @@ function BloodShieldTracker:Reset()
     	self.damagebar.hideooc = self.db.profile.hide_damage_bar_ooc
 		self:UpdateDamageBarTexture()
 		self:UpdateDamageBarBorder()
-		self:UpdateDamageBarVisiblity()
+		self:UpdateDamageBarVisibility()
 		self:UpdateDamageBarColors()
 	end
 	if self.statusbar then
@@ -834,7 +893,7 @@ function BloodShieldTracker:Reset()
     	self.statusbar.lock = self.db.profile.lock_status_bar
 		self:UpdateShieldBarTexture()
 		self:UpdateShieldBarBorder()
-		self:UpdateShieldBarVisiblity()
+		self:UpdateShieldBarVisibility()
 		self:UpdateShieldBarGraphics()
 	end
 	self:ResetFonts()
@@ -894,7 +953,8 @@ function BloodShieldTracker:Load()
     if self:IsEnabled() and (not self.damagebar.hideooc or InCombatLockdown()) then
         self.damagebar:Show()
     end
-	self:UpdateDamageBarVisiblity()
+    self:UpdateShieldBarVisibility()
+	self:UpdateDamageBarVisibility()
 end
 
 function BloodShieldTracker:Unload()
@@ -1433,7 +1493,7 @@ function BloodShieldTracker:CheckAuras()
     self:UpdateMinHeal("CheckAura", "player")
 end
 
-function BloodShieldTracker:UpdateShieldBarVisiblity()
+function BloodShieldTracker:UpdateShieldBarVisibility()
 	if self.statusbar then
 		local show = self.db.profile.status_bar_shown
 		if not show then
@@ -1447,7 +1507,7 @@ function BloodShieldTracker:UpdateShieldBarVisiblity()
 	end
 end
 
-function BloodShieldTracker:UpdateDamageBarVisiblity()
+function BloodShieldTracker:UpdateDamageBarVisibility()
 	if self.damagebar then
 		local show = self.db.profile.estheal_bar_shown
 		if not show then
@@ -1651,7 +1711,7 @@ function BloodShieldTracker:CreateDamageBar()
 			y = y - GetScreenHeight()/2
 			x = x / self:GetScale()
 			y = y / self:GetScale()
-			BloodShieldTracker.db.profile.est_heal_x, BloodShieldTracker.db.profile.est_heal_y = x, y
+			self.db.profile.est_heal_x, BloodShieldTracker.db.profile.est_heal_y = x, y
 			self:SetUserPlaced(false);
         end)
 
