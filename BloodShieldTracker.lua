@@ -156,31 +156,34 @@ function Broker.obj:OnEnter()
 
     tooltip:AddHeader(addonHdr:format(GetAddOnMetadata(ADDON_NAME,"Title"), ADDON_VERSION))
     tooltip:AddLine()
-    tooltip:AddLine(L["Shift + Left-Click to reset."], "", 1, 1, 1)
-    tooltip:AddLine()
 
-    tooltip:AddLine(shieldDataHdr)
-    tooltip:AddSeparator(1)
-    tooltip:AddLine(shieldDataLine1, 
-        shieldDataLine1Fmt:format(numShields,numRefreshedShields,numRemovedShields))
-    tooltip:AddLine(shieldDataLine2, 
-        shieldDataMinShld:format(numMinShields, percentMinimum))
+    if isDK then
+        tooltip:AddLine(L["Shift + Left-Click to reset."], "", 1, 1, 1)
+        tooltip:AddLine()
 
-    tooltip:AddLine()
+        tooltip:AddLine(shieldDataHdr)
+        tooltip:AddSeparator(1)
+        tooltip:AddLine(shieldDataLine1, 
+            shieldDataLine1Fmt:format(numShields,numRefreshedShields,numRemovedShields))
+        tooltip:AddLine(shieldDataLine2, 
+            shieldDataMinShld:format(numMinShields, percentMinimum))
 
-    tooltip:AddLine(shieldMaxValueHdr)
-    tooltip:AddSeparator(1)
-    tooltip:AddLine(shieldMaxValueLine1, 
-        rangeWithAvgFmt:format(
-            minShieldMaxValue, maxShieldMaxValue, avgShieldMaxValue or 0))
+        tooltip:AddLine()
 
-    tooltip:AddLine()
+        tooltip:AddLine(shieldMaxValueHdr)
+        tooltip:AddSeparator(1)
+        tooltip:AddLine(shieldMaxValueLine1, 
+            rangeWithAvgFmt:format(
+                minShieldMaxValue, maxShieldMaxValue, avgShieldMaxValue or 0))
 
-    tooltip:AddLine(shieldUsageHdr)
-    tooltip:AddSeparator(1)
-    tooltip:AddLine(shieldUsageLine1, 
-        rangeWithAvgPercFmt:format(
-            minShieldUsedPerc or 0, maxShieldUsedPerc, avgShieldUsedPerc or 0))
+        tooltip:AddLine()
+
+        tooltip:AddLine(shieldUsageHdr)
+        tooltip:AddSeparator(1)
+        tooltip:AddLine(shieldUsageLine1, 
+            rangeWithAvgPercFmt:format(
+                minShieldUsedPerc or 0, maxShieldUsedPerc, avgShieldUsedPerc or 0))
+    end
 
 	tooltip:SmartAnchorTo(self)
 	tooltip:Show()
@@ -200,6 +203,11 @@ local defaults = {
 		},
         verbose = false,
         enable_only_for_blood = true,
+        shield_bar_show_time = true,
+        shield_bar_time_pos = "RIGHT",
+        shield_sound_enabled = false,
+        shield_applied_sound = "None",
+        shield_removed_sound = "None",
         status_bar_enabled = true,
         damage_bar_enabled = true,
         hide_damage_bar_ooc = true,
@@ -397,13 +405,107 @@ function BloodShieldTracker:GetOptions()
         					end,
                             get = function(info) return self.db.profile.lock_status_bar end,
         				},
+                        timeRemaining = {
+                            order = 100,
+                            type = "header",
+                            name = L["Time Remaining"],
+                        },
+        				shield_bar_show_time = {
+        					name = L["Show Time"],
+        					desc = L["ShowTime_OptionDesc"],
+        					type = "toggle",
+        					order = 110,
+        					set = function(info, val)
+        					    self.db.profile.shield_bar_show_time = val
+        					    if val then
+        					        self.statusbar.time:Show()
+    					        else
+    					            self.statusbar.time:Hide()
+					            end
+        					end,
+                            get = function(info)
+                                return self.db.profile.shield_bar_show_time
+                            end,
+        				},
+        				shield_bar_time_pos = {
+        					name = L["Position"],
+        					desc = L["TimePosition_OptionDesc"],
+        					type = "select",
+        					values = {
+        					    ["RIGHT"] = L["Right"],
+        					    ["LEFT"] = L["Left"],
+        					},
+        					order = 120,
+        					set = function(info, val)
+        					    self.db.profile.shield_bar_time_pos = val
+    					        self.statusbar.time:SetPoint(val or "RIGHT")
+    					        self.statusbar.time:SetJustifyH(val or "RIGHT")
+        					end,
+                            get = function(info)
+                                return self.db.profile.shield_bar_time_pos
+                            end,
+                            disabled = function()
+                                return not self.db.profile.shield_bar_show_time
+                            end,
+        				},
+                        sound = {
+                            order = 200,
+                            type = "header",
+                            name = L["Sound"],
+                        },
+        				shield_sound_enabled = {
+        					name = L["Enabled"],
+        					desc = L["ShieldSoundEnabledDesc"],
+        					type = "toggle",
+        					order = 210,
+        					set = function(info, val)
+        					    self.db.profile.shield_sound_enabled = val
+        					end,
+                            get = function(info)
+                                return self.db.profile.shield_sound_enabled
+                            end,
+        				},
+        				shield_bar_applied_sound = {
+        					order = 220,
+        					name = L["Applied Sound"],
+        					desc = L["AppliedSoundDesc"],
+        					type = "select",
+        					values = LSM:HashTable("sound"),
+        					dialogControl = 'LSM30_Sound',
+        					get = function()
+        					    return self.db.profile.shield_applied_sound
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.shield_applied_sound = val
+        					end,
+        					disabled = function()
+        					    return not self.db.profile.shield_sound_enabled
+        					end,
+        				},
+        				shield_bar_removed_sound = {
+        					order = 230,
+        					name = L["Removed Sound"],
+        					desc = L["RemovedSoundDesc"],
+        					type = "select",
+        					values = LSM:HashTable("sound"),
+        					dialogControl = 'LSM30_Sound',
+        					get = function()
+        					    return self.db.profile.shield_removed_sound
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.shield_removed_sound = val
+        					end,
+        					disabled = function()
+        					    return not self.db.profile.shield_sound_enabled
+        					end,
+        				},
                         dimensions = {
-                            order = 29,
+                            order = 300,
                             type = "header",
                             name = L["Dimensions"],
                         },
         				status_bar_width = {
-        					order = 30,
+        					order = 310,
         					name = L["Width"],
         					desc = L["Change the width of the blood shield bar."],	
         					type = "range",
@@ -420,7 +522,7 @@ function BloodShieldTracker:GetOptions()
         					end,
         				},
         				status_bar_height = {
-        					order = 40,
+        					order = 320,
         					name = L["Height"],
         					desc = L["Change the height of the blood shield bar."],
         					type = "range",
@@ -437,7 +539,7 @@ function BloodShieldTracker:GetOptions()
         					end,					
         				},
         				status_bar_scaling = {
-        					order = 45,
+        					order = 330,
         					name = L["Scale"],
         					desc = L["ScaleDesc"],
         					type = "range",
@@ -451,12 +553,12 @@ function BloodShieldTracker:GetOptions()
         					end
         				},
                         colors = {
-                            order = 49,
+                            order = 400,
                             type = "header",
                             name = L["Colors"],
                         },
         				status_bar_textcolor = {
-        					order = 50,
+        					order = 410,
         					name = L["Text Color"],
         					desc = L["BloodShieldBarTextColor_OptionDesc"],
         					type = "color",
@@ -472,7 +574,7 @@ function BloodShieldTracker:GetOptions()
         					end,					
         				},
         				status_bar_color = {
-        					order = 60,
+        					order = 420,
         					name = L["Bar Color"],
         					desc = L["BloodShieldBarColor_OptionDesc"],
         					type = "color",
@@ -488,7 +590,7 @@ function BloodShieldTracker:GetOptions()
         					end,					
         				},
         				status_bar_bgcolor = {
-        					order = 70,
+        					order = 430,
         					name = L["Bar Depleted Color"],
         					desc = L["BloodShieldDepletedBarColor_OptionDesc"],
         					type = "color",
@@ -504,12 +606,12 @@ function BloodShieldTracker:GetOptions()
         					end,					
         				},
                         appearance = {
-                            order = 79,
+                            order = 500,
                             type = "header",
                             name = L["Appearance"],
                         },
         				status_bar_texture_opt = {
-        					order = 80,
+        					order = 510,
         					name = L["Texture"],
         					desc = L["StatusBarTextureDesc"],
         					type = "select",
@@ -524,7 +626,7 @@ function BloodShieldTracker:GetOptions()
         					end
         				},
         				status_bar_border_visible_opt = {
-        					order = 90,
+        					order = 520,
         					name = L["ShowBorder"],
         					desc = L["ShowBorderDesc"],
         					type = "toggle",
@@ -537,7 +639,7 @@ function BloodShieldTracker:GetOptions()
         					end,
         				},
         				status_bar_visible_opt = {
-        					order = 100,
+        					order = 530,
         					name = L["ShowBar"],
         					desc = L["ShowBarDesc"],
         					type = "toggle",
@@ -842,9 +944,10 @@ function BloodShieldTracker:OnInitialize()
     -- Load the settings
     self.db = LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", defaults, "Default")
 	-- Create our bars
-    self.statusbar = self:CreateStatusBar()
+    self.statusbar = self:CreateShieldBar()
 	self.statusbar.lock = self.db.profile.lock_status_bar
     self.statusbar.shield_curr = 0
+    self.statusbar.expires = 0
     self.damagebar = self:CreateDamageBar()
 	self.damagebar.lock = self.db.profile.lock_damage_bar
 	self.damagebar.hideooc = self.db.profile.hide_damage_bar_ooc
@@ -901,13 +1004,15 @@ function BloodShieldTracker:Reset()
 end
 
 function BloodShieldTracker:ResetFonts()
-	local fontName, fontHeight, fontFlags = BloodShieldTracker.statusbar.value:GetFont()
+	local fontName, fontHeight, fontFlags = self.statusbar.value:GetFont()
 	local ff = LSM:Fetch("font",self.db.profile.font_face)
 	local fh = self.db.profile.font_size
-	BloodShieldTracker.statusbar.value:SetFont(ff,fh,fontFlags)
-	BloodShieldTracker.statusbar.value:SetText(BloodShieldTracker.statusbar.value:GetText())
-	BloodShieldTracker.damagebar.value:SetFont(ff,fh,fontFlags)						
-	BloodShieldTracker.damagebar.value:SetText(BloodShieldTracker.damagebar.value:GetText())
+	self.statusbar.value:SetFont(ff,fh,fontFlags)
+	self.statusbar.value:SetText(self.statusbar.value:GetText())
+	self.statusbar.time:SetFont(ff,fh,fontFlags)
+	self.statusbar.time:SetText(self.statusbar.time:GetText())
+	self.damagebar.value:SetFont(ff,fh,fontFlags)						
+	self.damagebar.value:SetText(self.damagebar.value:GetText())
 end
 
 function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
@@ -1071,19 +1176,17 @@ function BloodShieldTracker:UpdateMinHeal(event,unit)
 end
 
 function BloodShieldTracker:PLAYER_REGEN_DISABLED()
-	-- Once combat stats, update the damage bar.
+	-- Once combat starts, update the damage bar.
 	idle = false
-	if self.damagebar and self:IsEnabled() then
-    	updateTimer = self:ScheduleRepeatingTimer("UpdateDamageBar", 0.5)
-	    self.damagebar:Show()
+	if self:IsEnabled() then
+    	updateTimer = self:ScheduleRepeatingTimer("UpdateBars", 0.5)
+        if self.damagebar then
+	        self.damagebar:Show()
+        end
     end
 end
 
 function BloodShieldTracker:PLAYER_REGEN_ENABLED()
-	-- cancel timer before hand
-	if updateTimer then
-        self:CancelTimer(updateTimer)
-    end
 	idle = true 
     self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], dsHealMin))
     self.damagebar.minheal = true
@@ -1098,6 +1201,7 @@ end
 
 function BloodShieldTracker:PLAYER_DEAD()
     -- Just in case, hide the BS bar if the player dies
+    self.statusbar.expires = 0
     self:CheckAuras()
     self.statusbar:Hide()
     -- Hide the heal bar if configured to do so for OOC
@@ -1106,29 +1210,53 @@ function BloodShieldTracker:PLAYER_DEAD()
     end
 end
 
-function BloodShieldTracker:UpdateDamageBar()
-    if not self.db.profile.damage_bar_enabled then return end
-    
-    local recentDamage = self:GetRecentDamageTaken()
+function BloodShieldTracker:UpdateBars()
+    -- If we're out of combat and no Blood Shields are present, stop the timer
+    if idle and self.statusbar.expires == 0 then
+    	if updateTimer then
+            self:CancelTimer(updateTimer)
+            updateTimer = nil
+        end
+    end
 
-    local predictedHeal = recentDamage * dsHealModifier * ImpDSModifier
-    local minimumHeal = dsHealMin
-	if recentDamage < minimumHeal then
-    	self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], minimumHeal))
-	else
-    	self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], predictedHeal))		
-	end
+    if self.db.profile.status_bar_enabled then
+        local expires = self.statusbar.expires
+        local timeleft = 0
+        local timeLeftFmt = "%d"
+        local current = GetTime()
+        if expires > 0 then
+            timeleft = expires - current
+            if timeleft < 0 or timeleft > 10 then
+                timeleft = 0
+            end
+        
+            timeleft = floor(timeleft)
+        end
+        self.statusbar.time:SetText(timeLeftFmt:format(timeleft))
+    end
 
-    self.damagebar:SetMinMaxValues(0, minimumHeal)
+    if self.db.profile.damage_bar_enabled and not idle then
+        local recentDamage = self:GetRecentDamageTaken()
 
-    if predictedHeal > minimumHeal then
-        self.damagebar.minheal = false
-        self:UpdateDamageBarColors(false)
-        self.damagebar:SetValue(minimumHeal)        
-    else
-        self.damagebar.minheal = true
-        self:UpdateDamageBarColors(true)
-        self.damagebar:SetValue(predictedHeal)
+        local predictedHeal = recentDamage * dsHealModifier * ImpDSModifier
+        local minimumHeal = dsHealMin
+    	if recentDamage < minimumHeal then
+        	self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], minimumHeal))
+    	else
+        	self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], predictedHeal))		
+    	end
+
+        self.damagebar:SetMinMaxValues(0, minimumHeal)
+
+        if predictedHeal > minimumHeal then
+            self.damagebar.minheal = false
+            self:UpdateDamageBarColors(false)
+            self.damagebar:SetValue(minimumHeal)        
+        else
+            self.damagebar.minheal = true
+            self:UpdateDamageBarColors(true)
+            self.damagebar:SetValue(predictedHeal)
+        end
     end
 end
 
@@ -1191,7 +1319,7 @@ function BloodShieldTracker:AddDamageTaken(timestamp, damage)
         end
     end
     
-    self:UpdateDamageBar()
+    self:UpdateBars()
 end
 
 function BloodShieldTracker:GetSpellSchool(school)
@@ -1335,6 +1463,10 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
     if eventtype == "SPELL_AURA_APPLIED" and dstName == self.playerName then
         if param10 and param10 == BS_SPELL then
+            self.statusbar.expires = GetTime() + 10
+            if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
+                PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
+            end
             if self.db.profile.verbose then
                 self:Print("Blood Shield applied.")
             end
@@ -1343,11 +1475,19 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
     if eventtype == "SPELL_AURA_REFRESH" and dstName == self.playerName then
         if param10 and param10 == BS_SPELL then
+            if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
+                PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
+            end
+
             self:BloodShieldRemoved("refreshed", timestamp)
         end
     end
     if eventtype == "SPELL_AURA_REMOVED" and dstName == self.playerName then
         if param10 and param10 == BS_SPELL then
+            if self.db.profile.shield_sound_enabled and self.db.profile.shield_removed_sound then
+                PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_removed_sound))
+            end
+
             self:BloodShieldRemoved("removed", timestamp)
         end
     end
@@ -1412,10 +1552,12 @@ function BloodShieldTracker:BloodShieldRemoved(type, timestamp)
     end
 
     if type == "refreshed" then
+        self.statusbar.expires = GetTime() + 10
         numRefreshedShields = numRefreshedShields + 1
     end
 
     if type == "removed" then
+        self.statusbar.expires = 0
         numRemovedShields = numRemovedShields + 1
         self.statusbar:Hide()
     end
@@ -1567,12 +1709,21 @@ end
 
 function BloodShieldTracker:UpdateShieldBarGraphics()
     if self.statusbar then
+        if self.db.profile.shield_bar_show_time then
+            self.statusbar.time:Show()
+        else
+            self.statusbar.time:Hide()
+        end
+        
+        self.statusbar.time:SetPoint(self.db.profile.shield_bar_time_pos or "RIGHT")
+
         local bc = self.db.profile.status_bar_color
         self.statusbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
         local bgc = self.db.profile.status_bar_bgcolor
         self.statusbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
         local tc = self.db.profile.status_bar_textcolor
         self.statusbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+        self.statusbar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
     end
 end
 
@@ -1594,7 +1745,7 @@ function BloodShieldTracker:UpdateDamageBarColors(min)
     end
 end
 
-function BloodShieldTracker:CreateStatusBar()
+function BloodShieldTracker:CreateShieldBar()
     local statusbar = CreateFrame("StatusBar", "BloodShieldTracker_StatusBar", UIParent)
     statusbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.shield_bar_x, self.db.profile.shield_bar_y)
 	statusbar:SetScale(self.db.profile.status_bar_scale)
@@ -1630,6 +1781,20 @@ function BloodShieldTracker:CreateStatusBar()
     statusbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
     statusbar.lock = false
 	statusbar.value:SetText(statusBarFormat:format(0, 0, "0"))
+
+    statusbar.time = statusbar:CreateFontString(nil, "OVERLAY")
+    statusbar.time:SetPoint(self.db.profile.shield_bar_time_pos or "RIGHT")
+    statusbar.time:SetFont(font, self.db.profile.font_size, "OUTLINE")
+    statusbar.time:SetJustifyH(self.db.profile.shield_bar_time_pos or "RIGHT")
+    statusbar.time:SetShadowOffset(1, -1)
+    statusbar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    statusbar.time:SetText("0")
+    if self.db.profile.shield_bar_show_time then
+        statusbar.time:Show()
+    else
+        statusbar.time:Hide()
+    end
+
     statusbar:SetMovable()
     statusbar:RegisterForDrag("LeftButton")
     statusbar:SetScript("OnDragStart",
