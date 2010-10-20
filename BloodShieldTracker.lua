@@ -118,19 +118,27 @@ local HEALING_DEBUFFS = {
 	[15312] = 0.25, -- Improved Mind Blast (Priest)
 	[15313] = 0.25, -- Improved Mind Blast (Priest)
 	[11175] = 0.08, -- Permafrost (Mage)
-	[12596] = 0.16, -- Permafrost (Mage)
+	[12569] = 0.16, -- Permafrost (Mage)
 	[12571] = 0.25, -- Permafrost (Mage)
 	[30213] = 0.25, -- Legion Strike (Warlock)
-	[80390] = 0.20, -- Mortal Strike (NPC)
-	[95410] = 0.25, -- Mortal Strike (NPC)
 	[59455] = 0.75, -- Mortal Strike (NPC)
 	[54716] = 0.50, -- Mortal Strike (NPC)
 	[19643] = 0.50, -- Mortal Strike (NPC)
+	[32736] = 0.50, -- Mortal Strike (NPC)
+	[67542] = 0.50, -- Mortal Strike (NPC)
+	[13737] = 0.50, -- Mortal Strike (NPC)
+	[68784] = 0.50, -- Mortal Strike (NPC)
+	[71552] = 0.50, -- Mortal Strike (NPC)
+	[68782] = 0.50, -- Mortal Strike (NPC)
+	
 }
 local healing_debuff_names = {}
 
 for k,v in pairs(HEALING_DEBUFFS) do
-	healing_debuff_names[(GetSpellInfo(k))] = true
+	local l = (GetSpellInfo(k))
+	if l then
+		healing_debuff_names[l] = true
+	end
 end
 
 
@@ -1200,7 +1208,7 @@ function BloodShieldTracker:UpdateMinHeal(event,unit)
 	if unit == "player" then
 		dsHealMin = ceil(
 		    (UnitHealthMax("player") * 0.1 * (1+iccBuffAmt) * 
-		        (1+vbHealingInc) * (1-healingDebuffModifier))-0.5)
+		        (1+vbHealingInc) * (1-healingDebuffMultiplier))-0.5)
 		if idle then
 			self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], dsHealMin))
 		end
@@ -1474,16 +1482,16 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local minimumHeal = dsHealMin
         
-        if healingDebuffModifier == 1 then
+        if healingDebuffMultiplier == 1 then
             shieldValue, predictedHeal, minimumBS = 0, 0, 0
         else
             shieldValue = ceil((totalHeal*shieldPercent / 
-                (1+iccBuffAmt) / (1+vbHealingInc) / (1-healingDebuffModifier))-0.5)
+                (1+iccBuffAmt) / (1+vbHealingInc) / (1-healingDebuffMultiplier))-0.5)
             predictedHeal = ceil(
                 (recentDmg * dsHealModifier * ImpDSModifier * 
-                    (1+iccBuffAmt) * (1+vbHealingInc) / (1-healingDebuffModifier))-0.5)
+                    (1+iccBuffAmt) * (1+vbHealingInc) / (1-healingDebuffMultiplier))-0.5)
             minimumBS = ceil((minimumHeal * shieldPercent / 
-                (1+iccBuffAmt) / (1+vbHealingInc) / (1-healingDebuffModifier))-0.5)
+                (1+iccBuffAmt) / (1+vbHealingInc) / (1-healingDebuffMultiplier))-0.5)
         end
 
         local shieldInd = ""
