@@ -105,23 +105,23 @@ local vbHealingInc = 0.0
 local healingDebuffMultiplier = 1
 
 local HEALING_DEBUFFS = {
+    -- PvP healing debuffs
 	[56112] = 0.20, -- Furious Attacks (Warrior)
 	[54680] = 0.25, -- Monstrous Bite (Hunter: Devilsaur)
 	[12294] = 0.25, -- Mortal Strike (Warrior)
 	[82654] = 0.25, -- Widow Venom (Hunter)
 	[13218] = 0.25, -- Wound Poison (Rogue)
+	[48301] = 0.25, -- Mind Trauma (Priest)
+	[11175] = 0.08, -- Permafrost (Mage)
+	[12569] = 0.16, -- Permafrost (Mage)
+	[12571] = 0.25, -- Permafrost (Mage)
+	[30213] = 0.25, -- Legion Strike (Warlock)
+    -- NPCs helaing debuffs
 	[69674] = 0.50, -- Rotface Mutated Infection
 	[73023] = 0.75, -- Rotface Mutated Infection
 	[73022] = 0.75, -- Rotface Mutated Infection
 	[71224] = 0.50, -- Rotface Mutated Infection
 	[71127] = 0.10, -- Stinky/Precious Mortal Wound
-	[15273] = 0.25, -- Improved Mind Blast (Priest)
-	[15312] = 0.25, -- Improved Mind Blast (Priest)
-	[15313] = 0.25, -- Improved Mind Blast (Priest)
-	[11175] = 0.08, -- Permafrost (Mage)
-	[12569] = 0.16, -- Permafrost (Mage)
-	[12571] = 0.25, -- Permafrost (Mage)
-	[30213] = 0.25, -- Legion Strike (Warlock)
 	[59455] = 0.75, -- Mortal Strike (NPC)
 	[54716] = 0.50, -- Mortal Strike (NPC)
 	[19643] = 0.50, -- Mortal Strike (NPC)
