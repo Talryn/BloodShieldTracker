@@ -101,6 +101,7 @@ local vbUnglyphedHealthInc = 0.15
 local vbUnglyphedHealingInc = 0.25
 local vbHealthInc = 0.0
 local vbHealingInc = 0.0
+
 local healingDebuffMultiplier = 1
 
 local HEALING_DEBUFFS = {
@@ -124,23 +125,15 @@ local HEALING_DEBUFFS = {
 	[59455] = 0.75, -- Mortal Strike (NPC)
 	[54716] = 0.50, -- Mortal Strike (NPC)
 	[19643] = 0.50, -- Mortal Strike (NPC)
-	[32736] = 0.50, -- Mortal Strike (NPC)
-	[67542] = 0.50, -- Mortal Strike (NPC)
-	[13737] = 0.50, -- Mortal Strike (NPC)
-	[68784] = 0.50, -- Mortal Strike (NPC)
-	[71552] = 0.50, -- Mortal Strike (NPC)
-	[68782] = 0.50, -- Mortal Strike (NPC)
-	
+    [32736] = 0.50, -- Mortal Strike (NPC)
+    [67542] = 0.50, -- Mortal Strike (NPC)
+    [13737] = 0.50, -- Mortal Strike (NPC)
+    [68784] = 0.50, -- Mortal Strike (NPC)
+    [71552] = 0.50, -- Mortal Strike (NPC)
+    [68782] = 0.50, -- Mortal Strike (NPC)
 }
+
 local healing_debuff_names = {}
-
-for k,v in pairs(HEALING_DEBUFFS) do
-	local l = (GetSpellInfo(k))
-	if l then
-		healing_debuff_names[l] = true
-	end
-end
-
 
 local Broker = CreateFrame("Frame")
 Broker.obj = LDB:NewDataObject(GetAddOnMetadata(ADDON_NAME,"Title"), {
@@ -1070,7 +1063,17 @@ function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 	end
 end
 
+function BloodShieldTracker:UpdateHealingDebuffs()
+    for k,v in pairs(HEALING_DEBUFFS) do
+        local spellName = (GetSpellInfo(k))
+        if spellName and #spellName > 0 then
+    	    healing_debuff_names[spellName] = true
+        end
+    end
+end
+
 function BloodShieldTracker:OnEnable()
+    self:UpdateHealingDebuffs()
     self:CheckClass()
 	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 	self:UpdateMastery()
@@ -1455,10 +1458,10 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if self.db.profile.verbose then
             local recentDmg = self:GetRecentDamageTaken(timestamp)
             local predictedHeal = 0
-            if healingDebuffModifier ~= 1 then 
+            if healingDebuffMultiplier ~= 1 then 
                 predictedHeal = ceil(
                     (recentDmg * dsHealModifier * ImpDSModifier * (1+iccBuffAmt) *
-                         (1+vbHealingInc) * (1-healingDebuffModifier))-0.5)
+                         (1+vbHealingInc) * (1-healingDebuffMultiplier))-0.5)
             end
             local dsHealFormat = "Estimated damage of %d will be a heal for %d"
     		self:Print(dsHealFormat:format(recentDmg, predictedHeal))
@@ -1477,21 +1480,19 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         -- side last five seconds of damage, we will take the heal and work
         -- backwards.  The forumula below attempts to factor in various
         -- healing buffs.
-        local shieldValue, predictedHeal, minimumBS
+        local shieldValue, predictedHeal
 
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local minimumHeal = dsHealMin
         
         if healingDebuffMultiplier == 1 then
-            shieldValue, predictedHeal, minimumBS = 0, 0, 0
+            shieldValue, predictedHeal = 0, 0
         else
             shieldValue = ceil((totalHeal*shieldPercent / 
                 (1+iccBuffAmt) / (1+vbHealingInc) / (1-healingDebuffMultiplier))-0.5)
             predictedHeal = ceil(
                 (recentDmg * dsHealModifier * ImpDSModifier * 
                     (1+iccBuffAmt) * (1+vbHealingInc) / (1-healingDebuffMultiplier))-0.5)
-            minimumBS = ceil((minimumHeal * shieldPercent / 
-                (1+iccBuffAmt) / (1+vbHealingInc) / (1-healingDebuffMultiplier))-0.5)
         end
 
         local shieldInd = ""
@@ -1641,7 +1642,7 @@ function BloodShieldTracker:CheckAuras()
 
     -- Check for Hellscream's Warsong ICC buff
     name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-        consolidate,spellId = UnitAura("player", HELLSCREAM_BUFF)
+        consolidate, spellId = UnitAura("player", HELLSCREAM_BUFF)
     if spellId then
         iccBuffFound = true
         iccBuff = true
@@ -1664,7 +1665,7 @@ function BloodShieldTracker:CheckAuras()
     end
 
     name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-        consolidate,spellId = UnitAura("player", VB_BUFF)
+        consolidate, spellId = UnitAura("player", VB_BUFF)
     if name then
         vbBuff = true
 		-- No Need to check how much bonus health we get from VB since we listen
@@ -1686,8 +1687,12 @@ function BloodShieldTracker:CheckAuras()
 	healingDebuffMultiplier = 0
 	-- Scan for healing debuffs
 	for k,v in pairs(healing_debuff_names) do
-		name, rank, icon, count, dispelType, duration, expires, caster, stealable, consolidate,spellId = UnitAura("player", k)
-		if name and HEALING_DEBUFFS[spellId] then
+		name, rank, icon, count, dispelType, duration, expires, caster, 
+		    stealable, consolidate, spellId = UnitDebuff("player", k)
+		if spellId and HEALING_DEBUFFS[spellId] then
+		    if not count or count == 0 then
+		        count = 1
+	        end
 			healingDebuff = HEALING_DEBUFFS[spellId] * count
 			if healingDebuff > healingDebuffMultiplier then
 			    healingDebuffMultiplier = healingDebuff
