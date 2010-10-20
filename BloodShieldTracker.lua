@@ -1441,9 +1441,12 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
         if self.db.profile.verbose then
             local recentDmg = self:GetRecentDamageTaken(timestamp)
-            local predictedHeal = ceil(
-                (recentDmg * dsHealModifier * ImpDSModifier * 
-                    (1+iccBuffAmt) * (1+vbHealingInc))-0.5)
+            local predictedHeal = 0
+            if healingDebuffModifier ~= 1 then 
+                predictedHeal = ceil(
+                    (recentDmg * dsHealModifier * ImpDSModifier * (1+iccBuffAmt) *
+                         (1+vbHealingInc) * (1-healingDebuffModifier))-0.5)
+            end
             local dsHealFormat = "Estimated damage of %d will be a heal for %d"
     		self:Print(dsHealFormat:format(recentDmg, predictedHeal))
         end
@@ -1461,17 +1464,24 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         -- side last five seconds of damage, we will take the heal and work
         -- backwards.  The forumula below attempts to factor in various
         -- healing buffs.
-        local shieldValue = ceil((totalHeal*shieldPercent / 
-            (1+iccBuffAmt) / (1+vbHealingInc))-0.5)
+        local shieldValue, predictedHeal, minimumBS
 
         local recentDmg = self:GetRecentDamageTaken(timestamp)
-        local predictedHeal = ceil(
-            (recentDmg * dsHealModifier * ImpDSModifier * 
-                (1+iccBuffAmt) * (1+vbHealingInc))-0.5)
         local minimumHeal = dsHealMin
+        
+        if healingDebuffModifier == 1 then
+            shieldValue, predictedHeal, minimumBS = 0, 0, 0
+        else
+            shieldValue = ceil((totalHeal*shieldPercent / 
+                (1+iccBuffAmt) / (1+vbHealingInc) / (1-healingDebuffModifier))-0.5)
+            predictedHeal = ceil(
+                (recentDmg * dsHealModifier * ImpDSModifier * 
+                    (1+iccBuffAmt) * (1+vbHealingInc) / (1-healingDebuffModifier))-0.5)
+            minimumBS = ceil((minimumHeal * shieldPercent / 
+                (1+iccBuffAmt) / (1+vbHealingInc) / (1-healingDebuffModifier))-0.5)
+        end
+
         local shieldInd = ""
-        local minimumBS = ceil((minimumHeal * shieldPercent / 
-            (1+iccBuffAmt) / (1+vbHealingInc))-0.5)
         local isMinimum = false
         if totalHeal == minimumHeal then
             shieldInd = "(min)"
