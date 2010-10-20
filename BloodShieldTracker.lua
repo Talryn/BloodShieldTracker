@@ -101,6 +101,25 @@ local vbUnglyphedHealthInc = 0.15
 local vbUnglyphedHealingInc = 0.25
 local vbHealthInc = 0.0
 local vbHealingInc = 0.0
+local healingDebuffMultiplier = 1
+
+local HEALING_DEBUFS = {
+	[56112] = 0.20,-- Furious Attacks (Warrior)
+	[54680] = 0.25,-- Monstrous Bite (Hunter: Devilsaur)
+	[12294] = 0.25,-- Mortal Strike (Warrior)
+	[82654] = 0.25,-- Widow Venom (Hunter)
+	[13218] = 0.25,-- Wound Poison (Rogue)
+	[69674] = 0.50,-- Rotface
+	[73023] = 0.75,-- Rotface
+	[73022] = 0.75,-- Rotface
+	[71224] = 0.50,-- Rotface
+	[71127] = 0.10,-- Stinky/Prescious
+}
+local healing_debuff_names = {}
+
+for k,v in pairs(HEALING_DEBUFS) do
+	healing_debuff_names[(GetSpellInfo(k))] = true
+end
 
 
 local Broker = CreateFrame("Frame")
@@ -1631,7 +1650,15 @@ function BloodShieldTracker:CheckAuras()
         vbHealthInc = 0.0
         vbHealingInc = 0.0
     end
-
+	healingDebuffMultiplier = 0
+	-- Scan for healing debuffs
+	for k,v in pairs(healing_debuff_names) do
+		name, rank, icon, count, dispelType, duration, expires, caster, stealable, consolidate,spellId = UnitAura("player", k)
+		if name and HEALING_DEBUFS[spellId] then
+			healingDebuffMultiplier = HEALING_DEBUFS[spellId] * count
+		end
+	end
+	
     self:UpdateMinHeal("CheckAura", "player")
 end
 
