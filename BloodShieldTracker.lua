@@ -1486,13 +1486,14 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         local minimumHeal = dsHealMin
         
         if healingDebuffMultiplier == 1 then
-            shieldValue, predictedHeal = 0, 0
+            shieldValue = 0
+            predictedHeal = 0
         else
             shieldValue = ceil((totalHeal*shieldPercent / 
                 (1+iccBuffAmt) / (1+vbHealingInc) / (1-healingDebuffMultiplier))-0.5)
             predictedHeal = ceil(
                 (recentDmg * dsHealModifier * ImpDSModifier * 
-                    (1+iccBuffAmt) * (1+vbHealingInc) / (1-healingDebuffMultiplier))-0.5)
+                    (1+iccBuffAmt) * (1+vbHealingInc) * (1-healingDebuffMultiplier))-0.5)
         end
 
         local shieldInd = ""
