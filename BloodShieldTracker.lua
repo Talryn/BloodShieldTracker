@@ -123,9 +123,9 @@ local HEALING_DEBUFFS = {
 	[30213] = 0.25, -- Legion Strike (Warlock)
 	[80390] = 0.20, -- Mortal Strike (NPC)
 	[95410] = 0.25, -- Mortal Strike (NPC)
-	[59455] = 0.75  -- Mortal Strike (NPC)
-	[54716] = 0.50  -- Mortal Strike (NPC)
-	[19643] - 0.50, -- Mortal Strike (NPC)
+	[59455] = 0.75, -- Mortal Strike (NPC)
+	[54716] = 0.50, -- Mortal Strike (NPC)
+	[19643] = 0.50, -- Mortal Strike (NPC)
 }
 local healing_debuff_names = {}
 
