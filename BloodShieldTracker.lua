@@ -121,10 +121,11 @@ local HEALING_DEBUFFS = {
 	[12596] = 0.16, -- Permafrost (Mage)
 	[12571] = 0.25, -- Permafrost (Mage)
 	[30213] = 0.25, -- Legion Strike (Warlock)
-	[80390] = 0.20, -- Mortal Strike
-	[95410] = 0.25, -- Mortal Strike
-	[59455] = 0.75  -- Mortal Strike
-	[54716] = 0.50  -- Mortal Strike	
+	[80390] = 0.20, -- Mortal Strike (NPC)
+	[95410] = 0.25, -- Mortal Strike (NPC)
+	[59455] = 0.75  -- Mortal Strike (NPC)
+	[54716] = 0.50  -- Mortal Strike (NPC)
+	[19643] - 0.50, -- Mortal Strike (NPC)
 }
 local healing_debuff_names = {}
 
