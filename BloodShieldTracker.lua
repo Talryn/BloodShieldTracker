@@ -103,21 +103,28 @@ local vbHealthInc = 0.0
 local vbHealingInc = 0.0
 local healingDebuffMultiplier = 1
 
-local HEALING_DEBUFS = {
-	[56112] = 0.20,-- Furious Attacks (Warrior)
-	[54680] = 0.25,-- Monstrous Bite (Hunter: Devilsaur)
-	[12294] = 0.25,-- Mortal Strike (Warrior)
-	[82654] = 0.25,-- Widow Venom (Hunter)
-	[13218] = 0.25,-- Wound Poison (Rogue)
-	[69674] = 0.50,-- Rotface
-	[73023] = 0.75,-- Rotface
-	[73022] = 0.75,-- Rotface
-	[71224] = 0.50,-- Rotface
-	[71127] = 0.10,-- Stinky/Prescious
+local HEALING_DEBUFFS = {
+	[56112] = 0.20, -- Furious Attacks (Warrior)
+	[54680] = 0.25, -- Monstrous Bite (Hunter: Devilsaur)
+	[12294] = 0.25, -- Mortal Strike (Warrior)
+	[82654] = 0.25, -- Widow Venom (Hunter)
+	[13218] = 0.25, -- Wound Poison (Rogue)
+	[69674] = 0.50, -- Rotface Mutated Infection
+	[73023] = 0.75, -- Rotface Mutated Infection
+	[73022] = 0.75, -- Rotface Mutated Infection
+	[71224] = 0.50, -- Rotface Mutated Infection
+	[71127] = 0.10, -- Stinky/Precious Mortal Wound
+	[15273] = 0.25, -- Improved Mind Blast (Priest)
+	[15312] = 0.25, -- Improved Mind Blast (Priest)
+	[15313] = 0.25, -- Improved Mind Blast (Priest)
+	[11175] = 0.08, -- Permafrost (Mage)
+	[12596] = 0.16, -- Permafrost (Mage)
+	[12571] = 0.25, -- Permafrost (Mage)
+	[30213] = 0.25, -- Legion Strike (Warlock)
 }
 local healing_debuff_names = {}
 
-for k,v in pairs(HEALING_DEBUFS) do
+for k,v in pairs(HEALING_DEBUFFS) do
 	healing_debuff_names[(GetSpellInfo(k))] = true
 end
 
@@ -1187,7 +1194,8 @@ end
 function BloodShieldTracker:UpdateMinHeal(event,unit)
 	if unit == "player" then
 		dsHealMin = ceil(
-		    (UnitHealthMax("player") * 0.1 * (1+iccBuffAmt) * (1+vbHealingInc))-0.5)
+		    (UnitHealthMax("player") * 0.1 * (1+iccBuffAmt) * 
+		        (1+vbHealingInc) * (1-healingDebuffModifier))-0.5)
 		if idle then
 			self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], dsHealMin))
 		end
@@ -1650,15 +1658,24 @@ function BloodShieldTracker:CheckAuras()
         vbHealthInc = 0.0
         vbHealingInc = 0.0
     end
+
+    local healingDebuff = 0
 	healingDebuffMultiplier = 0
 	-- Scan for healing debuffs
 	for k,v in pairs(healing_debuff_names) do
 		name, rank, icon, count, dispelType, duration, expires, caster, stealable, consolidate,spellId = UnitAura("player", k)
-		if name and HEALING_DEBUFS[spellId] then
-			healingDebuffMultiplier = HEALING_DEBUFS[spellId] * count
+		if name and HEALING_DEBUFFS[spellId] then
+			healingDebuff = HEALING_DEBUFFS[spellId] * count
+			if healingDebuff > healingDebuffMultiplier then
+			    healingDebuffMultiplier = healingDebuff
+			end
 		end
 	end
-	
+	-- Just in case make sure the modifier is a sane value
+	if healingDebuffMultiplier > 1 then
+	    healingDebuffMultiplier = 1
+    end
+
     self:UpdateMinHeal("CheckAura", "player")
 end
 
