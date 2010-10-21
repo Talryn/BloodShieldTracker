@@ -1298,12 +1298,11 @@ function BloodShieldTracker:UpdateEstHealBar()
     if self.db.profile.damage_bar_enabled and not idle then
         local recentDamage = self:GetRecentDamageTaken()
 
-        local predictedHeal = recentDamage * dsHealModifier * ImpDSModifier
+        local predictedHeal = ceil((recentDamage * dsHealModifier * ImpDSModifier *
+            (1+iccBuffAmt) * (1+vbHealingInc) * (1-healingDebuffMultiplier))-0.5)
         local minimumHeal = dsHealMin
-        local estimate
-    	if recentDamage < minimumHeal then
-    	    estimate = minimumHeal
-    	else
+        local estimate = minimumHeal
+    	if predictedHeal > minimumHeal then
     	    estimate = predictedHeal
     	end
 
