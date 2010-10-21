@@ -41,6 +41,7 @@ local BLUE = "|cff0198e1"
 local ORANGE = "|cffff9933"
 local statusBarFormat = "%d/%d (%d%%)"
 local healBarFormat = "%s: %d"
+local healBarNoTextFormat = "%d"
 
 local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
@@ -268,6 +269,7 @@ local defaults = {
 		status_bar_border = true,
 		estheal_bar_border = true,
 		estheal_bar_shown = true,
+		estheal_bar_show_text = true,
 		status_bar_shown = true,
 		est_heal_x = 0, est_heal_y = -40,
 		shield_bar_x = 0, shield_bar_y = 0,
@@ -750,6 +752,17 @@ function BloodShieldTracker:GetOptions()
                                 return self.db.profile.hide_damage_bar_ooc
                             end,
         				},
+        				estheal_bar_show_text = {
+        					name = L["Show Text"],
+        					desc = L["EstHealBarShowText_OptDesc"],
+        					type = "toggle",
+        					order = 35,
+        					set = function(info, val)
+        					    self.db.profile.estheal_bar_show_text = val
+        					    self:UpdateMinHeal("UpdateShowText", "player")
+        					end,
+                            get = function(info) return self.db.profile.estheal_bar_show_text end,
+        				},
                         dimensions = {
                             order = 39,
                             type = "header",
@@ -1213,7 +1226,7 @@ function BloodShieldTracker:UpdateMinHeal(event,unit)
 		    (UnitHealthMax("player") * 0.1 * (1+iccBuffAmt) * 
 		        (1+vbHealingInc) * (1-healingDebuffMultiplier))-0.5)
 		if idle then
-			self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], dsHealMin))
+		    self:UpdateEstHealBarText(dsHealMin)
 		end
 	end
 end
@@ -1230,8 +1243,8 @@ function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 end
 
 function BloodShieldTracker:PLAYER_REGEN_ENABLED()
-	idle = true 
-    self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], dsHealMin))
+	idle = true
+	self:UpdateEstHealBarText(dsHealMin)
     self.damagebar.minheal = true
     self:UpdateDamageBarColors(true)
     self.damagebar:SetMinMaxValues(0, 1)
@@ -1278,17 +1291,23 @@ function BloodShieldTracker:UpdateBars()
         self.statusbar.time:SetText(timeLeftFmt:format(timeleft))
     end
 
+    self:UpdateEstHealBar()
+end
+
+function BloodShieldTracker:UpdateEstHealBar()
     if self.db.profile.damage_bar_enabled and not idle then
         local recentDamage = self:GetRecentDamageTaken()
 
         local predictedHeal = recentDamage * dsHealModifier * ImpDSModifier
         local minimumHeal = dsHealMin
+        local estimate
     	if recentDamage < minimumHeal then
-        	self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], minimumHeal))
+    	    estimate = minimumHeal
     	else
-        	self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], predictedHeal))		
+    	    estimate = predictedHeal
     	end
 
+        self:UpdateEstHealBarText(estimate)
         self.damagebar:SetMinMaxValues(0, minimumHeal)
 
         if predictedHeal > minimumHeal then
@@ -1300,6 +1319,14 @@ function BloodShieldTracker:UpdateBars()
             self:UpdateDamageBarColors(true)
             self.damagebar:SetValue(predictedHeal)
         end
+    end
+end
+
+function BloodShieldTracker:UpdateEstHealBarText(estimate)
+    if self.db.profile.estheal_bar_show_text then
+	    self.damagebar.value:SetText(healBarFormat:format(L["HealBarText"], estimate))
+    else
+	    self.damagebar.value:SetText(healBarNoTextFormat:format(estimate))
     end
 end
 
