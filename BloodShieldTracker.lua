@@ -1513,14 +1513,18 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         self:NewBloodShield(timestamp, shieldValue, isMinimum)
     end
 
-    if eventtype == "SPELL_AURA_APPLIED" and dstName == self.playerName then
-        if param10 and param10 == BS_SPELL then
+    if eventtype == "SPELL_AURA_APPLIED" and dstName == self.playerName and param10 then
+        if param10 == BS_SPELL then
             self.statusbar.expires = GetTime() + 10
             if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
                 PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
             end
             if self.db.profile.verbose then
                 self:Print("Blood Shield applied.")
+            end
+        elseif param10 == VB_BUFF then
+            if self.db.profile.verbose then
+                self:Print("Vampiric Blood applied.")
             end
         end
     end
@@ -1534,13 +1538,17 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             self:BloodShieldRemoved("refreshed", timestamp)
         end
     end
-    if eventtype == "SPELL_AURA_REMOVED" and dstName == self.playerName then
-        if param10 and param10 == BS_SPELL then
+    if eventtype == "SPELL_AURA_REMOVED" and dstName == self.playerName and param10 then
+        if param10 == BS_SPELL then
             if self.db.profile.shield_sound_enabled and self.db.profile.shield_removed_sound then
                 PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_removed_sound))
             end
 
             self:BloodShieldRemoved("removed", timestamp)
+        elseif param10 == VB_BUFF then
+            if self.db.profile.verbose then
+                self:Print("Vampiric Blood removed.")
+            end
         end
     end
 end
