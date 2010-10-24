@@ -103,6 +103,10 @@ local vbUnglyphedHealingInc = 0.25
 local vbHealthInc = 0.0
 local vbHealingInc = 0.0
 
+local GUARDIAN_SPIRIT_BUFF = (GetSpellInfo(47788))
+local guardianSpiritHealBuff = 0.40
+local gsHealModifier = 0.0
+
 local healingDebuffMultiplier = 1
 
 local HEALING_DEBUFFS = {
@@ -135,6 +139,11 @@ local HEALING_DEBUFFS = {
 }
 
 local healing_debuff_names = {}
+
+local function round(number)
+    if not number then return 0 end
+    return ceil(number-0.5)
+end
 
 local Broker = CreateFrame("Frame")
 Broker.obj = LDB:NewDataObject(GetAddOnMetadata(ADDON_NAME,"Title"), {
@@ -1220,11 +1229,20 @@ function BloodShieldTracker:CheckGlyphs()
     end
 end
 
+function BloodShieldTracker:GetEffectiveHealingBuffModifiers()
+    return (1+iccBuffAmt) * (1+vbHealingInc) * (1+gsHealModifier)
+end
+
+function BloodShieldTracker:GetEffectiveHealingDebuffModifiers()
+    return (1-healingDebuffMultiplier)
+end
+
 function BloodShieldTracker:UpdateMinHeal(event,unit)
 	if unit == "player" then
-		dsHealMin = ceil(
-		    (UnitHealthMax("player") * 0.1 * (1+iccBuffAmt) * 
-		        (1+vbHealingInc) * (1-healingDebuffMultiplier))-0.5)
+		dsHealMin = round(
+		    UnitHealthMax("player") * 0.1 * 
+		    self:GetEffectiveHealingBuffModifiers() * 
+		    self:GetEffectiveHealingDebuffModifiers())
 		if idle then
 		    self:UpdateEstHealBarText(dsHealMin)
 		end
@@ -1298,8 +1316,10 @@ function BloodShieldTracker:UpdateEstHealBar()
     if self.db.profile.damage_bar_enabled and not idle then
         local recentDamage = self:GetRecentDamageTaken()
 
-        local predictedHeal = ceil((recentDamage * dsHealModifier * ImpDSModifier *
-            (1+iccBuffAmt) * (1+vbHealingInc) * (1-healingDebuffMultiplier))-0.5)
+        local predictedHeal = round(
+            recentDamage * dsHealModifier * ImpDSModifier *
+            self:GetEffectiveHealingBuffModifiers() * 
+            self:GetEffectiveHealingDebuffModifiers())
         local minimumHeal = dsHealMin
         local estimate = minimumHeal
     	if predictedHeal > minimumHeal then
@@ -1341,11 +1361,12 @@ function BloodShieldTracker:UpdateShieldBar(damage)
 	self.statusbar:SetValue(self.statusbar.shield_curr)
 	local diff
 	if self.statusbar.shield_max > 0 then
-	    diff = ceil((self.statusbar.shield_curr/self.statusbar.shield_max*100)-0.5)
+	    diff = round(self.statusbar.shield_curr/self.statusbar.shield_max*100)
     else
         diff = 0
     end
-	self.statusbar.value:SetText(statusBarFormat:format(self.statusbar.shield_curr, self.statusbar.shield_max, diff))
+	self.statusbar.value:SetText(
+	    statusBarFormat:format(self.statusbar.shield_curr, self.statusbar.shield_max, diff))
 end
 
 function BloodShieldTracker:GetRecentDamageTaken(timestamp)
@@ -1485,9 +1506,10 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             local recentDmg = self:GetRecentDamageTaken(timestamp)
             local predictedHeal = 0
             if healingDebuffMultiplier ~= 1 then 
-                predictedHeal = ceil(
-                    (recentDmg * dsHealModifier * ImpDSModifier * (1+iccBuffAmt) *
-                         (1+vbHealingInc) * (1-healingDebuffMultiplier))-0.5)
+                predictedHeal = round(
+                    recentDmg * dsHealModifier * ImpDSModifier * 
+                    self:GetEffectiveHealingBuffModifiers() * 
+                    self:GetEffectiveHealingDebuffModifiers())
             end
             local dsHealFormat = "Estimated damage of %d will be a heal for %d"
     		self:Print(dsHealFormat:format(recentDmg, predictedHeal))
@@ -1515,11 +1537,13 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             shieldValue = 0
             predictedHeal = 0
         else
-            shieldValue = ceil((totalHeal*shieldPercent / 
-                (1+iccBuffAmt) / (1+vbHealingInc) / (1-healingDebuffMultiplier))-0.5)
-            predictedHeal = ceil(
-                (recentDmg * dsHealModifier * ImpDSModifier * 
-                    (1+iccBuffAmt) * (1+vbHealingInc) * (1-healingDebuffMultiplier))-0.5)
+            shieldValue = round(totalHeal*shieldPercent / 
+                self:GetEffectiveHealingBuffModifiers() / 
+                self:GetEffectiveHealingDebuffModifiers())
+            predictedHeal = round(
+                recentDmg * dsHealModifier * ImpDSModifier * 
+                    self:GetEffectiveHealingBuffModifiers() * 
+                    self:GetEffectiveHealingDebuffModifiers())
         end
 
         local shieldInd = ""
@@ -1552,6 +1576,10 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             if self.db.profile.verbose then
                 self:Print("Vampiric Blood applied.")
             end
+        elseif param10 == GUARDIAN_SPIRIT_BUFF then
+            if self.db.profile.verbose then
+                self:Print("Guardian Spirit applied.")
+            end
         end
     end
 
@@ -1574,6 +1602,10 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         elseif param10 == VB_BUFF then
             if self.db.profile.verbose then
                 self:Print("Vampiric Blood removed.")
+            end
+        elseif param10 == GUARDIAN_SPIRIT_BUFF then
+            if self.db.profile.verbose then
+                self:Print("Guardian Spirit removed.")
             end
         end
     end
@@ -1737,6 +1769,19 @@ function BloodShieldTracker:CheckAuras()
 	-- Just in case make sure the modifier is a sane value
 	if healingDebuffMultiplier > 1 then
 	    healingDebuffMultiplier = 1
+    end
+
+    --
+    -- Check for other healing buffs
+    --
+    -- Check for Guardian Spirit
+    gsBuff = false
+    gsHealModifier = 0.0
+    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+        consolidate, spellId = UnitAura("player", GUARDIAN_SPIRIT_BUFF)
+    if name then
+        gsBuff = true
+        gsHealModifier = guardianSpiritHealBuff
     end
 
     self:UpdateMinHeal("CheckAura", "player")
