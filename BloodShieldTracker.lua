@@ -58,6 +58,7 @@ local ImpDSModifier = 1
 local HasVampTalent = false
 local dsHealModifier = 0.3
 local shieldPerMasteryPoint = 6.25
+local maxHealth = 0
 local dsHealMin = 0
 
 local HELLSCREAM_BUFF_05 = 73816
@@ -1239,8 +1240,9 @@ end
 
 function BloodShieldTracker:UpdateMinHeal(event,unit)
 	if unit == "player" then
+	    maxHealth = UnitHealthMax("player")
 		dsHealMin = round(
-		    UnitHealthMax("player") * 0.1 * 
+		    maxHealth * 0.1 * 
 		    self:GetEffectiveHealingBuffModifiers() * 
 		    self:GetEffectiveHealingDebuffModifiers())
 		if idle then
@@ -1530,28 +1532,32 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         -- healing buffs.
         local shieldValue, predictedHeal
 
+        local shieldInd = ""
+        local isMinimum = false
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local minimumHeal = dsHealMin
+        local minimumBS = round(maxHealth * 0.1 * shieldPercent)
         
         if healingDebuffMultiplier == 1 then
-            shieldValue = 0
+            shieldValue = minimumBS
             predictedHeal = 0
+            shieldInd = "(min)"
+            isMinimum = true
         else
             shieldValue = round(totalHeal*shieldPercent / 
                 self:GetEffectiveHealingBuffModifiers() / 
                 self:GetEffectiveHealingDebuffModifiers())
+            if shieldValue <= minimumBS then
+                shieldInd = "(min)"
+                isMinimum = true
+                shieldValue = minimumBS
+            end
             predictedHeal = round(
                 recentDmg * dsHealModifier * ImpDSModifier * 
                     self:GetEffectiveHealingBuffModifiers() * 
                     self:GetEffectiveHealingDebuffModifiers())
         end
 
-        local shieldInd = ""
-        local isMinimum = false
-        if totalHeal == minimumHeal then
-            shieldInd = "(min)"
-            isMinimum = true
-        end
         if self.db.profile.verbose then
             local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d]"
             self:Print(dsHealFormat:format(
