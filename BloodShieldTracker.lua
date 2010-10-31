@@ -13,7 +13,7 @@ BloodShieldTracker.statusbar = nil
 BloodShieldTracker.damagebar = nil
 
 local isDK = nil
-local IsBloodTank = true
+local IsBloodTank = false
 
 local updateTimer = nil
 local lastSeconds = 5
@@ -752,7 +752,7 @@ function BloodShieldTracker:GetOptions()
         							if not InCombatLockdown() then
         							    if val then
         							        self.damagebar:Hide()
-        						        elseif self:IsEnabled() then
+        						        elseif self:IsTrackerEnabled() then
         						            self.damagebar:Show()
         					            end
         					        end
@@ -1120,7 +1120,7 @@ function BloodShieldTracker:Load()
 	self:RegisterEvent("UNIT_AURA")
     self:RegisterEvent("PLAYER_ENTERING_WORLD", "CheckAuras")
     self:RegisterEvent("PLAYER_ALIVE", "CheckAuras")
-    if self:IsEnabled() and (not self.damagebar.hideooc or InCombatLockdown()) then
+    if self:IsTrackerEnabled() and (not self.damagebar.hideooc or InCombatLockdown()) then
         self.damagebar:Show()
     end
     self:UpdateShieldBarVisibility()
@@ -1203,14 +1203,14 @@ function BloodShieldTracker:CheckImpDeathStrike()
         IsBloodTank = false
 	end
 
-	if self:IsEnabled() then
+	if self:IsTrackerEnabled() then
 	    self:Load()
     else
         self:Unload()
     end
 end
 
-function BloodShieldTracker:IsEnabled()
+function BloodShieldTracker:IsTrackerEnabled()
     if IsBloodTank or (isDK and not self.db.profile.enable_only_for_blood) then
         return true
     else
@@ -1254,7 +1254,7 @@ end
 function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 	-- Once combat starts, update the damage bar.
 	idle = false
-	if self:IsEnabled() then
+	if self:IsTrackerEnabled() then
     	updateTimer = self:ScheduleRepeatingTimer("UpdateBars", 0.5)
         if self.damagebar then
 	        self.damagebar:Show()
