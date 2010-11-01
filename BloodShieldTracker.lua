@@ -14,6 +14,7 @@ BloodShieldTracker.damagebar = nil
 
 local isDK = nil
 local IsBloodTank = false
+local hasBloodShield = false
 
 local updateTimer = nil
 local lastSeconds = 5
@@ -692,7 +693,10 @@ function BloodShieldTracker:GetOptions()
         					set = function(info, val)
         					    self.db.profile.status_bar_texture = val
         					    self:UpdateShieldBarTexture()
-        					end
+        					end,
+        					disabled = function()
+        					    return not self.db.profile.status_bar_shown
+        					end,
         				},
         				status_bar_border_visible_opt = {
         					order = 520,
@@ -972,7 +976,10 @@ function BloodShieldTracker:GetOptions()
         					set = function(info, val)
         					    self.db.profile.estheal_bar_texture = val
         					    self:UpdateDamageBarTexture()
-        					end
+        					end,
+        					disabled = function()
+        					    return not self.db.profile.estheal_bar_shown
+        					end,
         				},
         				estheal_bar_border_visible_opt = {
         					order = 120,
@@ -1194,6 +1201,9 @@ function BloodShieldTracker:CheckImpDeathStrike()
     end
 
 	ImpDSModifier = 1
+	isBloodTank = false
+	hasBloodShield = false
+
 	if isDK then
     	for t = 1, GetNumTalentTabs() do
     		for i = 1, GetNumTalents(t) do
@@ -1211,8 +1221,10 @@ function BloodShieldTracker:CheckImpDeathStrike()
         	local id, name, desc, texture = GetTalentTabInfo(primaryTalentTree, false)
         	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
         		IsBloodTank = true
-        	else
-        		IsBloodTank = false
+        		-- Check if the player knows Mastery as it is needed to get Blood Shield
+                if IsSpellKnown(86471) then
+                    hasBloodShield = true
+                end
         	end
         else
             if self.db.profile.verbose then
@@ -1222,8 +1234,6 @@ function BloodShieldTracker:CheckImpDeathStrike()
     	if HasVampTalent then
         	self:CheckGlyphs()
     	end
-    else
-        IsBloodTank = false
 	end
 
 	if self:IsTrackerEnabled() then
@@ -1661,7 +1671,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 end
 
 function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, isMinimum)
-    if not IsBloodTank then return end
+    if not IsBloodTank or not hasBloodShield then return end
 
     numShields = numShields + 1
     totalShieldMaxValue = totalShieldMaxValue + shieldValue
