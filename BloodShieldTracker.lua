@@ -39,7 +39,9 @@ local GREEN = "|cff00ff00"
 local YELLOW = "|cffffff00"
 local BLUE = "|cff0198e1"
 local ORANGE = "|cffff9933"
-local statusBarFormat = "%d/%d (%d%%)"
+local statusBarFormatFull = "%d/%d (%d%%)"
+local statusBarFormatNoPer = "%d/%d"
+
 local healBarFormat = "%s: %d"
 local healBarNoTextFormat = "%d"
 
@@ -255,6 +257,7 @@ local defaults = {
         shield_applied_sound = "None",
         shield_removed_sound = "None",
         status_bar_enabled = true,
+        shield_bar_text_format = "Full",
         damage_bar_enabled = true,
         hide_damage_bar_ooc = true,
 		lock_status_bar = false,
@@ -451,6 +454,25 @@ function BloodShieldTracker:GetOptions()
         						end
         					end,
                             get = function(info) return self.db.profile.lock_status_bar end,
+        				},
+        				shield_bar_text_format = {
+        					name = L["Text Format"],
+        					desc = L["ShieldTextFormat_OptionDesc"],
+        					type = "select",
+        					values = {
+        					    ["Full"] = L["Full"],
+        					    ["OnlyPerc"] = L["Only Percent"],
+        					    ["OnlyCurrent"] = L["Only Current"],
+        					    ["OnlyMax"] = L["Only Maximum"],
+        					    ["CurrMax"] = L["Current and Maximum"]
+        					},
+        					order = 30,
+        					set = function(info, val)
+        					    self.db.profile.shield_bar_text_format = val
+        					end,
+                            get = function(info)
+                                return self.db.profile.shield_bar_text_format
+                            end,
         				},
                         timeRemaining = {
                             order = 100,
@@ -1003,6 +1025,7 @@ function BloodShieldTracker:OnInitialize()
 	self.statusbar.lock = self.db.profile.lock_status_bar
     self.statusbar.shield_curr = 0
     self.statusbar.expires = 0
+    self:UpdateShieldBarText(0, 0, 0)
     self.damagebar = self:CreateDamageBar()
 	self.damagebar.lock = self.db.profile.lock_damage_bar
 	self.damagebar.hideooc = self.db.profile.hide_damage_bar_ooc
@@ -1367,8 +1390,28 @@ function BloodShieldTracker:UpdateShieldBar(damage)
     else
         diff = 0
     end
-	self.statusbar.value:SetText(
-	    statusBarFormat:format(self.statusbar.shield_curr, self.statusbar.shield_max, diff))
+    self:UpdateShieldBarText(self.statusbar.shield_curr, self.statusbar.shield_max, diff)
+end
+
+function BloodShieldTracker:UpdateShieldBarText(current, maximum, percent)
+    local newText = ""
+    local numberFormat = "%d"
+    local percentFormat = "%d%%"
+    if self.db.profile.shield_bar_text_format == "Full" then
+        newText = statusBarFormatFull:format(current, maximum, percent)
+    elseif self.db.profile.shield_bar_text_format == "OnlyCurrent" then
+        newText = numberFormat:format(current)
+    elseif self.db.profile.shield_bar_text_format == "OnlyMax" then
+        newText = numberFormat:format(maximum)
+    elseif self.db.profile.shield_bar_text_format == "OnlyPerc" then
+        newText = percentFormat:format(percent)
+    elseif self.db.profile.shield_bar_text_format == "CurrMax" then
+        newText = statusBarFormatNoPer:format(current, maximum)
+    else
+        newText = statusBarFormatFull:format(current, maximum, percent)
+    end
+
+	self.statusbar.value:SetText(newText)
 end
 
 function BloodShieldTracker:GetRecentDamageTaken(timestamp)
@@ -1640,8 +1683,8 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, isMinimum)
     if self.db.profile.status_bar_enabled then
         self.statusbar:SetMinMaxValues(0, shieldValue)
         self.statusbar:SetValue(shieldValue)
-    
-        self.statusbar.value:SetText(statusBarFormat:format(shieldValue, shieldValue, "100"))
+
+        self:UpdateShieldBarText(shieldValue, shieldValue, 100)
         self.statusbar:Show()
     end
 end
@@ -1938,7 +1981,6 @@ function BloodShieldTracker:CreateShieldBar()
     local tc = self.db.profile.status_bar_textcolor
     statusbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
     statusbar.lock = false
-	statusbar.value:SetText(statusBarFormat:format(0, 0, "0"))
 
     statusbar.time = statusbar:CreateFontString(nil, "OVERLAY")
     statusbar.time:SetPoint(self.db.profile.shield_bar_time_pos or "RIGHT")
@@ -2034,7 +2076,7 @@ function BloodShieldTracker:CreateDamageBar()
 			y = y - GetScreenHeight()/2
 			x = x / self:GetScale()
 			y = y / self:GetScale()
-			self.db.profile.est_heal_x, BloodShieldTracker.db.profile.est_heal_y = x, y
+			BloodShieldTracker.db.profile.est_heal_x, BloodShieldTracker.db.profile.est_heal_y = x, y
 			self:SetUserPlaced(false);
         end)
 
