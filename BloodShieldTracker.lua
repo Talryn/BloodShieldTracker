@@ -1585,7 +1585,6 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         -- healing buffs.
         local shieldValue, predictedHeal
 
-        local shieldInd = ""
         local isMinimum = false
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local minimumHeal = dsHealMin
@@ -1594,14 +1593,12 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if healingDebuffMultiplier == 1 then
             shieldValue = minimumBS
             predictedHeal = 0
-            shieldInd = "(min)"
             isMinimum = true
         else
             shieldValue = round(totalHeal*shieldPercent / 
                 self:GetEffectiveHealingBuffModifiers() / 
                 self:GetEffectiveHealingDebuffModifiers())
             if shieldValue <= minimumBS then
-                shieldInd = "(min)"
                 isMinimum = true
                 shieldValue = minimumBS
             end
@@ -1615,8 +1612,6 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d]"
             self:Print(dsHealFormat:format(
                 totalHeal,actualHeal,overheal,recentDmg,predictedHeal))
-            local shieldFormat = "Blood Shield Amount: %d %s"
-            self:Print(shieldFormat:format(shieldValue,shieldInd))
         end
 
         self:NewBloodShield(timestamp, shieldValue, isMinimum)
@@ -1672,6 +1667,15 @@ end
 
 function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, isMinimum)
     if not IsBloodTank or not hasBloodShield then return end
+
+    if self.db.profile.verbose then
+        local shieldFormat = "Blood Shield Amount: %d %s"
+        local shieldInd = ""
+        if isMinimum then
+            shieldInd = "(min)"
+        end
+        self:Print(shieldFormat:format(shieldValue,shieldInd))
+    end
 
     numShields = numShields + 1
     totalShieldMaxValue = totalShieldMaxValue + shieldValue
