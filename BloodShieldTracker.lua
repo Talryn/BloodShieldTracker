@@ -1488,6 +1488,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     
     if not event or not eventtype or not dstName then return end
 
+    local spellName, spellAbsorb = "", ""
+
     if eventtype:find("_DAMAGE") and dstName == self.playerName then
         if eventtype:find("SWING_") and param9 then
             local damage, absorb = param9, param14 or 0
@@ -1618,6 +1620,9 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     end
 
     if eventtype == "SPELL_AURA_APPLIED" and dstName == self.playerName and param10 then
+        if param10 then spellName = param10 end
+        if param13 then spellAbsorb = param13 end
+
         if param10 == BS_SPELL then
             self.statusbar.expires = GetTime() + 10
             if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
@@ -1625,6 +1630,9 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
             if self.db.profile.verbose then
                 self:Print("Blood Shield applied.")
+                if spellAbsorb and spellAbsorb ~= "" then
+                    self:Print("** Blood Shield applied.  Value = "..spellAbsorb)
+                end
             end
         elseif param10 == VB_BUFF then
             if self.db.profile.verbose then
@@ -1638,21 +1646,34 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     end
 
     if eventtype == "SPELL_AURA_REFRESH" and dstName == self.playerName then
+        if param10 then spellName = param10 end
+        if param13 then spellAbsorb = param13 end
+
         if param10 and param10 == BS_SPELL then
             if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
                 PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
             end
 
             self:BloodShieldRemoved("refreshed", timestamp)
+            if self.db.profile.verbose and spellAbsorb and spellAbsorb ~= "" then
+                self:Print("** Blood Shield refresh.  New value = "..spellAbsorb)
+            end
         end
     end
+
     if eventtype == "SPELL_AURA_REMOVED" and dstName == self.playerName and param10 then
+        if param10 then spellName = param10 end
+        if param13 then spellAbsorb = param13 end
+
         if param10 == BS_SPELL then
             if self.db.profile.shield_sound_enabled and self.db.profile.shield_removed_sound then
                 PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_removed_sound))
             end
 
             self:BloodShieldRemoved("removed", timestamp)
+            if self.db.profile.verbose and spellAbsorb and spellAbsorb ~= "" then
+                self:Print("** Blood Shield removed.  Remaining = "..spellAbsorb)
+            end
         elseif param10 == VB_BUFF then
             if self.db.profile.verbose then
                 self:Print("Vampiric Blood removed.")
