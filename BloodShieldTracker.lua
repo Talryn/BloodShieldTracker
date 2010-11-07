@@ -1289,7 +1289,7 @@ function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 	idle = false
 	if self:IsTrackerEnabled() then
     	updateTimer = self:ScheduleRepeatingTimer("UpdateBars", 0.5)
-        if self.damagebar then
+        if self.db.profile.damage_bar_enabled and self.damagebar then
 	        self.damagebar:Show()
         end
     end
