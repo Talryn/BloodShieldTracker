@@ -59,7 +59,10 @@ local BS_SPELL = (GetSpellInfo(77535))
 local IMP_DS_TALENT = (GetSpellInfo(81138))
 local ImpDSModifier = 1
 local HasVampTalent = false
-local dsHealModifier = 0.3
+-- This should be the percent of the DS Heal from the tooltip
+local dsHealModifier = 0.25
+-- This should be the percent of max health a minimum DS heal will be.
+local dsMinHealPercent = 0.07
 local shieldPerMasteryPoint = 6.25
 local maxHealth = 0
 local dsHealMin = 0
@@ -1275,7 +1278,7 @@ function BloodShieldTracker:UpdateMinHeal(event,unit)
 	if unit == "player" then
 	    maxHealth = UnitHealthMax("player")
 		dsHealMin = round(
-		    maxHealth * 0.1 * 
+		    maxHealth * dsMinHealPercent * 
 		    self:GetEffectiveHealingBuffModifiers() * 
 		    self:GetEffectiveHealingDebuffModifiers())
 		if idle then
@@ -1590,7 +1593,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         local isMinimum = false
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local minimumHeal = dsHealMin
-        local minimumBS = round(maxHealth * 0.1 * shieldPercent)
+        local minimumBS = round(maxHealth * dsMinHealPercent * shieldPercent)
         
         if healingDebuffMultiplier == 1 then
             shieldValue = minimumBS
