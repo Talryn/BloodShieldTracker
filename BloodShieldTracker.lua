@@ -453,9 +453,7 @@ function BloodShieldTracker:GetOptions()
         					order = 20,
         					set = function(info, val)
         					    self.db.profile.lock_status_bar = val 
-        						if BloodShieldTracker.statusbar then
-        							BloodShieldTracker.statusbar.lock = val
-        						end
+        						BloodShieldTracker:ShieldBarLock(val)
         					end,
                             get = function(info) return self.db.profile.lock_status_bar end,
         				},
@@ -762,10 +760,9 @@ function BloodShieldTracker:GetOptions()
         					desc = L["Lock the estimated healing bar from moving."],
         					type = "toggle",
         					order = 20,
-        					set = function(info, val) self.db.profile.lock_damage_bar = val 
-        						if BloodShieldTracker.damagebar then
-        							BloodShieldTracker.damagebar.lock = val
-        						end					
+        					set = function(info, val)
+        					    self.db.profile.lock_damage_bar = val 
+        						BloodShieldTracker:EstHealBarLock(val)
         					end,
                             get = function(info) return self.db.profile.lock_damage_bar end,
         				},
@@ -1032,12 +1029,12 @@ function BloodShieldTracker:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", defaults, "Default")
 	-- Create our bars
     self.statusbar = self:CreateShieldBar()
-	self.statusbar.lock = self.db.profile.lock_status_bar
+	self:ShieldBarLock(self.db.profile.lock_status_bar)
     self.statusbar.shield_curr = 0
     self.statusbar.expires = 0
     self:UpdateShieldBarText(0, 0, 0)
     self.damagebar = self:CreateDamageBar()
-	self.damagebar.lock = self.db.profile.lock_damage_bar
+	self:EstHealBarLock(self.db.profile.lock_damage_bar)
 	self.damagebar.hideooc = self.db.profile.hide_damage_bar_ooc
 	self.damagebar.minheal = true
 	-- Register for profile callbacks
@@ -1072,7 +1069,7 @@ function BloodShieldTracker:Reset()
 	-- Reset positions
 	if self.damagebar then
 		self.damagebar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.est_heal_x, self.db.profile.est_heal_y)
-    	self.damagebar.lock = self.db.profile.lock_damage_bar
+    	self:EstHealBarLock(self.db.profile.lock_damage_bar)
     	self.damagebar.hideooc = self.db.profile.hide_damage_bar_ooc
 		self:UpdateDamageBarTexture()
 		self:UpdateDamageBarBorder()
@@ -1081,7 +1078,7 @@ function BloodShieldTracker:Reset()
 	end
 	if self.statusbar then
 		self.statusbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.shield_bar_x, self.db.profile.shield_bar_y)
-    	self.statusbar.lock = self.db.profile.lock_status_bar
+    	self:ShieldBarLock(self.db.profile.lock_status_bar)
 		self:UpdateShieldBarTexture()
 		self:UpdateShieldBarBorder()
 		self:UpdateShieldBarVisibility()
@@ -1981,6 +1978,28 @@ function BloodShieldTracker:UpdateDamageBarColors(min)
         self.damagebar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
         local tc = self.db.profile.estheal_bar_opt_textcolor
         self.damagebar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    end
+end
+
+function BloodShieldTracker:ShieldBarLock(locked)
+    if self.statusbar then
+        self.statusbar.lock = locked
+        if locked then
+            self.statusbar:EnableMouse(false)
+        else
+            self.statusbar:EnableMouse(true)
+        end
+    end
+end
+
+function BloodShieldTracker:EstHealBarLock(locked)
+    if self.damagebar then
+        self.damagebar.lock = locked
+        if locked then
+            self.damagebar:EnableMouse(false)
+        else
+            self.damagebar:EnableMouse(true)
+        end
     end
 end
 
