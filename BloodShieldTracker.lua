@@ -60,7 +60,7 @@ local IMP_DS_TALENT = (GetSpellInfo(81138))
 local ImpDSModifier = 1
 local HasVampTalent = false
 -- This should be the percent of the DS Heal from the tooltip
-local dsHealModifier = 0.25
+local dsHealModifier = 0.20
 -- This should be the percent of max health a minimum DS heal will be.
 local dsMinHealPercent = 0.07
 local shieldPerMasteryPoint = 6.25
