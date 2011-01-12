@@ -40,8 +40,8 @@ local GREEN = "|cff00ff00"
 local YELLOW = "|cffffff00"
 local BLUE = "|cff0198e1"
 local ORANGE = "|cffff9933"
-local statusBarFormatFull = "%d/%d (%d%%)"
-local statusBarFormatNoPer = "%d/%d"
+local statusBarFormatFull = "%s/%s (%d%%)"
+local statusBarFormatNoPer = "%s/%s"
 
 local healBarFormat = "%s: %d"
 local healBarNoTextFormat = "%d"
@@ -53,6 +53,8 @@ local icon = LibStub("LibDBIcon-1.0")
 -- Load LibsharedMedia we package it with the addon so it should be available
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
 
+local CURRENT_BUILD = GetBuildInfo()
+
 local DS_SPELL_DMG = (GetSpellInfo(49998))
 local DS_SPELL_HEAL = (GetSpellInfo(45470))
 local BS_SPELL = (GetSpellInfo(77535))
@@ -61,11 +63,29 @@ local ImpDSModifier = 1
 local HasVampTalent = false
 -- This should be the percent of the DS Heal from the tooltip
 local dsHealModifier = 0.20
+if CURRENT_BUILD == "4.0.6" then
+    dsHealModifier = 0.15
+end
 -- This should be the percent of max health a minimum DS heal will be.
 local dsMinHealPercent = 0.07
 local shieldPerMasteryPoint = 6.25
 local maxHealth = 0
 local dsHealMin = 0
+
+-- Keeps track of active shields on the player
+local activeShields = {}
+
+-- Other absorb mechanisms to watch for
+local otherAbsorbs = {
+    [17] = true,    -- Priest PW:S
+    [86273] = true, -- Paladin Illuminated Healing
+    [47753] = true, -- Priest Divine Aegis
+    [71586] = true, -- Hardened Skin from Corroded Skeleton Key
+}
+
+-- Special absorbs where the shield value is in the next param
+local specialAbsorbs = {
+}
 
 local HELLSCREAM_BUFF_05 = 73816
 local HELLSCREAM_BUFF_10 = 73818
@@ -128,7 +148,7 @@ local HEALING_DEBUFFS = {
 	[12569] = 0.16, -- Permafrost (Mage)
 	[12571] = 0.25, -- Permafrost (Mage)
 	[30213] = 0.25, -- Legion Strike (Warlock)
-    -- NPCs helaing debuffs
+    -- NPCs healing debuffs
 	[69674] = 0.50, -- Rotface Mutated Infection
 	[73023] = 0.75, -- Rotface Mutated Infection
 	[73022] = 0.75, -- Rotface Mutated Infection
@@ -142,7 +162,9 @@ local HEALING_DEBUFFS = {
     [13737] = 0.50, -- Mortal Strike (NPC)
     [68784] = 0.50, -- Mortal Strike (NPC)
     [71552] = 0.50, -- Mortal Strike (NPC)
-    [68782] = 0.50, -- Mortal Strike (NPC)
+    [68782] = 0.50, -- Mortal Strike (NPC),
+    [39171] = 0.06, -- Malevolent Strikes
+    [83908] = 0.06, -- Malevolent Strikes
 }
 
 local healing_debuff_names = {}
@@ -292,6 +314,7 @@ local defaults = {
 		shield_bar_x = 0, shield_bar_y = 0,
 		estheal_bar_scale = 1,
 		status_bar_scale = 1,
+		accountForOtherAbsorbs = true
     }
 }
 
@@ -1032,6 +1055,7 @@ function BloodShieldTracker:OnInitialize()
 	self:ShieldBarLock(self.db.profile.lock_status_bar)
     self.statusbar.shield_curr = 0
     self.statusbar.expires = 0
+    self.statusbar.active = false
     self:UpdateShieldBarText(0, 0, 0)
     self.damagebar = self:CreateDamageBar()
 	self:EstHealBarLock(self.db.profile.lock_damage_bar)
@@ -1384,6 +1408,17 @@ function BloodShieldTracker:UpdateEstHealBarText(estimate)
     end
 end
 
+function BloodShieldTracker:ShowShieldBar()
+    if self.db.profile.status_bar_enabled then
+        self.statusbar:SetMinMaxValues(0, self.statusbar.shield_max)
+        self.statusbar:SetValue(self.statusbar.shield_curr)
+
+        self:UpdateShieldBarText(
+            self.statusbar.shield_curr, self.statusbar.shield_max, 100)
+        self.statusbar:Show()
+    end
+end
+
 function BloodShieldTracker:UpdateShieldBar(damage)
     if not IsBloodTank then return end
 
@@ -1395,7 +1430,7 @@ function BloodShieldTracker:UpdateShieldBar(damage)
     end
 	self.statusbar:SetValue(self.statusbar.shield_curr)
 	local diff
-	if self.statusbar.shield_max > 0 then
+	if self.statusbar.shield_max > 0 and self.statusbar.shield_curr > 0 then
 	    diff = round(self.statusbar.shield_curr/self.statusbar.shield_max*100)
     else
         diff = 0
@@ -1403,22 +1438,37 @@ function BloodShieldTracker:UpdateShieldBar(damage)
     self:UpdateShieldBarText(self.statusbar.shield_curr, self.statusbar.shield_max, diff)
 end
 
+function BloodShieldTracker:FormatNumber(number)
+    local millFmt = "%.1fm"
+    local thousandFmt = "%.1fk"
+    if number > 1000000 then
+        return millFmt:format(number / 1000000)
+    elseif number > 1000 then
+        return thousandFmt:format(number / 1000)
+    end
+    
+    return number
+end
+
 function BloodShieldTracker:UpdateShieldBarText(current, maximum, percent)
     local newText = ""
-    local numberFormat = "%d"
     local percentFormat = "%d%%"
+    
+    local currentTxt = BloodShieldTracker:FormatNumber(current)
+    local maximumTxt = BloodShieldTracker:FormatNumber(maximum)
+    
     if self.db.profile.shield_bar_text_format == "Full" then
-        newText = statusBarFormatFull:format(current, maximum, percent)
+        newText = statusBarFormatFull:format(currentTxt, maximumTxt, percent)
     elseif self.db.profile.shield_bar_text_format == "OnlyCurrent" then
-        newText = numberFormat:format(current)
+        newText = currentTxt
     elseif self.db.profile.shield_bar_text_format == "OnlyMax" then
-        newText = numberFormat:format(maximum)
+        newText = maximumTxt
     elseif self.db.profile.shield_bar_text_format == "OnlyPerc" then
         newText = percentFormat:format(percent)
     elseif self.db.profile.shield_bar_text_format == "CurrMax" then
-        newText = statusBarFormatNoPer:format(current, maximum)
+        newText = statusBarFormatNoPer:format(currentTxt, maximumTxt)
     else
-        newText = statusBarFormatFull:format(current, maximum, percent)
+        newText = statusBarFormatFull:format(currentTxt, maximumTxt, percent)
     end
 
 	self.statusbar.value:SetText(newText)
@@ -1624,7 +1674,13 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if param13 then spellAbsorb = param13 end
 
         if param10 == BS_SPELL then
+            self.statusbar.active = true
+            self.statusbar.shield_curr = 0
+            self.statusbar.shield_max = 0
             self.statusbar.expires = GetTime() + 10
+            
+            self:ShowShieldBar()
+            
             if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
                 PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
             end
@@ -1642,6 +1698,17 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             if self.db.profile.verbose then
                 self:Print("Guardian Spirit applied.")
             end
+        elseif param9 and otherAbsorbs[param9] == true then
+            local shieldValue = 0
+            if specialAbsorbs[param9] == true then
+                shieldValue = (param14 or 0)
+            else
+                shieldValue = (param13 or 0)
+            end
+            self:ShieldNew(srcName, spellName, shieldValue)
+            if self.db.profile.verbose then
+                self:Print("Shield applied ("..srcName..", "..param10..", "..shieldValue..")")
+            end
         end
     end
 
@@ -1649,14 +1716,37 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if param10 then spellName = param10 end
         if param13 then spellAbsorb = param13 end
 
-        if param10 and param10 == BS_SPELL then
-            if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
-                PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
-            end
+        if param10 then
+            if param10 == BS_SPELL then
+                self.statusbar.active = true
+                
+                if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
+                    PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
+                end
 
-            self:BloodShieldRemoved("refreshed", timestamp)
-            if self.db.profile.verbose and spellAbsorb and spellAbsorb ~= "" then
-                self:Print("** Blood Shield refresh.  New value = "..spellAbsorb)
+                if CURRENT_BUILD == "4.0.6" then
+                    self.statusbar.expires = GetTime() + 10
+                else
+                    self:BloodShieldRemoved("refreshed", timestamp)
+                end
+
+                if self.db.profile.verbose and spellAbsorb and spellAbsorb ~= "" then
+                    self:Print("** Blood Shield refresh.  New value = "..spellAbsorb)
+                end
+            elseif param9 and otherAbsorbs[param9] == true then
+                local shieldValue = 0
+                if specialAbsorbs[param9] == true then
+                    shieldValue = (param14 or 0)
+                else
+                    shieldValue = (param13 or 0)
+                end
+                local absorbed = self:ShieldUpdate(srcName, spellName, shieldValue)
+                if self.db.profile.accountForOtherAbsorbs then
+                    self:UpdateShieldBar(absorbed * -1)
+                end
+                if self.db.profile.verbose then
+                    self:Print("Shield refresh ("..srcName..", "..param10..", "..shieldValue..", "..absorbed..")")
+                end
             end
         end
     end
@@ -1666,6 +1756,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if param13 then spellAbsorb = param13 end
 
         if param10 == BS_SPELL then
+            self.statusbar.active = false
+            
             if self.db.profile.shield_sound_enabled and self.db.profile.shield_removed_sound then
                 PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_removed_sound))
             end
@@ -1682,6 +1774,20 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             if self.db.profile.verbose then
                 self:Print("Guardian Spirit removed.")
             end
+        elseif param9 and otherAbsorbs[param9] == true then
+            local shieldValue = 0
+            if specialAbsorbs[param9] == true then
+                shieldValue = (param14 or 0)
+            else
+                shieldValue = (param13 or 0)
+            end
+            local absorbed = self:ShieldRemoved(srcName, spellName, shieldValue)
+            if self.db.profile.accountForOtherAbsorbs then
+                self:UpdateShieldBar(absorbed * -1)
+            end
+            if self.db.profile.verbose then
+                self:Print("Shield removed ("..srcName..", "..param10..", "..shieldValue..", "..absorbed..")")
+            end
         end
     end
 end
@@ -1689,13 +1795,32 @@ end
 function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, isMinimum)
     if not IsBloodTank or not hasBloodShield then return end
 
+    -- Check if we're adding to an existing BS
+    local isStacking = self.statusbar.shield_max > 0
+
+    if CURRENT_BUILD == "4.0.6" then
+    	self.statusbar.shield_max = self.statusbar.shield_max + shieldValue
+    	self.statusbar.shield_curr = self.statusbar.shield_curr + shieldValue
+    else
+    	self.statusbar.shield_max = shieldValue
+    	self.statusbar.shield_curr = shieldValue
+    end
+
     if self.db.profile.verbose then
-        local shieldFormat = "Blood Shield Amount: %d %s"
         local shieldInd = ""
         if isMinimum then
-            shieldInd = "(min)"
+            shieldInd = " (min)"
         end
-        self:Print(shieldFormat:format(shieldValue,shieldInd))
+
+        if CURRENT_BUILD == "4.0.6" and isStacking then
+            local shieldFormat = "Blood Shield Amount: %d/%d [Added %d%s]"
+            self:Print(shieldFormat:format(
+                self.statusbar.shield_curr, self.statusbar.shield_max, 
+                shieldValue,shieldInd))
+        else
+            local shieldFormat = "Blood Shield Amount: %d%s"
+            self:Print(shieldFormat:format(shieldValue,shieldInd))
+        end
     end
 
     numShields = numShields + 1
@@ -1712,16 +1837,7 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, isMinimum)
         maxShieldMaxValue = shieldValue
     end
 
-	self.statusbar.shield_max = shieldValue
-	self.statusbar.shield_curr = shieldValue
-    
-    if self.db.profile.status_bar_enabled then
-        self.statusbar:SetMinMaxValues(0, shieldValue)
-        self.statusbar:SetValue(shieldValue)
-
-        self:UpdateShieldBarText(shieldValue, shieldValue, 100)
-        self.statusbar:Show()
-    end
+    self:ShowShieldBar()
 end
 
 function BloodShieldTracker:BloodShieldRemoved(type, timestamp)
@@ -1762,7 +1878,46 @@ function BloodShieldTracker:BloodShieldRemoved(type, timestamp)
         self.statusbar.expires = 0
         numRemovedShields = numRemovedShields + 1
         self.statusbar:Hide()
+        self.statusbar.shield_max = 0
+        self.statusbar.shield_curr = 0
     end
+end
+
+function BloodShieldTracker:ShieldNew(player, spellName, value)
+    activeShields[player] = activeShields[player] or {}
+    activeShields[player][spellName] = value
+end
+
+function BloodShieldTracker:ShieldRemoved(player, spellName, value)
+    local prevValue = self:ShieldValue(player, spellName)
+    activeShields[player] = activeShields[player] or {}
+    activeShields[player][spellName] = nil
+    
+    if prevValue and value then
+        return prevValue - value
+    else
+        return 0
+    end
+end
+
+function BloodShieldTracker:ShieldUpdate(player, spellName, value)
+    local prevValue = self:ShieldValue(player, spellName)
+    activeShields[player] = activeShields[player] or {}
+    activeShields[player][spellName] = value
+
+    if prevValue and value then
+        return prevValue - value
+    else
+        return 0
+    end
+end
+
+function BloodShieldTracker:ShieldValue(player, spellName)
+    if activeShields[player] and activeShields[player][spellName] then
+        return activeShields[player][spellName]
+    end
+    
+    return 0
 end
 
 function BloodShieldTracker:ResetStats()
