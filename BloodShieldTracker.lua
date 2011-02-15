@@ -22,6 +22,68 @@ local damageTaken = {}
 local recentDamage = 0
 local removeList = {}
 
+-- Define a simplistic class for shield statistics
+ShieldStats = {}
+ShieldStats.__index = ShieldStats
+
+function ShieldStats:new()
+    local stats = {}
+    setmetatable(stats, ShieldStats)
+    stats:Reset()
+    return stats
+end
+
+function ShieldStats:NewShield(value, isMinimum, isRefresh)
+    self.numShields = self.numShields + 1
+    self.totalShields = self.totalShields + value
+
+    if isMinimum then
+        self.numMinShields = self.numMinShields + 1
+    end
+
+    if isRefresh then
+        self.numRefreshedShields = self.numRefreshedShields + 1
+    end
+
+    if self.minShield == 0 or value < self.minShield then
+        self.minShield = value
+    end
+    if value > self.maxShield then
+        self.maxShield = value
+    end
+end
+
+function ShieldStats:RemoveShield()
+    self.numRemovedShields = self.numRemovedShields + 1
+end
+
+function ShieldStats:ShieldAbsorb(value)
+    self.totalAbsorbs = self.totalAbsorbs + value
+end
+
+function ShieldStats:StartCombat()
+    self.startTime = GetTime()
+end
+
+function ShieldStats:EndCombat()
+    self.endTime = GetTime()
+end
+
+function ShieldStats:Reset()
+    self.numShields = 0
+    self.numMinShields = 0
+    self.numRemovedShields = 0
+    self.numRefreshedShields = 0
+    self.minShield = 0
+    self.maxShield = 0
+    self.totalShields = 0
+    self.totalAbsorbs = 0
+    self.startTime = 0
+    self.endTime = 0
+end
+
+-- Stats for all fights
+TotalShieldStats = ShieldStats:new()
 local numShields = 0
 local numMinShields = 0
 local numRemovedShields = 0
@@ -30,6 +92,15 @@ local minShieldMaxValue = 0
 local maxShieldMaxValue = 0
 local totalShieldMaxValue = 0
 local totalAbsorbedValue = 0
+
+-- Last fight stats
+LastFightStats = ShieldStats:new()
+--local lastFightShields = 0
+--local lastFightMinShields = 0
+--local lastFightRemovedShields = 0
+--local lastFightRefreshedShields = 0
+--local lastFightShieldTotal = 0
+--local lastFightAbsorbs = 0
 
 local lastDSSuccess = nil
 local masteryRating = 0
@@ -180,36 +251,59 @@ Broker.obj = LDB:NewDataObject(GetAddOnMetadata(ADDON_NAME,"Title"), {
 } )
 
 local addonHdr = GREEN.."%s %s"
-local shieldDataHdr = ORANGE..L["Blood Shield Data"]
-local shieldDataLine1 = YELLOW..L["Shields Total/Refreshed/Removed:"]
-local shieldDataLine2 = YELLOW..L["Number of Minimum Shields:"]
+local totalDataHdr = ORANGE..L["Total Data"]
+local dataLine1 = YELLOW..L["Shields Total/Refreshed/Removed:"]
+local dataLine2 = YELLOW..L["Number of Minimum Shields:"]
 local shieldDataMinShld = "%d (%d%%)"
 local shieldDataLine1Fmt = "%d / %d / %d"
-
-local shieldMaxValueHdr = ORANGE..L["Blood Shield Max Value"]
 local shieldMaxValueLine1 = YELLOW..L["Min - Max / Avg:"]
 local rangeWithAvgFmt = "%d - %d / %d"
 local valuesWithPercFmt = "%s / %s - %.1f%%"
-
-local shieldUsageHdr = ORANGE..L["Blood Shield Usage"]
 local shieldUsageLine1 = YELLOW..L["Absorbed/Total Shields/Percent:"]
 local percentFormat = "%.1f%%"
+local secondsFormat = "%.1f " .. L["seconds"]
+local durationLine = YELLOW..L["Fight Duration:"]
+local shieldFreqLine = YELLOW..L["Shield Frequency:"]
+
+local lastFightValueHdr = ORANGE..L["Last Fight Data"]
+
+function AddStats(tooltip, stats)
+    local percentMinimum = 0
+    local avgShieldMaxValue
+    if stats.numShields > 0 then
+        percentMinimum = stats.numMinShields / stats.numShields * 100
+        avgShieldMaxValue = stats.totalShields / stats.numShields
+    end
+
+    local shieldUsagePerc = 0
+    if stats.totalShields > 0 then
+        shieldUsagePerc = stats.totalAbsorbs / stats.totalShields * 100
+    end
+
+    tooltip:AddSeparator(1)
+    tooltip:AddLine(dataLine1, 
+        shieldDataLine1Fmt:format(
+            stats.numShields,
+            stats.numRefreshedShields, 
+            stats.numRemovedShields))
+    tooltip:AddLine(dataLine2, 
+        shieldDataMinShld:format(
+            stats.numMinShields, 
+            percentMinimum))
+    tooltip:AddLine(shieldMaxValueLine1, 
+        rangeWithAvgFmt:format(
+            stats.minShield, 
+            stats.maxShield, 
+            avgShieldMaxValue or 0))
+    tooltip:AddLine(shieldUsageLine1, 
+        valuesWithPercFmt:format(
+            BloodShieldTracker:FormatNumber(stats.totalAbsorbs), 
+            BloodShieldTracker:FormatNumber(stats.totalShields), shieldUsagePerc))
+end
 
 function Broker.obj:OnEnter()
 	local tooltip = LibQTip:Acquire("BloodShieldTrackerTooltip", 2, "LEFT", "RIGHT")
 	self.tooltip = tooltip 
-
-    local percentMinimum = 0
-    local avgShieldMaxValue
-    if numShields > 0 then
-        percentMinimum = numMinShields / numShields * 100
-        avgShieldMaxValue = totalShieldMaxValue / numShields
-    end
-
-    local shieldUsagePerc = 0
-    if totalShieldMaxValue > 0 then
-        shieldUsagePerc = totalAbsorbedValue / totalShieldMaxValue * 100
-    end
 
     tooltip:AddHeader(addonHdr:format(GetAddOnMetadata(ADDON_NAME,"Title"), ADDON_VERSION))
     tooltip:AddLine()
@@ -218,29 +312,25 @@ function Broker.obj:OnEnter()
         tooltip:AddLine(L["Shift + Left-Click to reset."], "", 1, 1, 1)
         tooltip:AddLine()
 
-        tooltip:AddLine(shieldDataHdr)
-        tooltip:AddSeparator(1)
-        tooltip:AddLine(shieldDataLine1, 
-            shieldDataLine1Fmt:format(numShields,numRefreshedShields,numRemovedShields))
-        tooltip:AddLine(shieldDataLine2, 
-            shieldDataMinShld:format(numMinShields, percentMinimum))
+        tooltip:AddLine(totalDataHdr)
+        AddStats(tooltip, TotalShieldStats)
 
         tooltip:AddLine()
-
-        tooltip:AddLine(shieldMaxValueHdr)
-        tooltip:AddSeparator(1)
-        tooltip:AddLine(shieldMaxValueLine1, 
-            rangeWithAvgFmt:format(
-                minShieldMaxValue, maxShieldMaxValue, avgShieldMaxValue or 0))
-
-        tooltip:AddLine()
-
-        tooltip:AddLine(shieldUsageHdr)
-        tooltip:AddSeparator(1)
-        tooltip:AddLine(shieldUsageLine1, 
-            valuesWithPercFmt:format(
-                BloodShieldTracker:FormatNumber(totalAbsorbedValue), 
-                BloodShieldTracker:FormatNumber(totalShieldMaxValue), shieldUsagePerc))
+        tooltip:AddLine(lastFightValueHdr)
+        AddStats(tooltip, LastFightStats)
+        local duration = LastFightStats.endTime - LastFightStats.startTime
+        if duration > 0 then
+            tooltip:AddLine(durationLine, secondsFormat:format(duration))
+            if LastFightStats.numShields > 0 then
+                local frequency = duration / LastFightStats.numShields
+                tooltip:AddLine(shieldFreqLine, secondsFormat:format(frequency))
+            else
+                tooltip:AddLine(shieldFreqLine, "")
+            end
+        else
+            tooltip:AddLine(durationLine, "")
+            tooltip:AddLine(shieldFreqLine, "")
+        end
     end
 
 	tooltip:SmartAnchorTo(self)
@@ -1301,6 +1391,9 @@ function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 	        self.damagebar:Show()
         end
     end
+    -- Reset the per fight stats
+    LastFightStats:Reset()
+    LastFightStats:StartCombat()
 end
 
 function BloodShieldTracker:PLAYER_REGEN_ENABLED()
@@ -1314,6 +1407,8 @@ function BloodShieldTracker:PLAYER_REGEN_ENABLED()
     if self.damagebar.hideooc then
         self.damagebar:Hide()
     end
+
+    LastFightStats:EndCombat()
 end
 
 function BloodShieldTracker:PLAYER_DEAD()
@@ -1745,21 +1840,24 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, isMinimum)
         self:Print(shieldFormat:format(shieldValue,shieldInd))
     end
 
-    numShields = numShields + 1
-    totalShieldMaxValue = totalShieldMaxValue + shieldValue
-
-    if isMinimum then
-        numMinShields = numMinShields + 1
-    end
-
-    if minShieldMaxValue == 0 or shieldValue < minShieldMaxValue then
-        minShieldMaxValue = shieldValue
-    end
-    if shieldValue > maxShieldMaxValue then
-        maxShieldMaxValue = shieldValue
-    end
+    self:UpdateStatsNewShield(shieldValue, isMinimum, false)
 
     self:ShowShieldBar()
+end
+
+function BloodShieldTracker:UpdateStatsNewShield(value, isMinimum, isRefresh)
+    TotalShieldStats:NewShield(value, isMinimum, isRefresh)
+    LastFightStats:NewShield(value, isMinimum, isRefresh)
+end
+
+function BloodShieldTracker:UpdateStatsRemoveShield()
+    TotalShieldStats:RemoveShield()
+    LastFightStats:RemoveShield()
+end
+
+function BloodShieldTracker:UpdateStatsShieldAbsorb(value)
+    TotalShieldStats:ShieldAbsorb(value)
+    LastFightStats:ShieldAbsorb(value)
 end
 
 function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
@@ -1780,12 +1878,8 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
         local minimumBS = round(maxHealth * dsMinHealPercent * shieldPercent)
         if added <= minimumBS then
             isMinimum = true
-            numMinShields = numMinShields + 1
         end
-        -- Update the stats
-        totalShieldMaxValue = totalShieldMaxValue + added
-        numShields = numShields + 1
-        numRefreshedShields = numRefreshedShields + 1
+        self:UpdateStatsNewShield(added, isMinimum, true)
         self.statusbar.expires = GetTime() + 10
         self.statusbar.shield_max = self.statusbar.shield_max + added
     elseif current == curr and type == "refreshed" then
@@ -1794,7 +1888,7 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
         self.statusbar.expires = GetTime() + 10
     else
         absorbed = curr - current
-        totalAbsorbedValue = totalAbsorbedValue + absorbed
+        self:UpdateStatsShieldAbsorb(absorbed)
     end
 
     self.statusbar.shield_curr = current
@@ -1825,8 +1919,8 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
 
     if type == "removed" then
         self.statusbar.expires = 0
-        numRemovedShields = numRemovedShields + 1
         self.statusbar:Hide()
+        self:UpdateStatsRemoveShield()
         self.statusbar.shield_max = 0
         self.statusbar.shield_curr = 0
     end
