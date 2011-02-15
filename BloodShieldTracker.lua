@@ -5,6 +5,7 @@ local ADDON_VERSION = "@project-version@"
 
 -- Local versions for performance
 local tinsert, tremove, tgetn = table.insert, table.remove, table.getn
+local tconcat = table.concat
 local pairs, ipairs = pairs, ipairs
 local floor, ceil = math.floor, math.ceil
 
