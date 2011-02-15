@@ -368,6 +368,9 @@ local defaults = {
 		status_bar_height = 15,
 		font_size = 12,
 		font_face = "Friz Quadrata TT",
+		font_outline = true,
+		font_monochrome = false,
+		font_thickoutline = false,
 		status_bar_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
 		status_bar_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 		status_bar_bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
@@ -511,6 +514,45 @@ function BloodShieldTracker:GetOptions()
         					    self.db.profile.font_face = val
         					    self:ResetFonts()
         					end
+        				},
+        				bar_font_outline = {
+        					name = L["Outline"],
+        					desc = L["FontOutline_OptionDesc"],
+        					type = "toggle",
+        					order = 70,
+        					set = function(info, val)
+        					    self.db.profile.font_outline = val
+        					    self:ResetFonts()
+        					end,
+                            get = function(info)
+                                return self.db.profile.font_outline
+                            end,
+        				},
+        				bar_font_monochrome = {
+        					name = L["Monochrome"],
+        					desc = L["FontMonochrome_OptionDesc"],
+        					type = "toggle",
+        					order = 80,
+        					set = function(info, val)
+        					    self.db.profile.font_monochrome = val
+        					    self:ResetFonts()
+        					end,
+                            get = function(info)
+                                return self.db.profile.font_monochrome
+                            end,
+        				},
+        				bar_font_thickoutline = {
+        					name = L["Thick Outline"],
+        					desc = L["FontThickOutline_OptionDesc"],
+        					type = "toggle",
+        					order = 90,
+        					set = function(info, val)
+        					    self.db.profile.font_thickoutline = val
+        					    self:ResetFonts()
+        					end,
+                            get = function(info)
+                                return self.db.profile.font_thickoutline
+                            end,
         				},
         			},
         		},
@@ -1186,8 +1228,23 @@ function BloodShieldTracker:Reset()
 	self:ResetStats()
 end
 
+function BloodShieldTracker:GetFontFlags()
+    local flags = {}
+    if self.db.profile.font_outline then
+        tinsert(flags, "OUTLINE")
+    end
+    if self.db.profile.font_monochrome then
+        tinsert(flags, "MONOCHROME")
+    end
+    if self.db.profile.font_thickoutline then
+        tinsert(flags, "THICKOUTLINE")
+    end
+    return tconcat(flags, ",")
+end
+
 function BloodShieldTracker:ResetFonts()
-	local fontName, fontHeight, fontFlags = self.statusbar.value:GetFont()
+	local fontName, fontHeight = self.statusbar.value:GetFont()
+	local fontFlags = self:GetFontFlags()
 	local ff = LSM:Fetch("font",self.db.profile.font_face)
 	local fh = self.db.profile.font_size
 	self.statusbar.value:SetFont(ff,fh,fontFlags)
@@ -2193,7 +2250,7 @@ function BloodShieldTracker:CreateShieldBar()
 	local font = LSM:Fetch("font",self.db.profile.font_face)
     statusbar.value = statusbar:CreateFontString(nil, "OVERLAY")
     statusbar.value:SetPoint("CENTER")
-    statusbar.value:SetFont(font, self.db.profile.font_size, "OUTLINE")
+    statusbar.value:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
     statusbar.value:SetJustifyH("CENTER")
     statusbar.value:SetShadowOffset(1, -1)
     local tc = self.db.profile.status_bar_textcolor
@@ -2202,7 +2259,7 @@ function BloodShieldTracker:CreateShieldBar()
 
     statusbar.time = statusbar:CreateFontString(nil, "OVERLAY")
     statusbar.time:SetPoint(self.db.profile.shield_bar_time_pos or "RIGHT")
-    statusbar.time:SetFont(font, self.db.profile.font_size, "OUTLINE")
+    statusbar.time:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
     statusbar.time:SetJustifyH(self.db.profile.shield_bar_time_pos or "RIGHT")
     statusbar.time:SetShadowOffset(1, -1)
     statusbar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
@@ -2270,7 +2327,7 @@ function BloodShieldTracker:CreateDamageBar()
     statusbar.value = statusbar:CreateFontString(nil, "OVERLAY")
     statusbar.value:SetPoint("CENTER")
 	local font = LSM:Fetch("font",self.db.profile.font_face)
-    statusbar.value:SetFont(font, self.db.profile.font_size, "OUTLINE")
+    statusbar.value:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
     statusbar.value:SetJustifyH("CENTER")
     statusbar.value:SetShadowOffset(1, -1)
     local tc = self.db.profile.estheal_bar_min_textcolor
