@@ -123,7 +123,8 @@ local icon = LibStub("LibDBIcon-1.0")
 -- Load LibsharedMedia we package it with the addon so it should be available
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
 
-local CURRENT_BUILD = GetBuildInfo()
+local CURRENT_BUILD, CURRENT_INTERNAL, 
+    CURRENT_BUILD_DATE, CURRENT_UI_VERSION = GetBuildInfo()
 
 local DS_SPELL_DMG = (GetSpellInfo(49998))
 local DS_SPELL_HEAL = (GetSpellInfo(45470))
@@ -1668,10 +1669,21 @@ function BloodShieldTracker:GetSpellSchool(school)
 end
 
 function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
-    local event, timestamp, eventtype, srcGUID, srcName, srcFlags, dstGUID, 
+    local event, timestamp, eventtype, hideCaster, srcGUID, srcName, srcFlags,  
+        dstGUID, dstName, dstFlags, param9, param10, param11, param12, param13,
+        param14, param15, param16, param17, param18, param19, param20
+
+    -- Conditionally handle the 4.06 and 4.1+ log formats.
+    if CURRENT_UI_VERSION >= 40100 then
+        event, timestamp, eventtype, hideCaster, srcGUID, srcName, srcFlags,  
+        dstGUID, dstName, dstFlags, param9, param10, param11, param12, param13,
+        param14, param15, param16, param17, param18, param19, param20 = ...
+    else
+        event, timestamp, eventtype, srcGUID, srcName, srcFlags, dstGUID, 
         dstName, dstFlags, param9, param10, param11, param12, param13, param14,
         param15, param16, param17, param18, param19, param20 = ...
-    
+    end
+
     if not event or not eventtype or not dstName then return end
 
     local spellName, spellAbsorb = "", ""
