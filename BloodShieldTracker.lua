@@ -1669,19 +1669,31 @@ function BloodShieldTracker:GetSpellSchool(school)
 end
 
 function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
-    local event, timestamp, eventtype, hideCaster, srcGUID, srcName, srcFlags,  
-        dstGUID, dstName, dstFlags, param9, param10, param11, param12, param13,
-        param14, param15, param16, param17, param18, param19, param20
+    local event, timestamp, eventtype, hideCaster, 
+        srcGUID, srcName, srcFlags, srcRaidFlags, 
+        destGUID, destName, destFlags, destRaidFlags, 
+        param9, param10, param11, param12, param13, param14, 
+        param15, param16, param17, param18, param19, param20
 
-    event, timestamp, eventtype, hideCaster, srcGUID, srcName, srcFlags,  
-    dstGUID, dstName, dstFlags, param9, param10, param11, param12, param13,
-    param14, param15, param16, param17, param18, param19, param20 = ...
+    if CURRENT_UI_VERSION >= 40200 then
+        event, timestamp, eventtype, hideCaster, 
+        srcGUID, srcName, srcFlags, srcRaidFlags,
+        destGUID, destName, destFlags, destRaidFlags,
+        param9, param10, param11, param12, param13, param14, 
+        param15, param16, param17, param18, param19, param20 = ...
+    else
+        event, timestamp, eventtype, hideCaster, 
+        srcGUID, srcName, srcFlags,  
+        destGUID, destName, destFlags, 
+        param9, param10, param11, param12, param13, param14, 
+        param15, param16, param17, param18, param19, param20 = ...
+    end
 
-    if not event or not eventtype or not dstName then return end
+    if not event or not eventtype or not destName then return end
 
     local spellName, spellAbsorb = "", ""
 
-    if eventtype:find("_DAMAGE") and dstName == self.playerName then
+    if eventtype:find("_DAMAGE") and destName == self.playerName then
         if eventtype:find("SWING_") and param9 then
             local damage, absorb = param9, param14 or 0
 
@@ -1709,7 +1721,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         end
     end    
 
-    if eventtype:find("_MISSED") and dstName == self.playerName then
+    if eventtype:find("_MISSED") and destName == self.playerName then
         if eventtype == "SWING_MISSED" then
             if param9 and param9 == "ABSORB" then
     			local damage = param10 or 0
@@ -1749,7 +1761,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     		self:Print(dsHealFormat:format(recentDmg, predictedHeal))
         end
 	end
-    if eventtype == "SPELL_HEAL" and dstName == self.playerName 
+    if eventtype == "SPELL_HEAL" and destName == self.playerName 
         and param10 == DS_SPELL_HEAL then
         
         local shieldPercent = masteryRating*shieldPerMasteryPoint/100
@@ -1794,7 +1806,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         end
     end
 
-    if eventtype == "SPELL_AURA_APPLIED" and dstName == self.playerName and param10 then
+    if eventtype == "SPELL_AURA_APPLIED" and destName == self.playerName and param10 then
         if param10 then spellName = param10 end
         if param13 then spellAbsorb = param13 end
 
@@ -1837,7 +1849,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         end
     end
 
-    if eventtype == "SPELL_AURA_REFRESH" and dstName == self.playerName then
+    if eventtype == "SPELL_AURA_REFRESH" and destName == self.playerName then
         if param10 then spellName = param10 end
         if param13 then spellAbsorb = param13 end
 
@@ -1860,7 +1872,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         end
     end
 
-    if eventtype == "SPELL_AURA_REMOVED" and dstName == self.playerName and param10 then
+    if eventtype == "SPELL_AURA_REMOVED" and destName == self.playerName and param10 then
         if param10 then spellName = param10 end
         if param13 then spellAbsorb = param13 end
 
