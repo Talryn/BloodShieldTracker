@@ -1358,7 +1358,7 @@ function BloodShieldTracker:CheckImpDeathStrike()
     end
 
 	ImpDSModifier = 1
-	isBloodTank = false
+	IsBloodTank = false
 	hasBloodShield = false
 
 	if isDK then
@@ -1381,11 +1381,7 @@ function BloodShieldTracker:CheckImpDeathStrike()
         		-- Check if the player knows Mastery as it is needed to get Blood Shield
                 if IsSpellKnown(86471) then
                     hasBloodShield = true
-		else
-                    hasBloodShield = false
                 end
-		else
-        		IsBloodTank = false
         	end
         else
             if self.db.profile.verbose then
