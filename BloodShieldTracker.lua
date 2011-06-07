@@ -130,15 +130,32 @@ local DS_SPELL_DMG = (GetSpellInfo(49998))
 local DS_SPELL_HEAL = (GetSpellInfo(45470))
 local BS_SPELL = (GetSpellInfo(77535))
 local IMP_DS_TALENT = (GetSpellInfo(81138))
+local DARK_SUCCOR_GLYPH_ID = 96279
 local ImpDSModifier = 1
 local HasVampTalent = false
+local HasSuccorGlyphed = false
 -- This should be the percent of the DS Heal from the tooltip.
 local dsHealModifier = 0.20
 -- This should be the percent of max health a minimum DS heal will be.
 local dsMinHealPercent = 0.07
+-- The minimum DS heal with the Dark Succor Glyph
+local dsMinHealPercentSuccor = 0.15
+-- The actual minimum DS heal percent. Determined based on spec, glyphs, and presence.
+local actualDsMinHeal = dsMinHealPercent
 local shieldPerMasteryPoint = 6.25
 local maxHealth = 0
 local dsHealMin = 0
+
+local CurrentPresence = nil
+local BLOOD_PRESENCE_BUFF = (GetSpellInfo(48263))
+local UNHOLY_PRESENCE_BUFF = (GetSpellInfo(48265))
+local FROST_PRESENCE_BUFF = (GetSpellInfo(48266))
+
+local LUCK_OF_THE_DRAW_BUFF_ID = 72221
+local LUCK_OF_THE_DRAW_BUFF = (GetSpellInfo(LUCK_OF_THE_DRAW_BUFF_ID))
+local LUCK_OF_THE_DRAW_MOD = 0.05
+local luckOfTheDrawBuff = false
+local luckOfTheDrawAmt = 0
 
 local HELLSCREAM_BUFF_05 = 73816
 local HELLSCREAM_BUFF_10 = 73818
@@ -1388,9 +1405,9 @@ function BloodShieldTracker:CheckImpDeathStrike()
                 self:Print(L["Could not determine talents."])
             end
         end
-    	if HasVampTalent then
+    	--if HasVampTalent then
         	self:CheckGlyphs()
-    	end
+    	--end
 	end
 
 	if self:IsTrackerEnabled() then
@@ -1410,18 +1427,23 @@ end
 
 function BloodShieldTracker:CheckGlyphs()
     vbGlyphed = false
-	if not HasVampTalent then return end -- Dont bother with glyph check if he doesnt have the talent
+    HasSuccorGlyphed = false
+	--if not HasVampTalent then return end -- Dont bother with glyph check if he doesnt have the talent
     for id = 1, GetNumGlyphSockets() do
         local enabled, glyphType, glyphTooltipIndex, 
             glyphSpell, iconFilename = GetGlyphSocketInfo(id, nil)
-        if enabled and glyphSpell == VB_GLYPH_ID then
-            vbGlyphed = true
+        if enabled then
+            if glyphSpell == VB_GLYPH_ID then
+                vbGlyphed = true
+            elseif glyphSpell == DARK_SUCCOR_GLYPH_ID then
+                HasSuccorGlyphed = true
+            end
         end
     end
 end
 
 function BloodShieldTracker:GetEffectiveHealingBuffModifiers()
-    return (1+iccBuffAmt) * (1+vbHealingInc) * (1+gsHealModifier)
+    return (1+iccBuffAmt) * (1+vbHealingInc) * (1+gsHealModifier) * (1+luckOfTheDrawAmt)
 end
 
 function BloodShieldTracker:GetEffectiveHealingDebuffModifiers()
@@ -1431,8 +1453,13 @@ end
 function BloodShieldTracker:UpdateMinHeal(event,unit)
 	if unit == "player" then
 	    maxHealth = UnitHealthMax("player")
+	    actualDsMinHeal = dsMinHealPercent
+	    if HasSuccorGlyphed and 
+	        (CurrentPresence == "Unholy" or CurrentPresence == "Frost") then
+	        actualDsMinHeal = dsMinHealPercentSuccor
+        end
 		dsHealMin = round(
-		    maxHealth * dsMinHealPercent * 
+		    maxHealth * actualDsMinHeal * 
 		    self:GetEffectiveHealingBuffModifiers() * 
 		    self:GetEffectiveHealingDebuffModifiers())
 		if idle then
@@ -1779,7 +1806,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         local isMinimum = false
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local minimumHeal = dsHealMin
-        local minimumBS = round(maxHealth * dsMinHealPercent * shieldPercent)
+        local minimumBS = round(maxHealth * actualDsMinHeal * shieldPercent)
         
         if healingDebuffMultiplier == 1 then
             shieldValue = minimumBS
@@ -1826,7 +1853,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
             local isMinimum = false
             local shieldPercent = masteryRating*shieldPerMasteryPoint/100
-            local minimumBS = round(maxHealth * dsMinHealPercent * shieldPercent)
+            local minimumBS = round(maxHealth * actualDsMinHeal * shieldPercent)
 
             if spellAbsorb <= minimumBS then
                 isMinimum = true
@@ -1950,7 +1977,7 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
         added = current - curr
         -- Check if it is a minimum heal.
         local shieldPercent = masteryRating*shieldPerMasteryPoint/100
-        local minimumBS = round(maxHealth * dsMinHealPercent * shieldPercent)
+        local minimumBS = round(maxHealth * actualDsMinHeal * shieldPercent)
         if added <= minimumBS then
             isMinimum = true
         end
@@ -2024,6 +2051,36 @@ end
 function BloodShieldTracker:CheckAuras()
     local name, rank, icon, count, dispelType, duration, expires,
         caster, stealable, consolidate, spellId
+
+    -- Determine the presence
+    CurrentPresence = nil
+    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+        consolidate, spellId = UnitAura("player", FROST_PRESENCE_BUFF)
+    if spellId then
+        CurrentPresence = "Frost"
+    end
+    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+        consolidate, spellId = UnitAura("player", UNHOLY_PRESENCE_BUFF)
+    if spellId then
+        CurrentPresence = "Unholy"
+    end
+    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+        consolidate, spellId = UnitAura("player", BLOOD_PRESENCE_BUFF)
+    if spellId then
+        CurrentPresence = "Blood"
+    end
+
+    luckOfTheDrawBuff = false
+    luckOfTheDrawAmt = 0
+    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+        consolidate, spellId = UnitAura("player", LUCK_OF_THE_DRAW_BUFF)
+    if spellId then
+        luckOfTheDrawBuff = true
+	    if not count or count == 0 then
+	        count = 1
+        end
+        luckOfTheDrawAmt = LUCK_OF_THE_DRAW_MOD * count
+    end
 
     local iccBuffFound = false
 
