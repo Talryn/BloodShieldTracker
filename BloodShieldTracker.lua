@@ -131,6 +131,10 @@ local DS_SPELL_HEAL = (GetSpellInfo(45470))
 local BS_SPELL = (GetSpellInfo(77535))
 local IMP_DS_TALENT = (GetSpellInfo(81138))
 local DARK_SUCCOR_GLYPH_ID = 96279
+-- New buff for 4.2
+local DARK_SUCCOR_BUFF_ID = 101568
+local DARK_SUCCOR_BUFF_NAME = (GetSpellInfo(DARK_SUCCOR_BUFF_ID))
+local DarkSuccorBuff = false
 local ImpDSModifier = 1
 local HasVampTalent = false
 local HasSuccorGlyphed = false
@@ -139,7 +143,9 @@ local dsHealModifier = 0.20
 -- This should be the percent of max health a minimum DS heal will be.
 local dsMinHealPercent = 0.07
 -- The minimum DS heal with the Dark Succor Glyph
-local dsMinHealPercentSuccor = 0.15
+local dsMinHealPercentSuccor = 0.20
+-- The minimum DS heal with the Dark Succor Glyph in 4.1
+local dsMinHealPercentSuccor41 = 0.15
 -- The actual minimum DS heal percent. Determined based on spec, glyphs, and presence.
 local actualDsMinHeal = dsMinHealPercent
 local shieldPerMasteryPoint = 6.25
@@ -1454,10 +1460,17 @@ function BloodShieldTracker:UpdateMinHeal(event,unit)
 	if unit == "player" then
 	    maxHealth = UnitHealthMax("player")
 	    actualDsMinHeal = dsMinHealPercent
-	    if HasSuccorGlyphed and 
-	        (CurrentPresence == "Unholy" or CurrentPresence == "Frost") then
-	        actualDsMinHeal = dsMinHealPercentSuccor
+
+        -- Check for Dark Succor
+        if CurrentPresence == "Unholy" or CurrentPresence == "Frost" then
+    	    if CURRENT_UI_VERSION < 40200 and HasSuccorGlyphed == true then
+    	        actualDsMinHeal = dsMinHealPercentSuccor41
+            end
+            if DarkSuccorBuff == true then
+    	        actualDsMinHeal = dsMinHealPercentSuccor
+            end
         end
+        
 		dsHealMin = round(
 		    maxHealth * actualDsMinHeal * 
 		    self:GetEffectiveHealingBuffModifiers() * 
@@ -2070,6 +2083,17 @@ function BloodShieldTracker:CheckAuras()
         CurrentPresence = "Blood"
     end
 
+    -- Check for the Dark Succor buff
+    DarkSuccorBuff = false
+    if DARK_SUCCOR_BUFF_NAME and #DARK_SUCCOR_BUFF_NAME > 0 then
+        name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+            consolidate, spellId = UnitAura("player", DARK_SUCCOR_BUFF_NAME)
+        if spellId then
+            DarkSuccorBuff = true
+        end
+    end
+
+    -- Check for the Luck of the Draw buff
     luckOfTheDrawBuff = false
     luckOfTheDrawAmt = 0
     name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
