@@ -17,6 +17,10 @@ local isDK = nil
 local IsBloodTank = false
 local hasBloodShield = false
 
+-- Create the frame used to get the BS tooltip text
+local TipFrame = CreateFrame("GameTooltip", "BST_Tooltip", nil, "GameTooltipTemplate")
+TipFrame:SetOwner(UIParent, "ANCHOR_NONE")
+
 local updateTimer = nil
 local lastSeconds = 5
 local damageTaken = {}
@@ -85,23 +89,9 @@ end
 
 -- Stats for all fights
 TotalShieldStats = ShieldStats:new()
-local numShields = 0
-local numMinShields = 0
-local numRemovedShields = 0
-local numRefreshedShields = 0
-local minShieldMaxValue = 0
-local maxShieldMaxValue = 0
-local totalShieldMaxValue = 0
-local totalAbsorbedValue = 0
 
 -- Last fight stats
 LastFightStats = ShieldStats:new()
---local lastFightShields = 0
---local lastFightMinShields = 0
---local lastFightRemovedShields = 0
---local lastFightRefreshedShields = 0
---local lastFightShieldTotal = 0
---local lastFightAbsorbs = 0
 
 local lastDSSuccess = nil
 local masteryRating = 0
@@ -128,7 +118,8 @@ local CURRENT_BUILD, CURRENT_INTERNAL,
 
 local DS_SPELL_DMG = (GetSpellInfo(49998))
 local DS_SPELL_HEAL = (GetSpellInfo(45470))
-local BS_SPELL = (GetSpellInfo(77535))
+local BS_SPELL_ID = 77535
+local BS_SPELL = (GetSpellInfo(BS_SPELL_ID))
 local IMP_DS_TALENT = (GetSpellInfo(81138))
 local DARK_SUCCOR_GLYPH_ID = 96279
 -- New buff for 4.2
@@ -416,7 +407,8 @@ local defaults = {
 		shield_bar_x = 0, shield_bar_y = 0,
 		estheal_bar_scale = 1,
 		status_bar_scale = 1,
-		accountForOtherAbsorbs = true
+		accountForOtherAbsorbs = true,
+		useAuraForShield = true
     }
 }
 
@@ -490,11 +482,19 @@ function BloodShieldTracker:GetOptions()
                             set = function(info, val) self.db.profile.verbose = val end,
                             get = function(info) return self.db.profile.verbose end,
                         },
+                        useAuraForShield = {
+                            name = L["Use Aura"],
+        					order = 40,
+                            desc = L["UseAura_OptionDesc"],
+                            type = "toggle",
+                            set = function(info, val) self.db.profile.useAuraForShield = val end,
+                            get = function(info) return self.db.profile.useAuraForShield end,
+                        },
         				config_mode = {
         					name = L["Config Mode"],
         					desc = L["Toggle config mode"],
         					type = "execute",
-        					order = 40,
+        					order = 50,
         					func = function()
         					    configMode = not configMode
         						if configMode then
@@ -509,12 +509,12 @@ function BloodShieldTracker:GetOptions()
         					end,
         				},
 					    fonts = {
-					        order = 40,
+					        order = 60,
 					        type = "header",
 					        name = L["Font"],
 					    },
         				bar_font_size = {
-        					order = 50,
+        					order = 70,
         					name = L["Font size"],
         					desc = L["Font size for the bars."],
         					type = "range",
@@ -528,7 +528,7 @@ function BloodShieldTracker:GetOptions()
         					get = function(info,val) return self.db.profile.font_size end,
         				},
         				bar_font = {
-        					order = 60,
+        					order = 80,
         					type = "select",
         					name = L["Font"],
         					desc = L["Font to use."],
@@ -544,7 +544,7 @@ function BloodShieldTracker:GetOptions()
         					name = L["Outline"],
         					desc = L["FontOutline_OptionDesc"],
         					type = "toggle",
-        					order = 70,
+        					order = 90,
         					set = function(info, val)
         					    self.db.profile.font_outline = val
         					    self:ResetFonts()
@@ -557,7 +557,7 @@ function BloodShieldTracker:GetOptions()
         					name = L["Monochrome"],
         					desc = L["FontMonochrome_OptionDesc"],
         					type = "toggle",
-        					order = 80,
+        					order = 100,
         					set = function(info, val)
         					    self.db.profile.font_monochrome = val
         					    self:ResetFonts()
@@ -570,7 +570,7 @@ function BloodShieldTracker:GetOptions()
         					name = L["Thick Outline"],
         					desc = L["FontThickOutline_OptionDesc"],
         					type = "toggle",
-        					order = 90,
+        					order = 110,
         					set = function(info, val)
         					    self.db.profile.font_thickoutline = val
         					    self:ResetFonts()
@@ -1851,11 +1851,6 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if param13 then spellAbsorb = param13 end
 
         if param10 == BS_SPELL then
-            self.statusbar.active = true
-            self.statusbar.shield_curr = 0
-            self.statusbar.shield_max = 0
-            self.statusbar.expires = GetTime() + 10
-
             if self.db.profile.verbose then
                 if spellAbsorb and spellAbsorb ~= "" then
                     self:Print("Blood Shield applied.  Value = "..spellAbsorb)
@@ -1864,19 +1859,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                 end
             end
 
-            local isMinimum = false
-            local shieldPercent = masteryRating*shieldPerMasteryPoint/100
-            local minimumBS = round(maxHealth * actualDsMinHeal * shieldPercent)
-
-            if spellAbsorb <= minimumBS then
-                isMinimum = true
-            end
-
-            self:NewBloodShield(timestamp, spellAbsorb, isMinimum)
-            self:ShowShieldBar()
-            
-            if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
-                PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
+            if self.db.profile.useAuraForShield == false then
+                self:NewBloodShield(timestamp, spellAbsorb)
             end
         elseif param10 == VB_BUFF then
             if self.db.profile.verbose then
@@ -1895,19 +1879,13 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
         if param10 then
             if param10 == BS_SPELL then
-                self.statusbar.active = true
-                
-                if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
-                    PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
-                end
-
                 if self.db.profile.verbose and spellAbsorb and spellAbsorb ~= "" then
                     self:Print("Blood Shield refresh.  New value = "..spellAbsorb)
-                else
-                    
                 end
 
-                self:BloodShieldUpdated("refreshed", timestamp, spellAbsorb or 0)
+                if self.db.profile.useAuraForShield == false then
+                    self:BloodShieldUpdated("refreshed", timestamp, spellAbsorb or 0)
+                end
             end
         end
     end
@@ -1917,13 +1895,10 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if param13 then spellAbsorb = param13 end
 
         if param10 == BS_SPELL then
-            self.statusbar.active = false
-            
-            if self.db.profile.shield_sound_enabled and self.db.profile.shield_removed_sound then
-                PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_removed_sound))
+            if self.db.profile.useAuraForShield == false then
+                self:BloodShieldUpdated("removed", timestamp, spellAbsorb or 0)
             end
 
-            self:BloodShieldUpdated("removed", timestamp, spellAbsorb or 0)
             if self.db.profile.verbose and spellAbsorb and spellAbsorb ~= "" then
                 self:Print("Blood Shield removed.  Remaining = "..spellAbsorb)
             end
@@ -1939,8 +1914,21 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     end
 end
 
-function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, isMinimum)
+function BloodShieldTracker:NewBloodShield(timestamp, shieldValue)
+    self.statusbar.active = true
+    self.statusbar.shield_curr = 0
+    self.statusbar.shield_max = 0
+    self.statusbar.expires = GetTime() + 10
+
     if not IsBloodTank or not hasBloodShield then return end
+
+    local isMinimum = false
+    local shieldPercent = masteryRating*shieldPerMasteryPoint/100
+    local minimumBS = round(maxHealth * actualDsMinHeal * shieldPercent)
+
+    if shieldValue <= minimumBS then
+        isMinimum = true
+    end
 
     self.statusbar.shield_max = self.statusbar.shield_max + shieldValue
     self.statusbar.shield_curr = self.statusbar.shield_curr + shieldValue
@@ -1956,8 +1944,11 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, isMinimum)
     end
 
     self:UpdateStatsNewShield(shieldValue, isMinimum, false)
-
     self:ShowShieldBar()
+
+    if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
+        PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
+    end
 end
 
 function BloodShieldTracker:UpdateStatsNewShield(value, isMinimum, isRefresh)
@@ -1978,6 +1969,12 @@ end
 function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
     if not IsBloodTank then return end
 
+    if type == "refreshed" then
+        self.statusbar.active = true
+    elseif type == "removed" then
+        self.statusbar.active = false
+    end
+
     local curr = self.statusbar.shield_curr or 0
     local isMinimum = false
 
@@ -1997,6 +1994,10 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
         self:UpdateStatsNewShield(added, isMinimum, true)
         self.statusbar.expires = GetTime() + 10
         self.statusbar.shield_max = self.statusbar.shield_max + added
+
+        if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
+            PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
+        end
     elseif current == curr and type == "refreshed" then
         -- No damage taken but refresh the time.
         -- This can happen if we hit the max shield value of maximum health.
@@ -2038,20 +2039,18 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
         self:UpdateStatsRemoveShield()
         self.statusbar.shield_max = 0
         self.statusbar.shield_curr = 0
+
+        if self.db.profile.shield_sound_enabled and self.db.profile.shield_removed_sound then
+            PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_removed_sound))
+        end
     end
 
     self:UpdateShieldBar()
 end
 
 function BloodShieldTracker:ResetStats()
-    numShields = 0
-    numMinShields = 0
-    numRemovedShields = 0
-    numRefreshedShields = 0
-    minShieldMaxValue = 0
-    maxShieldMaxValue = 0
-    totalShieldMaxValue = 0
-    totalAbsorbedValue = 0
+    TotalShieldStats:Reset()
+    LastFightStats:Reset()
 end
 
 function BloodShieldTracker:UNIT_AURA(...)
@@ -2061,10 +2060,87 @@ function BloodShieldTracker:UNIT_AURA(...)
     end
 end
 
+local function GetNumericValue(...)
+    local value
+    local valueText
+    local region
+    local regionText
+
+    for i = 1, select("#", ...) do
+        region = select(i, ...)
+        if region and region:GetObjectType() == "FontString" then
+            regionText = region:GetText()
+            if regionText then
+                valueText = regionText:match("%d+")
+                if valueText then
+                    value = tonumber(valueText)
+                    if value then
+                        return value
+                    end
+                end
+            end
+        end
+    end
+end
+
+local BSAuraPresent = false
+local BSAuraValue = 0
+
 function BloodShieldTracker:CheckAuras()
     local name, rank, icon, count, dispelType, duration, expires,
         caster, stealable, consolidate, spellId
 
+    -- Check for the Blood Shield
+    if self.db.profile.useAuraForShield == true then
+        name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+            consolidate, spellId = UnitAura("player", BS_SPELL)
+        if spellId then
+            -- Blood Shield present.  Get the value next from the tooltip.
+            TipFrame:ClearLines()
+            TipFrame:SetUnitBuff("player", name)
+            local value = GetNumericValue(TipFrame:GetRegions())
+            if value then
+                if BSAuraPresent == false then
+                    -- Blood Shield applied
+                    if self.db.profile.verbose == true then
+                        self:Print("AURA: Blood Shield applied. "..value)
+                    end
+                    self:NewBloodShield(GetTime(), value)
+                else
+                    if value ~= BSAuraValue then
+                        -- Blood Shield refreshed
+                        if self.db.profile.verbose == true then
+                            self:Print("AURA: Blood Shield refreshed. "..value
+                                .." ["..(value - BSAuraValue).."]")
+                        end
+                        self:BloodShieldUpdated("refreshed", GetTime(), value)
+                    end
+                end
+
+                BSAuraValue = value
+            else
+                if self.db.profile.verbose == true then
+                    if self.db.profile.verbose == true then
+                        self:Print("Error reading the Blood Shield tooltip.")
+                    end
+                end
+            end
+            BSAuraPresent = true
+        else
+            if BSAuraPresent == true then
+                -- Blood Shield removed
+                if self.db.profile.verbose == true then
+                    self:Print("AURA: Blood Shield removed. "..BSAuraValue)
+                end
+
+                self:BloodShieldUpdated("removed", GetTime(), BSAuraValue)
+            end
+                
+            BSAuraPresent = false
+            BSAuraValue = 0
+        end
+    end
+    
     -- Determine the presence
     CurrentPresence = nil
     name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
