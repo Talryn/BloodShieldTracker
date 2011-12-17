@@ -1944,6 +1944,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
 
             self:AddDamageTaken(timestamp, damage)
+            self:UpdateEstHealBar()
         elseif eventtype:find("SPELL_") or eventtype:find("RANGE_") then
             local type
             if eventtype:find("SPELL_") then type = "Spell" end
@@ -1973,6 +1974,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
             if countDamage == true then
                 self:AddDamageTaken(timestamp, damage)
+                self:UpdateEstHealBar()
             end
 
             if self.db.profile.verbose then
