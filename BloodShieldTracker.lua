@@ -1690,7 +1690,7 @@ function BloodShieldTracker:UpdateEstHealBar()
         if self.db.profile.estimate_bar_mode == "BS" then
             predictedValue = round(
                 recentDamage * dsHealModifier * ImpDSModifier * shieldPercent)
-            minimumValue = dsHealMin * shieldPercent
+            minimumValue = maxHealth * dsMinHealPercent * shieldPercent
         else
             predictedValue = round(
                 recentDamage * dsHealModifier * ImpDSModifier *
