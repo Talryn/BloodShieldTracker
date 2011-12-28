@@ -12,9 +12,8 @@ local floor, ceil = math.floor, math.ceil
 BloodShieldTracker.playerName = UnitName("player")
 BloodShieldTracker.statusbar = nil
 BloodShieldTracker.damagebar = nil
-
-local pwsbar = nil
-local illumbar = nil
+BloodShieldTracker.pwsbar = nil
+BloodShieldTracker.illumbar = nil
 
 local isDK = nil
 local IsBloodTank = false
@@ -425,13 +424,35 @@ local defaults = {
 		shield_bar_x = 0, shield_bar_y = 0,
 		estheal_bar_scale = 1,
 		status_bar_scale = 1,
-		accountForOtherAbsorbs = true,
 		useAuraForShield = true,
 		latencyMethod = "None",
 		latencyFixed = 0,
-		trackOtherShields = false,
-		trackPowerWordShield = true,
-		trackIllumHealShield = true
+        -- Setting for the PW:S Bar
+		pwsbar_enabled = false,
+		pwsbar_color = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+		pwsbar_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+		pwsbar_bgcolor = {r = 0.65, g = 0.65, b = 0.65, a = 0.8},
+		pwsbar_texture = "Blizzard",
+		pwsbar_border = true,
+		pwsbar_shown = true,
+		pwsbar_x = 0, pwsbar_y = 0,
+		pwsbar_scale = 1,
+		lock_pwsbar = false,
+		pwsbar_width = 75,
+		pwsbar_height = 15,
+        -- Setting for the Illum. Heal Bar
+		illumbar_enabled = false,
+		illumbar_color = {r = 0.96, g = 0.55, b = 0.73, a = 1},
+		illumbar_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+		illumbar_bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
+		illumbar_texture = "Blizzard",
+		illumbar_border = true,
+		illumbar_shown = true,
+		illumbar_x = 0, illumbar_y = 0,
+		illumbar_scale = 1,
+		lock_illum = false,
+		illumbar_width = 75,
+		illumbar_height = 15,
     }
 }
 
@@ -523,11 +544,15 @@ function BloodShieldTracker:GetOptions()
         						if configMode then
         							self.statusbar:Show()
         							self.damagebar:Show()
+        							self.pwsbar:Show()
+        							self.illumbar:Show()
         						else
         							self.statusbar:Hide()
         							if self.damagebar.hideooc and not InCombatLockdown() then
         							    self.damagebar:Hide()
                                     end
+                                    self.pwsbar:Hide()
+                                    self.illumbar:Hide()
         						end
         					end,
         				},
@@ -635,7 +660,7 @@ function BloodShieldTracker:GetOptions()
         				},
         				lock_status_bar = {
         					name = L["Lock bar"],
-        					desc = L["Lock the shield bar from moving."],
+        					desc = L["LockBarDesc"],
         					type = "toggle",
         					order = 20,
         					set = function(info, val)
@@ -662,20 +687,6 @@ function BloodShieldTracker:GetOptions()
                             get = function(info)
                                 return self.db.profile.shield_bar_text_format
                             end,
-        				},
-                		otherShields = {
-        					name = L["Other Shields"],
-        					desc = L["OtherShields_Desc"],
-        					type = "toggle",
-        					order = 40,
-        					set = function(info, val)
-        					    self.db.profile.trackOtherShields = val
-        					    if not val then
-        						    pwsbar:Hide()
-        						    illumbar:Hide()
-        						end
-        					end,
-                            get = function(info) return self.db.profile.trackOtherShields end,
         				},
                         timeRemaining = {
                             order = 100,
@@ -779,7 +790,7 @@ function BloodShieldTracker:GetOptions()
         				status_bar_width = {
         					order = 310,
         					name = L["Width"],
-        					desc = L["Change the width of the blood shield bar."],	
+        					desc = L["BarWidth_Desc"],	
         					type = "range",
         					min = 50,
         					max = 300,
@@ -796,7 +807,7 @@ function BloodShieldTracker:GetOptions()
         				status_bar_height = {
         					order = 320,
         					name = L["Height"],
-        					desc = L["Change the height of the blood shield bar."],
+        					desc = L["BarHeight_Desc"],
         					type = "range",
         					min = 10,
         					max = 30,
@@ -885,7 +896,7 @@ function BloodShieldTracker:GetOptions()
         				status_bar_texture_opt = {
         					order = 510,
         					name = L["Texture"],
-        					desc = L["StatusBarTextureDesc"],
+        					desc = L["BarTexture_OptionDesc"],
         					type = "select",
         					values = LSM:HashTable("statusbar"),
         					dialogControl = 'LSM30_Statusbar',
@@ -924,42 +935,6 @@ function BloodShieldTracker:GetOptions()
         				        self:UpdateShieldBarVisibility()
         				    end,
         				},
-                        pwShield = {
-                            order = 600,
-                            type = "header",
-                            name = PWS_SPELL,
-                        },
-                		pwsEnabled = {
-        					name = L["Enabled"],
-        					desc = L["pwsEnabled_Desc"],
-        					type = "toggle",
-        					order = 610,
-        					set = function(info, val)
-        					    self.db.profile.trackPowerWordShield = val
-        					    if not val then
-        						    pwsbar:Hide()
-        						end
-        					end,
-                            get = function(info) return self.db.profile.trackPowerWordShield end,
-        				},
-                        illumHealing = {
-                            order = 700,
-                            type = "header",
-                            name = ILLUMINATED_HEALING_BUFF,
-                        },
-                		illumHealEnabled = {
-        					name = L["Enabled"],
-        					desc = L["illumHealEnabled_Desc"],
-        					type = "toggle",
-        					order = 710,
-        					set = function(info, val)
-        					    self.db.profile.trackIllumHealShield = val
-        					    if not val then
-        						    illumbar:Hide()
-        						end
-        					end,
-                            get = function(info) return self.db.profile.trackIllumHealShield end,
-        				},
         			},
     			},
     			estHealBarOpts = {
@@ -994,7 +969,7 @@ function BloodShieldTracker:GetOptions()
         				},
         				lock_estheal_bar = {
         					name = L["Lock bar"],
-        					desc = L["Lock the estimated healing bar from moving."],
+        					desc = L["LockBarDesc"],
         					type = "toggle",
         					order = 20,
         					set = function(info, val)
@@ -1219,7 +1194,7 @@ function BloodShieldTracker:GetOptions()
         				estheal_bar_texture_opt = {
         					order = 170,
         					name = L["Texture"],
-        					desc = L["StatusBarTextureDesc"],
+        					desc = L["BarTexture_OptionDesc"],
         					type = "select",
         					values = LSM:HashTable("statusbar"),
         					dialogControl = 'LSM30_Statusbar',
@@ -1299,7 +1274,368 @@ function BloodShieldTracker:GetOptions()
         				},
 
         			}
-        		}
+        		},
+
+        		pwsBarOpts = {
+        			order = 4,
+        			type = "group",
+        			name = L["PW:S Bar"],
+        			desc = L["PW:S Bar"],
+        			args = {
+					    description = {
+					        order = 1,
+					        type = "description",
+					        name = L["PWSBar_Desc"],
+					    },
+                        generalOptions = {
+                            order = 2,
+                            type = "header",
+                            name = L["General Options"],
+                        },
+                		pwsbar_enabled = {
+        					name = L["Enabled"],
+        					desc = L["EnableBarDesc"],
+        					type = "toggle",
+        					order = 10,
+        					set = function(info, val)
+        					    self.db.profile.pwsbar_enabled = val
+        					    if not val then
+        						    BloodShieldTracker.pwsbar:Hide()
+        						end
+        					end,
+                            get = function(info) return self.db.profile.pwsbar_enabled end,
+        				},
+        				lock_pwsbar = {
+        					name = L["Lock bar"],
+        					desc = L["LockBarDesc"],
+        					type = "toggle",
+        					order = 20,
+        					set = function(info, val)
+        					    self.db.profile.lock_pwsbar = val 
+        						BloodShieldTracker:PWSBarLock(val)
+        					end,
+                            get = function(info) return self.db.profile.lock_pwsbar end,
+        				},
+                        dimensions = {
+                            order = 300,
+                            type = "header",
+                            name = L["Dimensions"],
+                        },
+        				pwsbar_width = {
+        					order = 310,
+        					name = L["Width"],
+        					desc = L["BarWidth_Desc"],	
+        					type = "range",
+        					min = 50,
+        					max = 300,
+        					step = 1,
+        					set = function(info, val)
+        					    self.db.profile.pwsbar_width = val 
+        						self.pwsbar:SetWidth(val)
+        						self.pwsbar.border:SetWidth(val+9)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.pwsbar_width
+        					end,
+        				},
+        				pwsbar_height = {
+        					order = 320,
+        					name = L["Height"],
+        					desc = L["BarHeight_Desc"],
+        					type = "range",
+        					min = 10,
+        					max = 30,
+        					step = 1,
+        					set = function(info, val)
+        					    self.db.profile.pwsbar_height = val 
+        						self.pwsbar:SetHeight(val)
+        						self.pwsbar.border:SetHeight(val + 8)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.pwsbar_height
+        					end,					
+        				},
+        				pwsbar_scaling = {
+        					order = 330,
+        					name = L["Scale"],
+        					desc = L["ScaleDesc"],
+        					type = "range",
+        					min = 0.1,
+        					max = 3,
+        					step = 0.1,
+        					get = function() return self.db.profile.pwsbar_scale end,
+        					set = function(info, val)
+        					    self.db.profile.pwsbar_scale = val
+        					    self.pwsbar:SetScale(val)
+        					end
+        				},
+                        colors = {
+                            order = 400,
+                            type = "header",
+                            name = L["Colors"],
+                        },
+        				pwsbar_textcolor = {
+        					order = 410,
+        					name = L["Text Color"],
+        					desc = L["BarTextColor_OptionDesc"],
+        					type = "color",
+        					hasAlpha = true,
+        					set = function(info, r, g, b, a)
+        					    local c = self.db.profile.pwsbar_textcolor
+        					    c.r, c.g, c.b, c.a = r, g, b, a
+        					    self:UpdatePWSBarGraphics()
+        					end,
+        					get = function(info)
+        				        local c = self.db.profile.pwsbar_textcolor
+        					    return c.r, c.g, c.b, c.a
+        					end,					
+        				},
+        				pwsbar_color = {
+        					order = 420,
+        					name = L["Bar Color"],
+        					desc = L["BarColor_OptionDesc"],
+        					type = "color",
+        					hasAlpha = true,
+        					set = function(info, r, g, b, a)
+        					    local c = self.db.profile.pwsbar_color
+        					    c.r, c.g, c.b, c.a = r, g, b, a
+        					    self:UpdatePWSBarGraphics()
+        					end,
+        					get = function(info)
+        				        local c = self.db.profile.pwsbar_color
+        					    return c.r, c.g, c.b, c.a
+        					end,					
+        				},
+                        appearance = {
+                            order = 500,
+                            type = "header",
+                            name = L["Appearance"],
+                        },
+        				pwsbar_texture_opt = {
+        					order = 510,
+        					name = L["Texture"],
+        					desc = L["BarTexture_OptionDesc"],
+        					type = "select",
+        					values = LSM:HashTable("statusbar"),
+        					dialogControl = 'LSM30_Statusbar',
+        					get = function()
+        					    return self.db.profile.pwsbar_texture
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.pwsbar_texture = val
+        					    self:UpdatePWSBarTexture()
+        					end,
+        					disabled = function()
+        					    return not self.db.profile.pwsbar_shown
+        					end,
+        				},
+        				pwsbar_border_visible_opt = {
+        					order = 520,
+        					name = L["ShowBorder"],
+        					desc = L["ShowBorderDesc"],
+        					type = "toggle",
+        					get = function()
+        					    return self.db.profile.pwsbar_border
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.pwsbar_border = val
+        					    self:UpdatePWSBarBorder()
+        					end,
+        				},
+        				pwsbar_visible_opt = {
+        					order = 530,
+        					name = L["ShowBar"],
+        					desc = L["ShowBarDesc"],
+        					type = "toggle",
+        					get = function() return self.db.profile.pwsbar_shown end,
+        					set = function(info,val) 
+        				        self.db.profile.pwsbar_shown = val
+        				        self:UpdatePWSBarVisibility()
+        				    end,
+        				},
+        			},
+        		},
+
+        		illumBarOpts = {
+        			order = 5,
+        			type = "group",
+        			name = L["Illuminated Healing Bar"],
+        			desc = L["Illuminated Healing Bar"],
+        			args = {
+					    description = {
+					        order = 1,
+					        type = "description",
+					        name = L["IllumBar_Desc"],
+					    },
+                        generalOptions = {
+                            order = 2,
+                            type = "header",
+                            name = L["General Options"],
+                        },
+                		bar_enabled = {
+        					name = L["Enabled"],
+        					desc = L["EnableBarDesc"],
+        					type = "toggle",
+        					order = 10,
+        					set = function(info, val)
+        					    self.db.profile.illumbar_enabled = val
+        					    if not val then
+        						    BloodShieldTracker.illumbar:Hide()
+        						end
+        					end,
+                            get = function(info) return self.db.profile.illumbar_enabled end,
+        				},
+        				lock_bar = {
+        					name = L["Lock bar"],
+        					desc = L["LockBarDesc"],
+        					type = "toggle",
+        					order = 20,
+        					set = function(info, val)
+        					    self.db.profile.lock_illumbar = val 
+        						BloodShieldTracker:IllumBarLock(val)
+        					end,
+                            get = function(info) return self.db.profile.lock_illumbar end,
+        				},
+                        dimensions = {
+                            order = 300,
+                            type = "header",
+                            name = L["Dimensions"],
+                        },
+        				bar_width = {
+        					order = 310,
+        					name = L["Width"],
+        					desc = L["BarWidth_Desc"],	
+        					type = "range",
+        					min = 50,
+        					max = 300,
+        					step = 1,
+        					set = function(info, val)
+        					    self.db.profile.illumbar_width = val 
+        						self.illumbar:SetWidth(val)
+        						self.illumbar.border:SetWidth(val+9)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.illumbar_width
+        					end,
+        				},
+        				bar_height = {
+        					order = 320,
+        					name = L["Height"],
+        					desc = L["BarHeight_Desc"],
+        					type = "range",
+        					min = 10,
+        					max = 30,
+        					step = 1,
+        					set = function(info, val)
+        					    self.db.profile.illumbar_height = val 
+        						self.illumbar:SetHeight(val)
+        						self.illumbar.border:SetHeight(val + 8)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.illumbar_height
+        					end,					
+        				},
+        				bar_scaling = {
+        					order = 330,
+        					name = L["Scale"],
+        					desc = L["ScaleDesc"],
+        					type = "range",
+        					min = 0.1,
+        					max = 3,
+        					step = 0.1,
+        					get = function() return self.db.profile.illumbar_scale end,
+        					set = function(info, val)
+        					    self.db.profile.illumbar_scale = val
+        					    self.illumbar:SetScale(val)
+        					end
+        				},
+                        colors = {
+                            order = 400,
+                            type = "header",
+                            name = L["Colors"],
+                        },
+        				bar_textcolor = {
+        					order = 410,
+        					name = L["Text Color"],
+        					desc = L["BarTextColor_OptionDesc"],
+        					type = "color",
+        					hasAlpha = true,
+        					set = function(info, r, g, b, a)
+        					    local c = self.db.profile.illumbar_textcolor
+        					    c.r, c.g, c.b, c.a = r, g, b, a
+        					    self:UpdateIllumBarGraphics()
+        					end,
+        					get = function(info)
+        				        local c = self.db.profile.illumbar_textcolor
+        					    return c.r, c.g, c.b, c.a
+        					end,					
+        				},
+        				bar_color = {
+        					order = 420,
+        					name = L["Bar Color"],
+        					desc = L["BarColor_OptionDesc"],
+        					type = "color",
+        					hasAlpha = true,
+        					set = function(info, r, g, b, a)
+        					    local c = self.db.profile.illumbar_color
+        					    c.r, c.g, c.b, c.a = r, g, b, a
+        					    self:UpdateIllumBarGraphics()
+        					end,
+        					get = function(info)
+        				        local c = self.db.profile.illumbar_color
+        					    return c.r, c.g, c.b, c.a
+        					end,					
+        				},
+                        appearance = {
+                            order = 500,
+                            type = "header",
+                            name = L["Appearance"],
+                        },
+        				bar_texture_opt = {
+        					order = 510,
+        					name = L["Texture"],
+        					desc = L["BarTexture_OptionDesc"],
+        					type = "select",
+        					values = LSM:HashTable("statusbar"),
+        					dialogControl = 'LSM30_Statusbar',
+        					get = function()
+        					    return self.db.profile.illumbar_texture
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.illumbar_texture = val
+        					    self:UpdateIllumBarTexture()
+        					end,
+        					disabled = function()
+        					    return not self.db.profile.illumbar_shown
+        					end,
+        				},
+        				bar_border_visible_opt = {
+        					order = 520,
+        					name = L["ShowBorder"],
+        					desc = L["ShowBorderDesc"],
+        					type = "toggle",
+        					get = function()
+        					    return self.db.profile.illumbar_border
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.illumbar_border = val
+        					    self:UpdateIllumBarBorder()
+        					end,
+        				},
+        				bar_visible_opt = {
+        					order = 530,
+        					name = L["ShowBar"],
+        					desc = L["ShowBarDesc"],
+        					type = "toggle",
+        					get = function() return self.db.profile.illumbar_shown end,
+        					set = function(info,val) 
+        				        self.db.profile.illumbar_shown = val
+        				        self:UpdateIllumBarVisibility()
+        				    end,
+        				},
+        			},
+        		},
+        		
             }
         }
 	options.args.profile = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
@@ -1329,6 +1665,11 @@ function BloodShieldTracker:OnInitialize()
 	self:EstHealBarLock(self.db.profile.lock_damage_bar)
 	self.damagebar.hideooc = self.db.profile.hide_damage_bar_ooc
 	self.damagebar.minheal = true
+    self.pwsbar = self:CreatePWSBar()
+	self:PWSBarLock(self.db.profile.lock_pwsbar)
+    self.illumbar = self:CreateIllumBar()
+	self:IllumBarLock(self.db.profile.lock_illumbar)
+
 	-- Register for profile callbacks
 	self.db.RegisterCallback(self, "OnProfileChanged", "Reset")
 	self.db.RegisterCallback(self, "OnProfileCopied", "Reset")
@@ -1346,6 +1687,11 @@ function BloodShieldTracker:OnInitialize()
 	    displayName, L["Blood Shield Bar"], displayName, "shieldBarOpts")
 	self.optionsFrame.EstHealBar = ACD:AddToBlizOptions(
 	    displayName, L["Estimated Healing Bar"], displayName, "estHealBarOpts")
+	self.optionsFrame.ShieldBar = ACD:AddToBlizOptions(
+	    displayName, L["PW:S Bar"], displayName, "pwsBarOpts")
+	self.optionsFrame.ShieldBar = ACD:AddToBlizOptions(
+	    displayName, L["Illuminated Healing Bar"], displayName, "illumBarOpts")
+
 	ACD:AddToBlizOptions(
 	    displayName, options.args.profile.name, displayName, "profile")
 
@@ -1376,6 +1722,23 @@ function BloodShieldTracker:Reset()
 		self:UpdateShieldBarVisibility()
 		self:UpdateShieldBarGraphics()
 	end
+	if self.pwsbar then
+		self.pwsbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.pwsbar_x, self.db.profile.pwsbar_y)
+    	self:PWSBarLock(self.db.profile.lock_pwsbar)
+		self:UpdatePWSBarTexture()
+		self:UpdatePWSBarBorder()
+		self:UpdatePWSBarVisibility()
+		self:UpdatePWSBarGraphics()
+	end
+	if self.illumbar then
+		self.illumbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.illumbar_x, self.db.profile.illumbar_y)
+    	self:IllumBarLock(self.db.profile.lock_illumbar)
+		self:UpdateIllumBarTexture()
+		self:UpdateIllumBarBorder()
+		self:UpdateIllumBarVisibility()
+		self:UpdateIllumBarGraphics()
+	end
+
 	self:ResetFonts()
 	self:ResetStats()
 end
@@ -1405,6 +1768,14 @@ function BloodShieldTracker:ResetFonts()
 	self.statusbar.time:SetText(self.statusbar.time:GetText())
 	self.damagebar.value:SetFont(ff,fh,fontFlags)						
 	self.damagebar.value:SetText(self.damagebar.value:GetText())
+    if self.pwsbar then
+    	self.pwsbar.value:SetFont(ff,fh,fontFlags)						
+    	self.pwsbar.value:SetText(self.pwsbar.value:GetText())
+    end
+    if self.illumbar then
+    	self.illumbar.value:SetFont(ff,fh,fontFlags)						
+    	self.illumbar.value:SetText(self.illumbar.value:GetText())
+    end
 end
 
 function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
@@ -1419,6 +1790,12 @@ function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 		end
 		if self.db.profile.status_bar_shown then
 			self:UpdateShieldBarTexture()
+		end
+		if self.db.profile.pwsbar_shown then
+			self:UpdatePWSBarTexture()
+		end
+		if self.db.profile.illumbar_shown then
+			self:UpdateIllumBarTexture()
 		end
 	end
 end
@@ -1733,6 +2110,18 @@ function BloodShieldTracker:UpdateEstHealBarText(estimate)
     end
 end
 
+function BloodShieldTracker:UpdatePWSBarText(value)
+    if self.db.profile.pwsbar_enabled then
+        self.pwsbar.value:SetText(self:FormatNumber(value))
+    end
+end
+
+function BloodShieldTracker:UpdateIllumBarText(value)
+    if self.db.profile.illumbar_enabled then
+        self.illumbar.value:SetText(self:FormatNumber(value))
+    end
+end
+
 function BloodShieldTracker:ShowShieldBar()
     if self.db.profile.status_bar_enabled then
         self.statusbar:SetMinMaxValues(0, self.statusbar.shield_max)
@@ -1760,14 +2149,6 @@ function BloodShieldTracker:UpdateShieldBar()
         diff = 0
     end
     self:UpdateShieldBarText(self.statusbar.shield_curr, self.statusbar.shield_max, diff)
-
-    local pwsvalue = OtherShields["PWS"]
-    if pwsvalue and pwsvalue > 0 then
-        pwsbar.value:SetText(self:FormatNumber(pwsvalue))
-        pwsbar:Show()
-    else
-        pwsbar:Hide()
-    end
 end
 
 function BloodShieldTracker:FormatNumber(number)
@@ -2390,18 +2771,19 @@ function BloodShieldTracker:CheckAuras()
 
         elseif spellId == PWS_SPELL_ID then
             -- Check for a Power Word: Shield
-            if self.db.profile.trackOtherShields == true and 
-                self.db.profile.trackPowerWordShield == true then
+            if self.db.profile.pwsbar_enabled == true then
                 pwsFound = true
                 TipFrame:ClearLines()
                 TipFrame:SetUnitBuff("player", name)
                 local value = GetNumericValue(TipFrame:GetRegions())
                 if value then
                     OtherShields["PWS"] = value
-                    pwsbar:Show()
                     if pwsValue and pwsValue ~= value then
-                        pwsbar.value:SetText(self:FormatNumber(value))
+                        self:UpdatePWSBarText(value)
+                    else
+                        self:UpdatePWSBarText("Err")
                     end
+                    self.pwsbar:Show()
                 else
                     if self.db.profile.verbose == true then
                         self:Print("Error reading the Power Word: Shield tooltip.")
@@ -2409,8 +2791,7 @@ function BloodShieldTracker:CheckAuras()
                 end
             end
         elseif spellId == ILLUMINATED_HEALING_BUFF_ID then
-            if self.db.profile.trackOtherShields == true and 
-                self.db.profile.trackIllumHealShield == true then
+            if self.db.profile.illumbar_enabled == true then
                 illumHealFound = true
                 TipFrame:ClearLines()
                 TipFrame:SetUnitBuff("player", name)
@@ -2505,19 +2886,18 @@ function BloodShieldTracker:CheckAuras()
     
     if not pwsFound then
         OtherShields["PWS"] = 0
-        pwsbar:Hide()
+        self.pwsbar:Hide()
     end
 
-    if self.db.profile.trackOtherShields == true and 
-        self.db.profile.trackIllumHealShield == true then
+    if self.db.profile.illumbar_enabled == true then
         local illumValue = OtherShields["IlluminatedHealing"]
         if illumHealFound then
-            illumbar:Show()
             if illumValue and illumValue ~= illumPrevValue then
-                illumbar.value:SetText(self:FormatNumber(illumValue))
+                self:UpdateIllumBarText(illumValue)
             end
+            self.illumbar:Show()
         else
-            illumbar:Hide()
+            self.illumbar:Hide()
         end
     end
 
@@ -2595,7 +2975,7 @@ function BloodShieldTracker:CheckAurasOld()
     end
 
     -- Check for a Power Word: Shield
-    --if self.db.profile.trackPowerWordShield == true then
+    if self.db.profile.pwsbar_enabled == true then
         local pwsValue = OtherShields["PWS"]
         name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
             consolidate, spellId = UnitAura("player", PWS_SPELL)
@@ -2618,7 +2998,7 @@ function BloodShieldTracker:CheckAurasOld()
             OtherShields["PWS"] = 0
             pwsbar:Hide()
         end
-    --end
+    end
 
     -- Determine the presence
     CurrentPresence = nil
@@ -2771,6 +3151,34 @@ function BloodShieldTracker:UpdateDamageBarVisibility()
 	end
 end
 
+function BloodShieldTracker:UpdatePWSBarVisibility()
+	if self.pwsbar then
+		local show = self.db.profile.pwsbar_shown
+		if not show then
+			self.pwsbar:SetStatusBarTexture("")
+			self.pwsbar.bg:SetTexture("")
+			self.pwsbar.border:Hide()
+		else
+			self:UpdateShieldBarTexture()
+			self:UpdateShieldBarBorder()
+		end
+	end
+end
+
+function BloodShieldTracker:UpdateIllumBarVisibility()
+	if self.illumbar then
+		local show = self.db.profile.illumbar_shown
+		if not show then
+			self.illumbar:SetStatusBarTexture("")
+			self.illumbar.bg:SetTexture("")
+			self.illumbar.border:Hide()
+		else
+			self:UpdateIllumBarTexture()
+			self:UpdateIllumBarBorder()
+		end
+	end
+end
+
 -- show/hide borders
 function BloodShieldTracker:UpdateShieldBarBorder()
 	if self.statusbar then
@@ -2787,6 +3195,24 @@ function BloodShieldTracker:UpdateDamageBarBorder()
 			self.damagebar.border:Show()
 		else
 			self.damagebar.border:Hide()
+		end
+	end
+end
+function BloodShieldTracker:UpdatePWSBarBorder()
+	if self.pwsbar then
+		if self.db.profile.pwsbar_border then
+			self.pwsbar.border:Show()
+		else
+			self.pwsbar.border:Hide()
+		end
+	end
+end
+function BloodShieldTracker:UpdateIllumBarBorder()
+	if self.illumbar then
+		if self.db.profile.illumbar_border then
+			self.illumbar.border:Show()
+		else
+			self.illumbar.border:Hide()
 		end
 	end
 end
@@ -2811,6 +3237,26 @@ function BloodShieldTracker:UpdateDamageBarTexture()
 	    self.damagebar:GetStatusBarTexture():SetHorizTile(false)
 	    self.damagebar:GetStatusBarTexture():SetVertTile(false)
 		self:UpdateDamageBarColors(true)
+	end
+end
+function BloodShieldTracker:UpdatePWSBarTexture()
+	if self.pwsbar then
+		local bt = LSM:Fetch("statusbar",self.db.profile.pwsbar_texture)
+		self.pwsbar:SetStatusBarTexture(bt)
+		self.pwsbar.bg:SetTexture(bt)
+	    self.pwsbar:GetStatusBarTexture():SetHorizTile(false)
+	    self.pwsbar:GetStatusBarTexture():SetVertTile(false)
+		self:UpdatePWSBarGraphics()
+	end
+end
+function BloodShieldTracker:UpdateIllumBarTexture()
+	if self.illumbar then
+		local bt = LSM:Fetch("statusbar",self.db.profile.illumbar_texture)
+		self.illumbar:SetStatusBarTexture(bt)
+		self.illumbar.bg:SetTexture(bt)
+	    self.illumbar:GetStatusBarTexture():SetHorizTile(false)
+	    self.illumbar:GetStatusBarTexture():SetVertTile(false)
+		self:UpdateIllumBarGraphics()
 	end
 end
 
@@ -2853,6 +3299,28 @@ function BloodShieldTracker:UpdateDamageBarColors(min)
     end
 end
 
+function BloodShieldTracker:UpdatePWSBarGraphics()
+    if self.pwsbar then
+        local bc = self.db.profile.pwsbar_color
+        self.pwsbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+        local bgc = self.db.profile.pwsbar_bgcolor
+        self.pwsbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+        local tc = self.db.profile.pwsbar_textcolor
+        self.pwsbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    end
+end
+
+function BloodShieldTracker:UpdateIllumBarGraphics()
+    if self.illumbar then
+        local bc = self.db.profile.illumbar_color
+        self.illumbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+        local bgc = self.db.profile.status_bar_bgcolor
+        self.illumbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+        local tc = self.db.profile.status_bar_textcolor
+        self.illumbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    end
+end
+
 function BloodShieldTracker:ShieldBarLock(locked)
     if self.statusbar then
         self.statusbar.lock = locked
@@ -2871,6 +3339,28 @@ function BloodShieldTracker:EstHealBarLock(locked)
             self.damagebar:EnableMouse(false)
         else
             self.damagebar:EnableMouse(true)
+        end
+    end
+end
+
+function BloodShieldTracker:PWSBarLock(locked)
+    if self.pwsbar then
+        self.pwsbar.lock = locked
+        if locked then
+            self.pwsbar:EnableMouse(false)
+        else
+            self.pwsbar:EnableMouse(true)
+        end
+    end
+end
+
+function BloodShieldTracker:IllumBarLock(locked)
+    if self.illumbar then
+        self.illumbar.lock = locked
+        if locked then
+            self.illumbar:EnableMouse(false)
+        else
+            self.illumbar:EnableMouse(true)
         end
     end
 end
@@ -2951,6 +3441,7 @@ function BloodShieldTracker:CreateShieldBar()
 	statusbar.shield_max = 0
 
 
+--[[
     pwsbar = CreateFrame("Frame", "BloodShieldTracker_Shield_PWS", UIParent)
     pwsbar:SetPoint("TOPLEFT", statusbar, "TOPRIGHT", 10, 0)
     pwsbar:SetHeight(self.db.profile.status_bar_height)
@@ -2966,6 +3457,7 @@ function BloodShieldTracker:CreateShieldBar()
     pwsbar.value:SetShadowOffset(1, -1)
     pwsbar.value:SetTextColor(1, 1, 1, 1)
     pwsbar.value:SetText("0")
+]]--
 
     illumbar = CreateFrame("Frame", "BloodShieldTracker_Shield_IllumHeal", UIParent)
     illumbar:SetPoint("TOPLEFT", pwsbar, "TOPRIGHT", 10, 0)
@@ -2984,6 +3476,136 @@ function BloodShieldTracker:CreateShieldBar()
     illumbar.value:SetText("0")
 
     return statusbar
+end
+
+function BloodShieldTracker:CreatePWSBar()
+    local pwsbar = CreateFrame("StatusBar", "BloodShieldTracker_Shield_PWS", UIParent)
+    pwsbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.pwsbar_x, self.db.profile.pwsbar_y)
+	pwsbar:SetScale(self.db.profile.pwsbar_scale)
+    pwsbar:SetOrientation("HORIZONTAL")
+    pwsbar:SetWidth(self.db.profile.pwsbar_width)
+    pwsbar:SetHeight(self.db.profile.pwsbar_height)
+	local bt = LSM:Fetch("statusbar",self.db.profile.pwsbar_texture)
+    pwsbar:SetStatusBarTexture(bt)
+    pwsbar:GetStatusBarTexture():SetHorizTile(false)
+    pwsbar:GetStatusBarTexture():SetVertTile(false)
+    local bc = self.db.profile.pwsbar_color
+    pwsbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+    pwsbar.bg = pwsbar:CreateTexture(nil, "BACKGROUND")
+    pwsbar.bg:SetTexture(bt)
+    pwsbar.bg:SetAllPoints(true)
+    local bgc = self.db.profile.pwsbar_bgcolor
+    pwsbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+    pwsbar.border = pwsbar:CreateTexture(nil, "BACKGROUND")
+    pwsbar.border:SetPoint("CENTER")
+    pwsbar.border:SetWidth(pwsbar:GetWidth()+9)
+    pwsbar.border:SetHeight(pwsbar:GetHeight()+8)
+    pwsbar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
+	if not self.db.profile.pwsbar_border then
+		pwsbar.border:Hide()
+	end
+	local font = LSM:Fetch("font",self.db.profile.font_face)
+    pwsbar.value = pwsbar:CreateFontString(nil, "OVERLAY")
+    pwsbar.value:SetPoint("CENTER")
+    pwsbar.value:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
+    pwsbar.value:SetJustifyH("CENTER")
+    pwsbar.value:SetShadowOffset(1, -1)
+    local tc = self.db.profile.pwsbar_textcolor
+    pwsbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    pwsbar.lock = false
+
+    pwsbar:SetMovable()
+    pwsbar:RegisterForDrag("LeftButton")
+    pwsbar:SetScript("OnDragStart",
+        function(self,button)
+			if not self.lock then
+            	self:StartMoving()
+			end
+        end)
+    pwsbar:SetScript("OnDragStop",
+        function(self)
+            self:StopMovingOrSizing()
+			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
+			local x, y = self:GetCenter()
+			x, y = x * scale, y * scale
+			x = x - GetScreenWidth()/2
+			y = y - GetScreenHeight()/2
+			x = x / self:GetScale()
+			y = y / self:GetScale()
+			BloodShieldTracker.db.profile.pwsbar_x, BloodShieldTracker.db.profile.pwsbar_y = x, y
+			self:SetUserPlaced(false);
+        end)
+    pwsbar:EnableMouse(true)
+    pwsbar:SetMinMaxValues(0, 1)
+    pwsbar:SetValue(1)
+    pwsbar:Hide()
+
+    return pwsbar
+end
+
+function BloodShieldTracker:CreateIllumBar()
+    local illumbar = CreateFrame("StatusBar", "BloodShieldTracker_Shield_IllumHeal", UIParent)
+    illumbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.illumbar_x, self.db.profile.illumbar_y)
+	illumbar:SetScale(self.db.profile.illumbar_scale)
+    illumbar:SetOrientation("HORIZONTAL")
+    illumbar:SetWidth(self.db.profile.illumbar_width)
+    illumbar:SetHeight(self.db.profile.illumbar_height)
+	local bt = LSM:Fetch("statusbar",self.db.profile.illumbar_texture)
+    illumbar:SetStatusBarTexture(bt)
+    illumbar:GetStatusBarTexture():SetHorizTile(false)
+    illumbar:GetStatusBarTexture():SetVertTile(false)
+    local bc = self.db.profile.illumbar_color
+    illumbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+    illumbar.bg = illumbar:CreateTexture(nil, "BACKGROUND")
+    illumbar.bg:SetTexture(bt)
+    illumbar.bg:SetAllPoints(true)
+    local bgc = self.db.profile.illumbar_bgcolor
+    illumbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+    illumbar.border = illumbar:CreateTexture(nil, "BACKGROUND")
+    illumbar.border:SetPoint("CENTER")
+    illumbar.border:SetWidth(illumbar:GetWidth()+9)
+    illumbar.border:SetHeight(illumbar:GetHeight()+8)
+    illumbar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
+	if not self.db.profile.illumbar_border then
+		illumbar.border:Hide()
+	end
+	local font = LSM:Fetch("font",self.db.profile.font_face)
+    illumbar.value = illumbar:CreateFontString(nil, "OVERLAY")
+    illumbar.value:SetPoint("CENTER")
+    illumbar.value:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
+    illumbar.value:SetJustifyH("CENTER")
+    illumbar.value:SetShadowOffset(1, -1)
+    local tc = self.db.profile.illumbar_textcolor
+    illumbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    illumbar.lock = false
+
+    illumbar:SetMovable()
+    illumbar:RegisterForDrag("LeftButton")
+    illumbar:SetScript("OnDragStart",
+        function(self,button)
+			if not self.lock then
+            	self:StartMoving()
+			end
+        end)
+    illumbar:SetScript("OnDragStop",
+        function(self)
+            self:StopMovingOrSizing()
+			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
+			local x, y = self:GetCenter()
+			x, y = x * scale, y * scale
+			x = x - GetScreenWidth()/2
+			y = y - GetScreenHeight()/2
+			x = x / self:GetScale()
+			y = y / self:GetScale()
+			BloodShieldTracker.db.profile.illumbar_x, BloodShieldTracker.db.profile.illumbar_y = x, y
+			self:SetUserPlaced(false);
+        end)
+    illumbar:EnableMouse(true)
+    illumbar:SetMinMaxValues(0, 1)
+    illumbar:SetValue(1)
+    illumbar:Hide()
+
+    return illumbar
 end
 
 function BloodShieldTracker:CreateEstimateBar()
