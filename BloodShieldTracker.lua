@@ -2217,8 +2217,9 @@ function BloodShieldTracker:GetRecentDamageTaken(timestamp)
     for i, v in ipairs(damageTaken) do
         if v and v[1] and v[2] then
             diff = current - v[1]
-            -- If the damage occured in the window, accounting for latency, the add it
-            if diff <= lastSeconds and diff >= latency then
+            -- If the damage occured in the window, 
+            -- adjusted for latency above, then add it.
+            if diff <= lastSeconds and diff >= 0 then
                 damage = damage + v[2]
             end
         end
@@ -2329,7 +2330,6 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
 
             self:AddDamageTaken(timestamp, damage)
-            self:UpdateEstHealBar()
         elseif eventtype:find("SPELL_") or eventtype:find("RANGE_") then
             local type
             if eventtype:find("SPELL_") then type = "Spell" end
@@ -2359,7 +2359,6 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
             if countDamage == true then
                 self:AddDamageTaken(timestamp, damage)
-                self:UpdateEstHealBar()
             end
 
             if self.db.profile.verbose then
