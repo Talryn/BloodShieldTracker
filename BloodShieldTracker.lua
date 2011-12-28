@@ -2152,6 +2152,10 @@ function BloodShieldTracker:UpdateShieldBar()
 end
 
 function BloodShieldTracker:FormatNumber(number)
+    if tonumber(number) == nil then
+        return number
+    end
+    
     local millFmt = "%.1fm"
     local thousandFmt = "%.1fk"
     if number > 1000000 then
@@ -2771,7 +2775,7 @@ function BloodShieldTracker:CheckAuras()
 
         elseif spellId == PWS_SPELL_ID then
             -- Check for a Power Word: Shield
-            if self.db.profile.pwsbar_enabled == true then
+            if self.db.profile.pwsbar_enabled == true and IsBloodTank then
                 pwsFound = true
                 TipFrame:ClearLines()
                 TipFrame:SetUnitBuff("player", name)
@@ -2781,8 +2785,9 @@ function BloodShieldTracker:CheckAuras()
                     if pwsValue and pwsValue ~= value then
                         self:UpdatePWSBarText(value)
                     else
-                        self:UpdatePWSBarText("Err")
+                        self:UpdatePWSBarText(0)
                     end
+                    
                     self.pwsbar:Show()
                 else
                     if self.db.profile.verbose == true then
@@ -2791,7 +2796,7 @@ function BloodShieldTracker:CheckAuras()
                 end
             end
         elseif spellId == ILLUMINATED_HEALING_BUFF_ID then
-            if self.db.profile.illumbar_enabled == true then
+            if self.db.profile.illumbar_enabled == true and IsBloodTank then
                 illumHealFound = true
                 TipFrame:ClearLines()
                 TipFrame:SetUnitBuff("player", name)
@@ -2889,7 +2894,7 @@ function BloodShieldTracker:CheckAuras()
         self.pwsbar:Hide()
     end
 
-    if self.db.profile.illumbar_enabled == true then
+    if self.db.profile.illumbar_enabled == true and IsBloodTank then
         local illumValue = OtherShields["IlluminatedHealing"]
         if illumHealFound then
             if illumValue and illumValue ~= illumPrevValue then
