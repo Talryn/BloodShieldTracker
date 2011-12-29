@@ -3230,8 +3230,8 @@ function BloodShieldTracker:UpdatePWSBarVisibility()
 			self.pwsbar.bg:SetTexture("")
 			self.pwsbar.border:Hide()
 		else
-			self:UpdateShieldBarTexture()
-			self:UpdateShieldBarBorder()
+			self:UpdatePWSBarTexture()
+			self:UpdatePWSBarBorder()
 		end
 	end
 end
@@ -3385,9 +3385,9 @@ function BloodShieldTracker:UpdateIllumBarGraphics()
     if self.illumbar then
         local bc = self.db.profile.illumbar_color
         self.illumbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-        local bgc = self.db.profile.status_bar_bgcolor
+        local bgc = self.db.profile.illumbar_bgcolor
         self.illumbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-        local tc = self.db.profile.status_bar_textcolor
+        local tc = self.db.profile.illumbar_textcolor
         self.illumbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
     end
 end
@@ -3583,6 +3583,7 @@ function BloodShieldTracker:CreatePWSBar()
     pwsbar.value:SetShadowOffset(1, -1)
     local tc = self.db.profile.pwsbar_textcolor
     pwsbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    pwsbar.value:SetText("0")
     pwsbar.lock = false
 
     pwsbar:SetMovable()
@@ -3648,6 +3649,7 @@ function BloodShieldTracker:CreateIllumBar()
     illumbar.value:SetShadowOffset(1, -1)
     local tc = self.db.profile.illumbar_textcolor
     illumbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    illumbar.value:SetText("0")
     illumbar.lock = false
 
     illumbar:SetMovable()
