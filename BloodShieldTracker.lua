@@ -3,6 +3,11 @@ local BloodShieldTracker = LibStub("AceAddon-3.0"):NewAddon("BloodShieldTracker"
 local ADDON_NAME = ...
 local ADDON_VERSION = "@project-version@"
 
+local DEBUG_OUTPUT = false
+local DEBUG_BUFFER = ""
+
+local AGU = LibStub("AceGUI-3.0")
+
 -- Local versions for performance
 local tinsert, tremove, tgetn = table.insert, table.remove, table.getn
 local tconcat = table.concat
@@ -22,6 +27,10 @@ local hasBloodShield = false
 -- Create the frame used to get the BS tooltip text
 local TipFrame = CreateFrame("GameTooltip", "BST_Tooltip", nil, "GameTooltipTemplate")
 TipFrame:SetOwner(UIParent, "ANCHOR_NONE")
+
+-- Keep track of time.  Start with current client time
+-- but will use the combat log timestamps after that.
+local currentTime = time()
 
 local updateTimer = nil
 local lastSeconds = 5
@@ -1643,10 +1652,50 @@ function BloodShieldTracker:GetOptions()
     return options
 end
 
+local DebugOutputFrame = nil
+function BloodShieldTracker:ShowDebugOutput()
+    if DebugOutputFrame then return end
+
+	local frame = AGU:Create("Frame")
+	frame:SetTitle("Debug Output")
+	frame:SetWidth(650)
+	frame:SetHeight(400)
+    frame:SetLayout("Flow")
+	frame:SetCallback("OnClose", function(widget)
+		widget:ReleaseChildren()
+		widget:Release()
+		DebugOutputFrame = nil
+	end)
+
+    DebugOutputFrame = frame
+
+    local multiline = AGU:Create("MultiLineEditBox")
+    multiline:SetLabel("Output")
+    multiline:SetNumLines(20)
+    multiline:SetMaxLetters(0)
+    multiline:SetFullWidth(true)
+    multiline:DisableButton(true)
+    frame:AddChild(multiline)
+    frame.multiline = multiline
+
+    multiline:SetText(DEBUG_BUFFER)
+end
+
 function BloodShieldTracker:ChatCommand(input)
     if not input or input:trim() == "" then
         self:ShowOptions()
     else
+        if input == "debug" then
+            if DEBUG_OUTPUT == false then
+                DEBUG_OUTPUT = true
+                self:Print("Debugging on.")
+            else
+                DEBUG_OUTPUT = false
+                self:Print("Debugging off.")
+            end
+        elseif input == "showdebug" then
+            self:ShowDebugOutput()
+        end
         --LibStub("AceConfigCmd-3.0").HandleCommand(BloodShieldTracker, "bst", "BloodShieldTracker", input)
     end
 end
@@ -1989,6 +2038,10 @@ function BloodShieldTracker:UpdateMinHeal(event,unit)
 	end
 end
 
+local function UpdateTime(self, elapsed)
+    currentTime = currentTime + elapsed
+end
+
 function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 	-- Once combat starts, update the damage bar.
 	idle = false
@@ -1996,11 +2049,16 @@ function BloodShieldTracker:PLAYER_REGEN_DISABLED()
     	updateTimer = self:ScheduleRepeatingTimer("UpdateBars", 0.5)
         if self.db.profile.damage_bar_enabled and self.damagebar then
 	        self.damagebar:Show()
+	        self.damagebar:SetScript("OnUpdate", UpdateTime)
         end
     end
     -- Reset the per fight stats
     LastFightStats:Reset()
     LastFightStats:StartCombat()
+    
+    if DEBUG_OUTPUT == true then
+        DEBUG_BUFFER = ""
+    end
 end
 
 function BloodShieldTracker:PLAYER_REGEN_ENABLED()
@@ -2014,6 +2072,8 @@ function BloodShieldTracker:PLAYER_REGEN_ENABLED()
     if self.damagebar.hideooc then
         self.damagebar:Hide()
     end
+
+    self.damagebar:SetScript("OnUpdate", nil)
 
     LastFightStats:EndCombat()
 end
@@ -2029,7 +2089,7 @@ function BloodShieldTracker:PLAYER_DEAD()
     end
 end
 
-function BloodShieldTracker:UpdateBars()
+function BloodShieldTracker:UpdateBars(timestamp)
     -- If we're out of combat and no Blood Shields are present, stop the timer
     if idle and self.statusbar.expires == 0 then
     	if updateTimer then
@@ -2054,12 +2114,12 @@ function BloodShieldTracker:UpdateBars()
         self.statusbar.time:SetText(timeLeftFmt:format(timeleft))
     end
 
-    self:UpdateEstHealBar()
+    self:UpdateEstHealBar(timestamp)
 end
 
-function BloodShieldTracker:UpdateEstHealBar()
+function BloodShieldTracker:UpdateEstHealBar(timestamp)
     if self.db.profile.damage_bar_enabled and not idle then
-        local recentDamage = self:GetRecentDamageTaken()
+        local recentDamage = self:GetRecentDamageTaken(timestamp)
         local shieldPercent = masteryRating*shieldPerMasteryPoint/100
 
         local predictedValue, minimumValue = 0, 0
@@ -2196,8 +2256,8 @@ function BloodShieldTracker:GetRecentDamageTaken(timestamp)
     local damage = 0
     local current = timestamp
     
-    if not current then
-        current = time()
+    if not current or current <= 0 then
+        current = currentTime
     end
 
     if self.db.profile.latencyMethod == "DS" then
@@ -2249,7 +2309,7 @@ function BloodShieldTracker:AddDamageTaken(timestamp, damage)
         end
     end
     
-    self:UpdateBars()
+    self:UpdateBars(timestamp)
 end
 
 function BloodShieldTracker:GetSpellSchool(school)
@@ -2319,6 +2379,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     if not event or not eventtype or not destName then return end
 
     local spellName, spellAbsorb = "", ""
+
+    currentTime = timestamp
 
     if eventtype:find("_DAMAGE") and destName == self.playerName then
         if eventtype:find("SWING_") and param9 then
@@ -2410,6 +2472,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 	    param10 == DS_SPELL_DMG then
 
         if self.db.profile.verbose then
+            local dsHealFormat = "Estimated damage of %d will be a heal for %d"
             local recentDmg = self:GetRecentDamageTaken(timestamp)
             local predictedHeal = 0
             if healingDebuffMultiplier ~= 1 then 
@@ -2418,7 +2481,6 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                     self:GetEffectiveHealingBuffModifiers() * 
                     self:GetEffectiveHealingDebuffModifiers())
             end
-            local dsHealFormat = "Estimated damage of %d will be a heal for %d"
     		self:Print(dsHealFormat:format(recentDmg, predictedHeal))
         end
 	end
@@ -2464,6 +2526,13 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d]"
             self:Print(dsHealFormat:format(
                 totalHeal,actualHeal,overheal,recentDmg,predictedHeal))
+        end
+        
+        if DEBUG_OUTPUT == true then
+            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d]"
+            DEBUG_BUFFER = DEBUG_BUFFER .. timestamp .. "   " .. 
+                dsHealFormat:format(totalHeal,actualHeal,overheal,
+                recentDmg,predictedHeal) .. "\n"
         end
     end
 
@@ -2783,8 +2852,6 @@ function BloodShieldTracker:CheckAuras()
                     OtherShields["PWS"] = value
                     if pwsValue and pwsValue ~= value then
                         self:UpdatePWSBarText(value)
-                    else
-                        self:UpdatePWSBarText(0)
                     end
                     
                     self.pwsbar:Show()
