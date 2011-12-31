@@ -394,6 +394,7 @@ local defaults = {
 		},
         verbose = false,
         enable_only_for_blood = true,
+        shield_bar_progress = "Time",
         shield_bar_show_time = true,
         shield_bar_time_pos = "RIGHT",
         shield_sound_enabled = false,
@@ -697,6 +698,22 @@ function BloodShieldTracker:GetOptions()
         					end,
                             get = function(info)
                                 return self.db.profile.shield_bar_text_format
+                            end,
+        				},
+        				shield_bar_progress = {
+        					name = L["Progress Bar"],
+        					desc = L["ShieldProgress_OptionDesc"],
+        					type = "select",
+        					values = {
+        					    ["Time"] = L["Time Remaining"],
+        					    ["Current"] = L["Current Value"]
+        					},
+        					order = 40,
+        					set = function(info, val)
+        					    self.db.profile.shield_bar_progress = val
+        					end,
+                            get = function(info)
+                                return self.db.profile.shield_bar_progress
                             end,
         				},
                         timeRemaining = {
@@ -2113,7 +2130,11 @@ function BloodShieldTracker:UpdateBars(timestamp)
         
             timeleft = floor(timeleft)
         end
-        self.statusbar:SetValue(timeleft)
+
+        if self.db.profile.shield_bar_progress == "Time" then
+            self.statusbar:SetValue(timeleft)
+        end
+
         self.statusbar.time:SetText(timeLeftFmt:format(timeleft))
     end
 
@@ -2187,10 +2208,12 @@ end
 
 function BloodShieldTracker:ShowShieldBar()
     if self.db.profile.status_bar_enabled then
-        --self.statusbar:SetMinMaxValues(0, self.statusbar.shield_max)
-        --self.statusbar:SetValue(self.statusbar.shield_curr)
-
-        self.statusbar:SetValue(BS_DURATION)
+        if self.db.profile.shield_bar_progress == "Time" then
+            self.statusbar:SetValue(BS_DURATION)
+        else
+            self.statusbar:SetMinMaxValues(0, self.statusbar.shield_max)
+            self.statusbar:SetValue(self.statusbar.shield_curr)
+        end
 
         self:UpdateShieldBarText(
             self.statusbar.shield_curr, self.statusbar.shield_max, 100)
@@ -2206,7 +2229,11 @@ function BloodShieldTracker:UpdateShieldBar()
         self:Print(badShieldValueFmt:format(
             self.statusbar.shield_curr, damage, self.statusbar.shield_max))
     end
-	--self.statusbar:SetValue(self.statusbar.shield_curr)
+
+    if self.db.profile.shield_bar_progress == "Current" then
+	    self.statusbar:SetValue(self.statusbar.shield_curr)
+    end
+
 	local diff
 	if self.statusbar.shield_max > 0 and self.statusbar.shield_curr > 0 then
 	    diff = round(self.statusbar.shield_curr/self.statusbar.shield_max*100)
