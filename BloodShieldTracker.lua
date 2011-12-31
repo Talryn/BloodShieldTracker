@@ -705,13 +705,14 @@ function BloodShieldTracker:GetOptions()
         					desc = L["ShieldProgress_OptionDesc"],
         					type = "select",
         					values = {
+        					    ["None"] = L["None"],
         					    ["Time"] = L["Time Remaining"],
         					    ["Current"] = L["Current Value"]
         					},
         					order = 40,
         					set = function(info, val)
         					    self.db.profile.shield_bar_progress = val
-        					    if val == "Time" then
+        					    if val == "Time" or val == "None" then
         					        self:UpdateShieldBarMode()
     					        end
         					end,
@@ -2217,6 +2218,9 @@ function BloodShieldTracker:UpdateShieldBarMode()
     if self.statusbar and self.db.profile.shield_bar_progress == "Time" then
         self.statusbar:SetMinMaxValues(0, BS_DURATION)
         self.statusbar:SetValue(BS_DURATION)
+    elseif self.db.profile.shield_bar_progress == "None" then
+        self.statusbar:SetMinMaxValues(0, 1)
+        self.statusbar:SetValue(1)        
     end
 end
 
@@ -2224,7 +2228,7 @@ function BloodShieldTracker:ShowShieldBar()
     if self.db.profile.status_bar_enabled then
         if self.db.profile.shield_bar_progress == "Time" then
             self.statusbar:SetValue(BS_DURATION)
-        else
+        elseif self.db.profile.shield_bar_progress == "Current" then
             self.statusbar:SetMinMaxValues(0, self.statusbar.shield_max)
             self.statusbar:SetValue(self.statusbar.shield_curr)
         end
