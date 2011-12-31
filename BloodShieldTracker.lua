@@ -2674,14 +2674,21 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue)
     self.statusbar.shield_max = self.statusbar.shield_max + shieldValue
     self.statusbar.shield_curr = self.statusbar.shield_curr + shieldValue
 
-    if self.db.profile.verbose then
+    if self.db.profile.verbose or DEBUG_OUPUT then
         local shieldInd = ""
         if isMinimum then
             shieldInd = " (min)"
         end
 
         local shieldFormat = "Blood Shield Amount: %d%s"
-        self:Print(shieldFormat:format(shieldValue,shieldInd))
+        if self.db.profile.verbose then
+            self:Print(shieldFormat:format(shieldValue,shieldInd))
+        end
+
+        if DEBUG_OUTPUT then
+            DEBUG_BUFFER = DEBUG_BUFFER .. 
+                shieldFormat:format(shieldValue,shieldInd) .."\n"
+        end
     end
 
     self:UpdateStatsNewShield(shieldValue, isMinimum, false)
@@ -2735,6 +2742,17 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
         self:UpdateStatsNewShield(added, isMinimum, true)
         self.statusbar.expires = GetTime() + 10
         self.statusbar.shield_max = self.statusbar.shield_max + added
+
+        if DEBUG_OUTPUT then
+            local shieldRefreshedFormat = "Blood Shield Refreshed: %d%s"
+
+            if isMinimum then
+                shieldInd = " (min)"
+            end
+
+            DEBUG_BUFFER = DEBUG_BUFFER .. 
+                shieldRefreshedFormat:format(added,shieldInd) .. "\n"
+        end
 
         if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
             PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
@@ -2826,6 +2844,7 @@ end
 
 local BSAuraPresent = false
 local BSAuraValue = 0
+local BSAuraExpires = 0
 local PWSAuraPresent = false
 local PWSAuraValue = 0
 
@@ -2872,7 +2891,8 @@ function BloodShieldTracker:CheckAuras()
                     end
                     self:NewBloodShield(GetTime(), value)
                 else
-                    if value ~= BSAuraValue then
+                    if value ~= BSAuraValue or 
+                        (expires ~= BSAuraExpires and value > 0) then
                         -- Blood Shield refreshed
                         if self.db.profile.verbose == true then
                             self:Print("AURA: Blood Shield refreshed. "..value
@@ -2883,6 +2903,7 @@ function BloodShieldTracker:CheckAuras()
                 end
 
                 BSAuraValue = value
+                BSAuraExpires = expires
             else
                 if self.db.profile.verbose == true then
                     if self.db.profile.verbose == true then
