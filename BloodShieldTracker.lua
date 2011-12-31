@@ -139,6 +139,8 @@ local DarkSuccorBuff = false
 local ImpDSModifier = 1
 local HasVampTalent = false
 local HasSuccorGlyphed = false
+-- The duration of Blood Shield
+local BS_DURATION = 10
 -- This should be the percent of the DS Heal from the tooltip.
 local dsHealModifier = 0.20
 -- This should be the percent of max health a minimum DS heal will be.
@@ -398,7 +400,7 @@ local defaults = {
         shield_applied_sound = "None",
         shield_removed_sound = "None",
         status_bar_enabled = true,
-        shield_bar_text_format = "Full",
+        shield_bar_text_format = "OnlyCurrent",
         damage_bar_enabled = true,
         hide_damage_bar_ooc = true,
 		lock_status_bar = false,
@@ -2111,6 +2113,7 @@ function BloodShieldTracker:UpdateBars(timestamp)
         
             timeleft = floor(timeleft)
         end
+        self.statusbar:SetValue(timeleft)
         self.statusbar.time:SetText(timeLeftFmt:format(timeleft))
     end
 
@@ -2184,8 +2187,10 @@ end
 
 function BloodShieldTracker:ShowShieldBar()
     if self.db.profile.status_bar_enabled then
-        self.statusbar:SetMinMaxValues(0, self.statusbar.shield_max)
-        self.statusbar:SetValue(self.statusbar.shield_curr)
+        --self.statusbar:SetMinMaxValues(0, self.statusbar.shield_max)
+        --self.statusbar:SetValue(self.statusbar.shield_curr)
+
+        self.statusbar:SetValue(BS_DURATION)
 
         self:UpdateShieldBarText(
             self.statusbar.shield_curr, self.statusbar.shield_max, 100)
@@ -2201,7 +2206,7 @@ function BloodShieldTracker:UpdateShieldBar()
         self:Print(badShieldValueFmt:format(
             self.statusbar.shield_curr, damage, self.statusbar.shield_max))
     end
-	self.statusbar:SetValue(self.statusbar.shield_curr)
+	--self.statusbar:SetValue(self.statusbar.shield_curr)
 	local diff
 	if self.statusbar.shield_max > 0 and self.statusbar.shield_curr > 0 then
 	    diff = round(self.statusbar.shield_curr/self.statusbar.shield_max*100)
@@ -3511,40 +3516,8 @@ function BloodShieldTracker:CreateShieldBar()
 	statusbar.shield_curr = 0
 	statusbar.shield_max = 0
 
-
---[[
-    pwsbar = CreateFrame("Frame", "BloodShieldTracker_Shield_PWS", UIParent)
-    pwsbar:SetPoint("TOPLEFT", statusbar, "TOPRIGHT", 10, 0)
-    pwsbar:SetHeight(self.db.profile.status_bar_height)
-    pwsbar:SetWidth(75)
-    pwsbar.texture = pwsbar:CreateTexture()
-    pwsbar.texture:SetAllPoints(pwsbar)
-    pwsbar.texture:SetTexture(1.0,1.0,1.0,1.0)
-    pwsbar:Hide()
-    pwsbar.value = pwsbar:CreateFontString(nil, "OVERLAY")
-    pwsbar.value:SetPoint("CENTER")
-    pwsbar.value:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
-    pwsbar.value:SetJustifyH("CENTER")
-    pwsbar.value:SetShadowOffset(1, -1)
-    pwsbar.value:SetTextColor(1, 1, 1, 1)
-    pwsbar.value:SetText("0")
-]]--
-
-    illumbar = CreateFrame("Frame", "BloodShieldTracker_Shield_IllumHeal", UIParent)
-    illumbar:SetPoint("TOPLEFT", pwsbar, "TOPRIGHT", 10, 0)
-    illumbar:SetHeight(self.db.profile.status_bar_height)
-    illumbar:SetWidth(75)
-    illumbar.texture = illumbar:CreateTexture()
-    illumbar.texture:SetAllPoints(illumbar)
-    illumbar.texture:SetTexture(0.96,0.55,0.73,1.0)
-    illumbar:Hide()
-    illumbar.value = illumbar:CreateFontString(nil, "OVERLAY")
-    illumbar.value:SetPoint("CENTER")
-    illumbar.value:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
-    illumbar.value:SetJustifyH("CENTER")
-    illumbar.value:SetShadowOffset(1, -1)
-    illumbar.value:SetTextColor(1, 1, 1, 1)
-    illumbar.value:SetText("0")
+    statusbar:SetMinMaxValues(0, BS_DURATION)
+    statusbar:SetValue(BS_DURATION)
 
     return statusbar
 end
