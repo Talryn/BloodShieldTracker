@@ -2249,6 +2249,7 @@ function BloodShieldTracker:UpdateShieldBar()
     end
 
     if self.db.profile.shield_bar_progress == "Current" then
+        self.statusbar:SetMinMaxValues(0, self.statusbar.shield_max)
 	    self.statusbar:SetValue(self.statusbar.shield_curr)
     end
 
