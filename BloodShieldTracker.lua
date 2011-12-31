@@ -711,6 +711,9 @@ function BloodShieldTracker:GetOptions()
         					order = 40,
         					set = function(info, val)
         					    self.db.profile.shield_bar_progress = val
+        					    if val == "Time" then
+        					        self:UpdateShieldBarMode()
+    					        end
         					end,
                             get = function(info)
                                 return self.db.profile.shield_bar_progress
@@ -1722,19 +1725,23 @@ end
 function BloodShieldTracker:OnInitialize()
     -- Load the settings
     self.db = LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", defaults, "Default")
-	-- Create our bars
+	-- Create the shield bar
     self.statusbar = self:CreateShieldBar()
 	self:ShieldBarLock(self.db.profile.lock_status_bar)
     self.statusbar.shield_curr = 0
     self.statusbar.expires = 0
     self.statusbar.active = false
+	self:UpdateShieldBarMode()
     self:UpdateShieldBarText(0, 0, 0)
+    -- Create the estimate/damage bar
     self.damagebar = self:CreateEstimateBar()
 	self:EstHealBarLock(self.db.profile.lock_damage_bar)
 	self.damagebar.hideooc = self.db.profile.hide_damage_bar_ooc
 	self.damagebar.minheal = true
+	-- Create the PW:S bar
     self.pwsbar = self:CreatePWSBar()
 	self:PWSBarLock(self.db.profile.lock_pwsbar)
+	-- Create the Illum. Heal bar
     self.illumbar = self:CreateIllumBar()
 	self:IllumBarLock(self.db.profile.lock_illumbar)
 
@@ -2203,6 +2210,13 @@ end
 function BloodShieldTracker:UpdateIllumBarText(value)
     if self.db.profile.illumbar_enabled then
         self.illumbar.value:SetText(self:FormatNumber(value))
+    end
+end
+
+function BloodShieldTracker:UpdateShieldBarMode()
+    if self.statusbar and self.db.profile.shield_bar_progress == "Time" then
+        self.statusbar:SetMinMaxValues(0, BS_DURATION)
+        self.statusbar:SetValue(BS_DURATION)
     end
 end
 
@@ -3542,9 +3556,6 @@ function BloodShieldTracker:CreateShieldBar()
     statusbar:Hide()
 	statusbar.shield_curr = 0
 	statusbar.shield_max = 0
-
-    statusbar:SetMinMaxValues(0, BS_DURATION)
-    statusbar:SetValue(BS_DURATION)
 
     return statusbar
 end
