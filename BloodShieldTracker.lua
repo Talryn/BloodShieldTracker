@@ -113,8 +113,15 @@ local ORANGE = "|cffff9933"
 local statusBarFormatFull = "%s/%s (%d%%)"
 local statusBarFormatNoPer = "%s/%s"
 
-local healBarFormat = "%s: %d"
-local healBarNoTextFormat = "%d"
+local healBarFormat = "%s: %s"
+local healBarNoTextFormat = "%s"
+
+local millFmtOne = "%.1fm"
+local thousandFmtOne = "%.1fk"
+local millFmtZero = "%.0fm"
+local thousandFmtZero = "%.0fk"
+local millFmt = millFmtZero
+local thousandFmt = thousandFmtZero
 
 local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
@@ -153,6 +160,8 @@ local dsMinHealPercentSuccor41 = 0.15
 local actualDsMinHeal = dsMinHealPercent
 local shieldPerMasteryPoint = 6.25
 local maxHealth = 0
+local currentHealth = 0
+local percentHealth = 0
 local dsHealMin = 0
 
 -- Other Shields
@@ -394,6 +403,7 @@ local defaults = {
 		},
         verbose = false,
         enable_only_for_blood = true,
+        precision = "Zero",
         shield_bar_progress = "Time",
         shield_bar_show_time = true,
         shield_bar_time_pos = "RIGHT",
@@ -439,7 +449,7 @@ local defaults = {
 		useAuraForShield = true,
 		latencyMethod = "None",
 		latencyFixed = 0,
-        -- Setting for the PW:S Bar
+        -- Settings for the PW:S Bar
 		pwsbar_enabled = false,
 		pwsbar_color = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 		pwsbar_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
@@ -452,7 +462,7 @@ local defaults = {
 		lock_pwsbar = false,
 		pwsbar_width = 75,
 		pwsbar_height = 15,
-        -- Setting for the Illum. Heal Bar
+        -- Settings for the Illum. Heal Bar
 		illumbar_enabled = false,
 		illumbar_color = {r = 0.96, g = 0.55, b = 0.73, a = 1},
 		illumbar_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
@@ -465,6 +475,25 @@ local defaults = {
 		lock_illum = false,
 		illumbar_width = 75,
 		illumbar_height = 15,
+        -- Settings for the Health Bar
+		healthbar_enabled = false,
+		healthbar_hide_ooc = false,
+		healthbar_color = {r = 0.0, g = 0.5, b = 0.8, a = 1},
+		healthbar_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+		healthbar_bgcolor = {r = 0.0, g = 0.3, b = 0.6, a = 0.8},
+		healthbar_low_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
+		healthbar_low_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+		healthbar_low_bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
+		healthbar_texture = "Blizzard",
+		healthbar_border = true,
+		healthbar_shown = true,
+		healthbar_x = 0, healthbar_y = 0,
+		healthbar_scale = 1,
+		lock_healthbar = false,
+		healthbar_width = 75,
+		healthbar_height = 15,
+		healthbar_low_percent = 0.3
+
     }
 }
 
@@ -538,6 +567,29 @@ function BloodShieldTracker:GetOptions()
                             set = function(info, val) self.db.profile.verbose = val end,
                             get = function(info) return self.db.profile.verbose end,
                         },
+        				precision = {
+        					name = L["Precision"],
+        					desc = L["Precision_OptionDesc"],
+        					type = "select",
+        					values = {
+        					    ["Zero"] = L["Zero"],
+        					    ["One"] = L["One"]
+        					},
+        					order = 35,
+        					set = function(info, val)
+        					    self.db.profile.precision = val
+        					    if val == "One" then
+                                    millFmt = millFmtOne
+                                    thousandFmt = thousandFmtOne
+    					        else
+                                    millFmt = millFmtZero
+                                    thousandFmt = thousandFmtZero
+                                end
+        					end,
+                            get = function(info)
+                                return self.db.profile.precision
+                            end,
+        				},
                         useAuraForShield = {
                             name = L["Use Aura"],
         					order = 40,
@@ -1668,6 +1720,319 @@ function BloodShieldTracker:GetOptions()
         			},
         		},
         		
+    			healthBarOpts = {
+    			    order = 6,
+    			    type = "group",
+    			    name = L["Health Bar"],
+    			    desc = L["Health Bar"],
+    			    args = {
+					    description = {
+					        order = 1,
+					        type = "description",
+					        name = L["HealthBar_Desc"],
+					    },
+                        generalOptions = {
+                            order = 2,
+                            type = "header",
+                            name = L["General Options"],
+                        },
+                		bar_enabled = {
+        					name = L["Enabled"],
+        					desc = L["EnableBarDesc"],
+        					type = "toggle",
+        					order = 10,
+        					set = function(info, val)
+        					    self.db.profile.healthbar_enabled = val
+    					        self:ToggleHealthBar(val)
+        					end,
+                            get = function(info)
+                                return self.db.profile.healthbar_enabled
+                            end,
+        				},
+        				lock_bar = {
+        					name = L["Lock bar"],
+        					desc = L["LockBarDesc"],
+        					type = "toggle",
+        					order = 20,
+        					set = function(info, val)
+        					    self.db.profile.lock_healthbar = val 
+        						BloodShieldTracker:HealthBarLock(val)
+        					end,
+                            get = function(info)
+                                return self.db.profile.lock_healthbar
+                            end,
+        				},
+        				hide_bar_ooc = {
+        					name = L["Hide out of combat"],
+        					desc = L["HideOutOfCombat_OptionDesc"],
+        					type = "toggle",
+        					order = 30,
+        					set = function(info, val)
+        					    self.db.profile.healthbar_hide_ooc = val 
+        						if BloodShieldTracker.healthbar then
+        							BloodShieldTracker.healthbar.hideooc = val
+        							if not InCombatLockdown() then
+        							    if val then
+        							        self.healthbar:Hide()
+        						        elseif self:IsTrackerEnabled() then
+        						            self.healthbar:Show()
+        					            end
+        					        end
+        						end					
+        					end,
+                            get = function(info)
+                                return self.db.profile.healthbar_hide_ooc
+                            end,
+        				},
+        				low_percent = {
+        					order = 40,
+        					name = L["Low Health Threshold"],
+        					desc = L["LowHealthThreshold_OptionDesc"],	
+        					type = "range",
+        					min = 5,
+        					max = 95,
+        					step = 5,
+        					set = function(info, val)
+        					    self.db.profile.healthbar_low_percent = val / 100
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.healthbar_low_percent * 100
+        					end,
+        				},
+                        dimensions = {
+                            order = 100,
+                            type = "header",
+                            name = L["Dimensions"],
+                        },
+        				bar_width = {
+        					order = 110,
+        					name = L["Width"],
+        					desc = L["BarWidth_Desc"],	
+        					type = "range",
+        					min = 10,
+        					max = 200,
+        					set = function(info, val)
+        					    self.db.profile.healthbar_width = val 
+        						self.healthbar:SetWidth(val)
+        						self.healthbar.border:SetWidth(val+9)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.healthbar_width
+        					end,
+        				},
+        				bar_height = {
+        					order = 120,
+        					name = L["Height"],
+        					desc = L["BarHeight_Desc"],	
+        					type = "range",
+        					min = 8,
+        					max = 30,
+        					step = 1,
+        					set = function(info, val)
+        					    self.db.profile.healthbar_height = val 
+        						self.healthbar:SetHeight(val)
+        						self.healthbar.border:SetHeight(val + 8)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.healthbar_height
+        					end,
+        				},
+        				bar_scaling = {
+        					order = 130,
+        					name = L["Scale"],
+        					desc = L["ScaleDesc"],
+        					type = "range",
+        					min = 0.1,
+        					max = 3,
+        					step = 0.1,
+        					get = function()
+        					    return self.db.profile.healthbar_scale
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.healthbar_scale = val
+        					    self.healthbar:SetScale(val)
+        					end
+        				},
+                        colors = {
+                            order = 200,
+                            type = "header",
+                            name = L["Colors for Normal Health"],
+                        },
+        				bar_textcolor = {
+        					order = 210,
+        					name = L["Text Color"],
+        					desc = L["BarTextColor_OptionDesc"],
+        					type = "color",
+        					hasAlpha = true,
+        					set = function(info, r, g, b, a)
+        					    local c = self.db.profile.healthbar_textcolor
+        					    c.r, c.g, c.b, c.a = r, g, b, a
+        					    if self.healthbar then
+        					        self:UpdateHealthBarColors(
+        					            self.healthbar.lowhealth or true)
+        					    end
+        					end,
+        					get = function(info)
+        				        local c = self.db.profile.healthbar_textcolor
+        					    return c.r, c.g, c.b, c.a
+        					end,					
+        				},
+        				bar_color = {
+        					order = 220,
+        					name = L["Bar Color"],
+        					desc = L["BarColor_OptionDesc"],
+        					type = "color",
+        					hasAlpha = true,
+        					set = function(info, r, g, b, a)
+        					    local c = self.db.profile.healthbar_color
+        					    c.r, c.g, c.b, c.a = r, g, b, a
+        					    if self.healthbar then
+        					        self:UpdateHealthBarColors(
+        					            self.healthbar.lowhealth or true)
+        					    end
+        					end,
+        					get = function(info)
+        				        local c = self.db.profile.healthbar_color
+        					    return c.r, c.g, c.b, c.a
+        					end,					
+        				},
+        				bar_bgcolor = {
+        					order = 230,
+        					name = L["Bar Background Color"],
+        					desc = L["BarBackgroundColor_OptionDesc"],
+        					type = "color",
+        					hasAlpha = true,
+        					set = function(info, r, g, b, a)
+        					    local c = self.db.profile.healthbar_bgcolor
+        					    c.r, c.g, c.b, c.a = r, g, b, a
+        					    if self.healthbar then
+        					        self:UpdateHealthBarColors(
+        					            self.healthbar.lowhealth or true)
+        					    end
+        					end,
+        					get = function(info)
+        				        local c = self.db.profile.healthbar_bgcolor
+        					    return c.r, c.g, c.b, c.a
+        					end,					
+        				},
+
+                        colorsLow = {
+                            order = 300,
+                            type = "header",
+                            name = L["Colors for Low Health"],
+                        },
+        				bar_low_textcolor = {
+        					order = 310,
+        					name = L["Low Health Text Color"],
+        					desc = L["BarTextColor_OptionDesc"],
+        					type = "color",
+        					hasAlpha = true,
+        					set = function(info, r, g, b, a)
+        					    local c = self.db.profile.healthbar_low_textcolor
+        					    c.r, c.g, c.b, c.a = r, g, b, a
+        					    if self.healthbar then
+        					        self:UpdateHealthBarColors(
+        					            self.healthbar.lowhealth or true)
+        					    end
+        					end,
+        					get = function(info)
+        				        local c = self.db.profile.healthbar_low_textcolor
+        					    return c.r, c.g, c.b, c.a
+        					end,					
+        				},
+        				bar_low_color = {
+        					order = 320,
+        					name = L["Low Health Bar Color"],
+        					desc = L["BarColor_OptionDesc"],
+        					type = "color",
+        					hasAlpha = true,
+        					set = function(info, r, g, b, a)
+        					    local c = self.db.profile.healthbar_low_color
+        					    c.r, c.g, c.b, c.a = r, g, b, a
+        					    if self.healthbar then
+        					        self:UpdateHealthBarColors(
+        					            self.healthbar.lowhealth or true)
+        					    end
+        					end,
+        					get = function(info)
+        				        local c = self.db.profile.healthbar_low_color
+        					    return c.r, c.g, c.b, c.a
+        					end,					
+        				},
+        				bar_low_bgcolor = {
+        					order = 330,
+        					name = L["Low Health Bar Background Color"],
+        					desc = L["BarBackgroundColor_LowHealth_OptionDesc"],
+        					type = "color",
+        					hasAlpha = true,
+        					set = function(info, r, g, b, a)
+        					    local c = self.db.profile.healthbar_low_bgcolor
+        					    c.r, c.g, c.b, c.a = r, g, b, a
+        					    if self.healthbar then
+        					        self:UpdateHealthBarColors(
+        					            self.healthbar.lowhealth or true)
+        					    end
+        					end,
+        					get = function(info)
+        				        local c = self.db.profile.healthbar_low_bgcolor
+        					    return c.r, c.g, c.b, c.a
+        					end,					
+        				},
+
+                        appearance = {
+                            order = 400,
+                            type = "header",
+                            name = L["Appearance"],
+                        },
+        				bar_texture_opt = {
+        					order = 410,
+        					name = L["Texture"],
+        					desc = L["BarTexture_OptionDesc"],
+        					type = "select",
+        					values = LSM:HashTable("statusbar"),
+        					dialogControl = 'LSM30_Statusbar',
+        					get = function()
+        					    return self.db.profile.healthbar_texture
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.healthbar_texture = val
+        					    self:UpdateHealthBarTexture()
+        					end,
+        					disabled = function()
+        					    return not self.db.profile.healthbar_shown
+        					end,
+        				},
+        				bar_border_visible_opt = {
+        					order = 420,
+        					name = L["ShowBorder"],
+        					desc = L["ShowBorderDesc"],
+        					type = "toggle",
+        					get = function()
+        					    return self.db.profile.healthbar_border
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.healthbar_border = val
+        					    self:UpdateHealthBarBorder()
+        					end,
+        				},
+        				bar_visible_opt = {
+        					order = 430,
+        					name = L["ShowBar"],
+        					desc = L["ShowBarDesc"],
+        					type = "toggle",
+        					get = function()
+        					    return self.db.profile.healthbar_shown
+        					end,
+        					set = function(info,val)
+        					    self.db.profile.healthbar_shown = val
+        					    self:UpdateHealthBarVisibility()
+        					end,
+        				},
+
+        			}
+        		},
+
+
             }
         }
 	options.args.profile = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
@@ -1745,6 +2110,10 @@ function BloodShieldTracker:OnInitialize()
 	-- Create the Illum. Heal bar
     self.illumbar = self:CreateIllumBar()
 	self:IllumBarLock(self.db.profile.lock_illumbar)
+    -- Create the Health Bar
+    self.healthbar = self:CreateHealthBar()
+	self.healthbar.hideooc = self.db.profile.healthbar_hide_ooc
+	self:HealthBarLock(self.db.profile.lock_healthbar)
 
 	-- Register for profile callbacks
 	self.db.RegisterCallback(self, "OnProfileChanged", "Reset")
@@ -1767,6 +2136,8 @@ function BloodShieldTracker:OnInitialize()
 	    displayName, L["PW:S Bar"], displayName, "pwsBarOpts")
 	self.optionsFrame.ShieldBar = ACD:AddToBlizOptions(
 	    displayName, L["Illuminated Healing Bar"], displayName, "illumBarOpts")
+	self.optionsFrame.HealthBar = ACD:AddToBlizOptions(
+	    displayName, L["Health Bar"], displayName, "healthBarOpts")
 
 	ACD:AddToBlizOptions(
 	    displayName, options.args.profile.name, displayName, "profile")
@@ -1777,6 +2148,15 @@ function BloodShieldTracker:OnInitialize()
 
 	icon:Register("BloodShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
 	LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
+
+    -- Set the precision
+    if self.db.profile.precision == "One" then
+        millFmt = millFmtOne
+        thousandFmt = thousandFmtOne
+    else
+        millFmt = millFmtZero
+        thousandFmt = thousandFmtZero
+    end
 end
 
 function BloodShieldTracker:Reset()
@@ -1813,6 +2193,14 @@ function BloodShieldTracker:Reset()
 		self:UpdateIllumBarBorder()
 		self:UpdateIllumBarVisibility()
 		self:UpdateIllumBarGraphics()
+	end
+	if self.healthbar then
+		self.healthbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.healthbar_x, self.db.profile.healthbar_y)
+    	self:HealthBarLock(self.db.profile.lock_healthbar)
+		self:UpdateHealthBarTexture()
+		self:UpdateHealthBarBorder()
+		self:UpdateHealthBarVisibility()
+		self:UpdateHealthBarGraphics(self.healthbar.lowhealth)
 	end
 
 	self:ResetFonts()
@@ -1852,6 +2240,10 @@ function BloodShieldTracker:ResetFonts()
     	self.illumbar.value:SetFont(ff,fh,fontFlags)						
     	self.illumbar.value:SetText(self.illumbar.value:GetText())
     end
+    if self.healthbar then
+    	self.healthbar.value:SetFont(ff,fh,fontFlags)						
+    	self.healthbar.value:SetText(self.healthbar.value:GetText())
+    end
 end
 
 function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
@@ -1872,6 +2264,9 @@ function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 		end
 		if self.db.profile.illumbar_shown then
 			self:UpdateIllumBarTexture()
+		end
+		if self.db.profile.healthbar_shown then
+			self:UpdateHealthBarTexture()
 		end
 	end
 end
@@ -1915,6 +2310,10 @@ function BloodShieldTracker:Load()
     if self:IsTrackerEnabled() and (not self.damagebar.hideooc or InCombatLockdown()) then
         self.damagebar:Show()
     end
+    if self.db.profile.healthbar_enabled then
+        self:RegisterEvent("UNIT_HEALTH")
+        self.healthbar:Show()
+    end
     self:UpdateShieldBarVisibility()
 	self:UpdateDamageBarVisibility()
 end
@@ -1932,6 +2331,7 @@ function BloodShieldTracker:Unload()
     self:UnregisterEvent("PLAYER_ALIVE")
     self:UnregisterEvent("UNIT_SPELLCAST_SENT")
     self:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+    self:UnregisterEvent("UNIT_HEALTH")
 	self.damagebar:Hide()
 end
 
@@ -2040,9 +2440,36 @@ function BloodShieldTracker:GetEffectiveHealingDebuffModifiers()
     return (1-healingDebuffMultiplier)
 end
 
-function BloodShieldTracker:UpdateMinHeal(event,unit)
+function BloodShieldTracker:UNIT_HEALTH(event, unit)
+    if unit and unit == "player" then
+        local oldHealth = currentHealth
+        currentHealth = UnitHealth("player")
+        if oldHealth ~= currentHealth then
+            if maxHealth > 0 then
+                percentHealth = currentHealth / maxHealth
+            else
+                percentHealth = 0
+            end
+            self:UpdateHealthBar(false)
+        end
+    end
+end
+
+function BloodShieldTracker:UpdateMinHeal(event, unit)
 	if unit == "player" then
+	    local oldHealth = maxHealth
 	    maxHealth = UnitHealthMax("player")
+	    if currentHealth <= 0 then
+    	    currentHealth = UnitHealth("player")
+        end
+        if oldHealth ~= maxHealth then
+            if maxHealth > 0 then
+                percentHealth = currentHealth / maxHealth
+            else
+                percentHealth = 0
+            end
+            self:UpdateHealthBar(true)
+        end
 	    actualDsMinHeal = dsMinHealPercent
 
         -- Check for Dark Succor
@@ -2078,6 +2505,9 @@ function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 	        self.damagebar:Show()
 	        self.damagebar:SetScript("OnUpdate", UpdateTime)
         end
+        if self.healthbar and self.db.profile.healthbar_enabled then
+            self.healthbar:Show()
+        end
     end
     -- Reset the per fight stats
     LastFightStats:Reset()
@@ -2100,6 +2530,10 @@ function BloodShieldTracker:PLAYER_REGEN_ENABLED()
         self.damagebar:Hide()
     end
 
+    if self.healthbar and self.healthbar.hideooc then
+        self.healthbar:Hide()
+    end
+
     self.damagebar:SetScript("OnUpdate", nil)
 
     LastFightStats:EndCombat()
@@ -2113,6 +2547,16 @@ function BloodShieldTracker:PLAYER_DEAD()
     -- Hide the heal bar if configured to do so for OOC
     if self.damagebar.hideooc then
         self.damagebar:Hide()
+    end
+end
+
+function BloodShieldTracker:ToggleHealthBar(enable)
+    if enable then
+        self:RegisterEvent("UNIT_HEALTH")
+        self.healthbar:Show()
+    else
+        self.healthbar:Hide()
+        self:UnregisterEvent("UNIT_HEALTH")
     end
 end
 
@@ -2196,9 +2640,13 @@ function BloodShieldTracker:UpdateEstHealBarText(estimate)
         else
             text = L["HealBarText"]
         end
-        self.damagebar.value:SetText(healBarFormat:format(text, estimate))
+        self.damagebar.value:SetText(
+            healBarFormat:format(
+                text, self:FormatNumber(estimate)))
     else
-	    self.damagebar.value:SetText(healBarNoTextFormat:format(estimate))
+	    self.damagebar.value:SetText(
+	        healBarNoTextFormat:format(
+	            self:FormatNumber(estimate)))
     end
 end
 
@@ -2262,13 +2710,28 @@ function BloodShieldTracker:UpdateShieldBar()
     self:UpdateShieldBarText(self.statusbar.shield_curr, self.statusbar.shield_max, diff)
 end
 
+function BloodShieldTracker:UpdateHealthBar(maxChanged)
+    if self.db.profile.healthbar_enabled then
+        if maxChanged then
+            self.healthbar:SetMinMaxValues(0, maxHealth)
+        end
+
+        local lowhealth = (percentHealth <= self.db.profile.healthbar_low_percent)
+        if lowhealth ~= self.healthbar.lowhealth then
+            self:UpdateHealthBarGraphics(lowhealth)
+        end
+        self.healthbar.lowhealth = lowhealth
+
+        self.healthbar:SetValue(currentHealth)
+        self.healthbar.value:SetText(self:FormatNumber(currentHealth))
+    end
+end
+
 function BloodShieldTracker:FormatNumber(number)
     if tonumber(number) == nil then
         return number
     end
     
-    local millFmt = "%.1fm"
-    local thousandFmt = "%.1fk"
     if number > 1000000 then
         return millFmt:format(number / 1000000)
     elseif number > 1000 then
@@ -3322,6 +3785,20 @@ function BloodShieldTracker:UpdateIllumBarVisibility()
 	end
 end
 
+function BloodShieldTracker:UpdateHealthBarVisibility()
+	if self.healthbar then
+		local show = self.db.profile.healthbar_shown
+		if not show then
+			self.healthbar:SetStatusBarTexture("")
+			self.healthbar.bg:SetTexture("")
+			self.healthbar.border:Hide()
+		else
+			self:UpdateHealthBarTexture()
+			self:UpdateHelathBarBorder()
+		end
+	end
+end
+
 -- show/hide borders
 function BloodShieldTracker:UpdateShieldBarBorder()
 	if self.statusbar then
@@ -3332,6 +3809,7 @@ function BloodShieldTracker:UpdateShieldBarBorder()
 		end
 	end
 end
+
 function BloodShieldTracker:UpdateDamageBarBorder()
 	if self.damagebar then
 		if self.db.profile.estheal_bar_border then
@@ -3356,6 +3834,15 @@ function BloodShieldTracker:UpdateIllumBarBorder()
 			self.illumbar.border:Show()
 		else
 			self.illumbar.border:Hide()
+		end
+	end
+end
+function BloodShieldTracker:UpdateHealthBarBorder()
+	if self.healthbar then
+		if self.db.profile.healthbar_border then
+			self.healthbar.border:Show()
+		else
+			self.healthbar.border:Hide()
 		end
 	end
 end
@@ -3402,7 +3889,16 @@ function BloodShieldTracker:UpdateIllumBarTexture()
 		self:UpdateIllumBarGraphics()
 	end
 end
-
+function BloodShieldTracker:UpdateHealthBarTexture()
+	if self.healthbar then
+		local bt = LSM:Fetch("statusbar",self.db.profile.healthbar_texture)
+		self.healthbar:SetStatusBarTexture(bt)
+		self.healthbar.bg:SetTexture(bt)
+	    self.healthbar:GetStatusBarTexture():SetHorizTile(false)
+	    self.healthbar:GetStatusBarTexture():SetVertTile(false)
+		self:UpdateHealthBarGraphics(self.healthbar.lowhealth)
+	end
+end
 
 function BloodShieldTracker:UpdateShieldBarGraphics()
     if self.statusbar then
@@ -3425,21 +3921,19 @@ function BloodShieldTracker:UpdateShieldBarGraphics()
 end
 
 function BloodShieldTracker:UpdateDamageBarColors(min)
+    local bc, bgc, tc
     if min then
-        local bc = self.db.profile.estheal_bar_min_color
-        self.damagebar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-        local bgc = self.db.profile.estheal_bar_min_bgcolor
-        self.damagebar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-        local tc = self.db.profile.estheal_bar_min_textcolor
-        self.damagebar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+        bc = self.db.profile.estheal_bar_min_color
+        bgc = self.db.profile.estheal_bar_min_bgcolor
+        tc = self.db.profile.estheal_bar_min_textcolor
     else
-        local bc = self.db.profile.estheal_bar_opt_color
-        self.damagebar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-        local bgc = self.db.profile.estheal_bar_opt_bgcolor
-        self.damagebar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-        local tc = self.db.profile.estheal_bar_opt_textcolor
-        self.damagebar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+        bc = self.db.profile.estheal_bar_opt_color
+        bgc = self.db.profile.estheal_bar_opt_bgcolor
+        tc = self.db.profile.estheal_bar_opt_textcolor
     end
+    self.damagebar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+    self.damagebar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+    self.damagebar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 end
 
 function BloodShieldTracker:UpdatePWSBarGraphics()
@@ -3461,6 +3955,24 @@ function BloodShieldTracker:UpdateIllumBarGraphics()
         self.illumbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
         local tc = self.db.profile.illumbar_textcolor
         self.illumbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    end
+end
+
+function BloodShieldTracker:UpdateHealthBarGraphics(low)
+    if self.healthbar then
+        local bc, bgc, tc
+        if low then
+            bc = self.db.profile.healthbar_low_color
+            bgc = self.db.profile.healthbar_low_bgcolor
+            tc = self.db.profile.healthbar_low_textcolor
+        else
+            bc = self.db.profile.healthbar_color
+            bgc = self.db.profile.healthbar_bgcolor
+            tc = self.db.profile.healthbar_textcolor
+        end
+        self.healthbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+        self.healthbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+        self.healthbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
     end
 end
 
@@ -3504,6 +4016,17 @@ function BloodShieldTracker:IllumBarLock(locked)
             self.illumbar:EnableMouse(false)
         else
             self.illumbar:EnableMouse(true)
+        end
+    end
+end
+
+function BloodShieldTracker:HealthBarLock(locked)
+    if self.healthbar then
+        self.healthbar.lock = locked
+        if locked then
+            self.healthbar:EnableMouse(false)
+        else
+            self.healthbar:EnableMouse(true)
         end
     end
 end
@@ -3788,4 +4311,71 @@ function BloodShieldTracker:CreateEstimateBar()
     statusbar:EnableMouse(true)
     statusbar:Hide()
     return statusbar
+end
+
+function BloodShieldTracker:CreateHealthBar()
+    local healthbar = CreateFrame("StatusBar", "BloodShieldTracker_HealthBar", UIParent)
+	local scale = self.db.profile.healthbar_scale
+    healthbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.healthbar_x, self.db.profile.healthbar_y)
+	healthbar:SetScale(scale)
+    healthbar:SetWidth(self.db.profile.healthbar_width)
+    healthbar:SetHeight(self.db.profile.healthbar_height)
+	local bt = LSM:Fetch("statusbar",self.db.profile.healthbar_texture)
+   	healthbar:SetStatusBarTexture(bt)
+    healthbar:GetStatusBarTexture():SetHorizTile(false)
+    healthbar:GetStatusBarTexture():SetVertTile(false)
+    local bc = self.db.profile.healthbar_color
+    healthbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+    healthbar.bg = healthbar:CreateTexture(nil, "BACKGROUND")
+    healthbar.bg:SetTexture(bt)
+    healthbar.bg:SetAllPoints(true)
+    local bgc = self.db.profile.healthbar_bgcolor
+    healthbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+    healthbar.border = healthbar:CreateTexture(nil, "BACKGROUND")
+    healthbar.border:SetPoint("CENTER")
+    healthbar.border:SetWidth(healthbar:GetWidth()+9)
+    healthbar.border:SetHeight(healthbar:GetHeight()+8)
+    healthbar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
+	if not self.db.profile.healthbar_border then
+		healthbar.border:Hide()
+	end
+    healthbar.value = healthbar:CreateFontString(nil, "OVERLAY")
+    healthbar.value:SetPoint("CENTER")
+	local font = LSM:Fetch("font",self.db.profile.font_face)
+    healthbar.value:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
+    healthbar.value:SetJustifyH("CENTER")
+    healthbar.value:SetShadowOffset(1, -1)
+    local tc = self.db.profile.healthbar_textcolor
+    healthbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    healthbar.lock = false
+    healthbar:SetMovable()
+    healthbar:RegisterForDrag("LeftButton")
+    healthbar:SetScript("OnDragStart",
+        function(self,button)
+			if not self.lock then
+            	self:StartMoving()
+			end
+        end)
+    healthbar:SetScript("OnDragStop",
+        function(self)
+            self:StopMovingOrSizing()
+			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
+			local x, y = self:GetCenter()
+			x, y = x * scale, y * scale
+			x = x - GetScreenWidth()/2
+			y = y - GetScreenHeight()/2
+			x = x / self:GetScale()
+			y = y / self:GetScale()
+			BloodShieldTracker.db.profile.healthbar_x, BloodShieldTracker.db.profile.healthbar_y = x, y
+			self:SetUserPlaced(false);
+        end)
+
+    healthbar:SetMinMaxValues(0,1)
+    healthbar:SetValue(1)
+    healthbar.value:SetText("0")
+    healthbar:EnableMouse(true)
+    healthbar:Hide()
+    healthbar.hideooc = false
+    healthbar.lowhealth = false
+    return healthbar
 end
