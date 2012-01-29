@@ -112,6 +112,7 @@ local BLUE = "|cff0198e1"
 local ORANGE = "|cffff9933"
 local statusBarFormatFull = "%s/%s (%d%%)"
 local statusBarFormatNoPer = "%s/%s"
+local statusBarFormatCurrPerc = "%s (%d%%)"
 
 local healBarFormat = "%s: %s"
 local healBarNoTextFormat = "%s"
@@ -492,8 +493,8 @@ local defaults = {
 		lock_healthbar = false,
 		healthbar_width = 75,
 		healthbar_height = 15,
-		healthbar_low_percent = 0.3
-
+		healthbar_low_percent = 0.3,
+		healthbar_text_format = "OnlyCurrent"
     }
 }
 
@@ -1799,6 +1800,29 @@ function BloodShieldTracker:GetOptions()
         					    return self.db.profile.healthbar_low_percent * 100
         					end,
         				},
+        				text_format = {
+        					name = L["Text Format"],
+        					desc = L["TextFormat_OptionDesc"],
+        					type = "select",
+        					values = {
+        					    ["Full"] = L["Full"],
+        					    ["OnlyPerc"] = L["Only Percent"],
+        					    ["OnlyCurrent"] = L["Only Current"],
+        					    ["CurrMax"] = L["Current and Maximum"],
+        					    ["CurrPerc"] = L["Current and Percent"]
+        					},
+        					order = 50,
+        					set = function(info, val)
+        					    self.db.profile.healthbar_text_format = val
+        					    if self.healthbar then
+        					        self.healthbar.format = val
+        					        BloodShieldTracker:UpdateHealthBar(false)
+    					        end
+        					end,
+                            get = function(info)
+                                return self.db.profile.healthbar_text_format
+                            end,
+        				},
                         dimensions = {
                             order = 100,
                             type = "header",
@@ -2113,6 +2137,7 @@ function BloodShieldTracker:OnInitialize()
     -- Create the Health Bar
     self.healthbar = self:CreateHealthBar()
 	self.healthbar.hideooc = self.db.profile.healthbar_hide_ooc
+	self.healthbar.format = self.db.profile.healthbar_text_format
 	self:HealthBarLock(self.db.profile.lock_healthbar)
 
 	-- Register for profile callbacks
@@ -2710,6 +2735,7 @@ function BloodShieldTracker:UpdateShieldBar()
     self:UpdateShieldBarText(self.statusbar.shield_curr, self.statusbar.shield_max, diff)
 end
 
+local percentIntFmt = "%d%%"
 function BloodShieldTracker:UpdateHealthBar(maxChanged)
     if self.db.profile.healthbar_enabled then
         if maxChanged then
@@ -2723,7 +2749,29 @@ function BloodShieldTracker:UpdateHealthBar(maxChanged)
         self.healthbar.lowhealth = lowhealth
 
         self.healthbar:SetValue(currentHealth)
-        self.healthbar.value:SetText(self:FormatNumber(currentHealth))
+
+        local text = ""
+    
+        if self.healthbar.format == "OnlyPerc" then
+            text = percentIntFmt:format(percentHealth * 100)
+        elseif self.healthbar.format == "Full" then
+            text = statusBarFormatFull:format(
+                self:FormatNumber(currentHealth), 
+                self:FormatNumber(maxHealth), 
+                percentHealth * 100)
+        elseif self.healthbar.format == "CurrMax" then
+            text = statusBarFormatNoPer:format(
+                self:FormatNumber(currentHealth), 
+                self:FormatNumber(maxHealth))
+        elseif self.healthbar.format == "CurrPerc" then
+            text = statusBarFormatCurrPerc:format(
+                self:FormatNumber(currentHealth), 
+                percentHealth * 100)
+        else
+            text = self:FormatNumber(currentHealth)
+        end
+
+        self.healthbar.value:SetText(text)
     end
 end
 
@@ -4377,5 +4425,6 @@ function BloodShieldTracker:CreateHealthBar()
     healthbar:Hide()
     healthbar.hideooc = false
     healthbar.lowhealth = false
+    healthbar.format = "OnlyCurrent"
     return healthbar
 end
