@@ -2335,10 +2335,7 @@ function BloodShieldTracker:Load()
     if self:IsTrackerEnabled() and (not self.damagebar.hideooc or InCombatLockdown()) then
         self.damagebar:Show()
     end
-    if self.db.profile.healthbar_enabled then
-        self:RegisterEvent("UNIT_HEALTH")
-        self.healthbar:Show()
-    end
+    self:ToggleHealthBar(self.db.profile.healthbar_enabled)
     self:UpdateShieldBarVisibility()
 	self:UpdateDamageBarVisibility()
 end
@@ -2578,7 +2575,11 @@ end
 function BloodShieldTracker:ToggleHealthBar(enable)
     if enable then
         self:RegisterEvent("UNIT_HEALTH")
-        self.healthbar:Show()
+        if self.healthbar.hideooc and (not InCombatLockdown() or idle) then
+            self.healthbar:Hide()
+        else
+            self.healthbar:Show()
+        end
     else
         self.healthbar:Hide()
         self:UnregisterEvent("UNIT_HEALTH")
