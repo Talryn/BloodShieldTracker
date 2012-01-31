@@ -1,3 +1,13 @@
+local _G = getfenv(0)
+
+local string = _G.string
+local table = _G.table
+local math = _G.math
+local pairs = _G.pairs
+local ipairs = _G.ipairs
+local select = _G.select
+local LibStub = _G.LibStub
+
 local BloodShieldTracker = LibStub("AceAddon-3.0"):NewAddon("BloodShieldTracker", "AceConsole-3.0", "AceEvent-3.0","AceTimer-3.0")
 
 local ADDON_NAME = ...
@@ -11,7 +21,6 @@ local AGU = LibStub("AceGUI-3.0")
 -- Local versions for performance
 local tinsert, tremove, tgetn = table.insert, table.remove, table.getn
 local tconcat = table.concat
-local pairs, ipairs = pairs, ipairs
 local floor, ceil = math.floor, math.ceil
 
 BloodShieldTracker.playerName = UnitName("player")
@@ -23,6 +32,15 @@ BloodShieldTracker.illumbar = nil
 local isDK = nil
 local IsBloodTank = false
 local hasBloodShield = false
+
+-- Settings to allow custom fonts and textures which override the
+-- user set options.
+local CustomUI = {}
+CustomUI.texture = nil
+CustomUI.font = nil
+CustomUI.fontSize = nil
+CustomUI.fontFlags = nil
+CustomUI.showBorders = nil
 
 -- Create the frame used to get the BS tooltip text
 local TipFrame = CreateFrame("GameTooltip", "BST_Tooltip", nil, "GameTooltipTemplate")
@@ -2246,11 +2264,62 @@ function BloodShieldTracker:GetFontFlags()
     return tconcat(flags, ",")
 end
 
+function BloodShieldTracker:SetCustomTexture(texture)
+    if texture then
+        CustomUI.texture = texture
+        self:UpdateTextures()
+    end
+end
+
+function BloodShieldTracker:SetCustomFont(font)
+    if font then
+        CustomUI.font = font
+        self:ResetFonts()
+    end
+end
+
+function BloodShieldTracker:SetCustomFontSize(size)
+    if size then
+        CustomUI.fontSize = size
+        self:ResetFonts()
+    end
+end
+
+function BloodShieldTracker:SetCustomFontFlags(flags)
+    if flags then
+        CustomUI.fontFlags = flags
+        self:ResetFonts()
+    end
+end
+
+function BloodShieldTracker:SetCustomShowBorders(show)
+    if show then
+        CustomUI.showBorders = show
+        self:UpdateBorders()
+    end
+end
+
 function BloodShieldTracker:ResetFonts()
 	local fontName, fontHeight = self.statusbar.value:GetFont()
-	local fontFlags = self:GetFontFlags()
-	local ff = LSM:Fetch("font",self.db.profile.font_face)
-	local fh = self.db.profile.font_size
+	local ff, fh, fontFlags
+
+    -- If a custom font is set, then override the settings
+    if CustomUI.font then
+        ff = CustomUI.font
+    else
+	    ff = LSM:Fetch("font",self.db.profile.font_face)
+    end
+    if CustomUI.fontSize then
+        fh = CustomUI.fontSize
+    else
+        fh = self.db.profile.font_size
+    end
+    if CustomUI.fontFlags then
+        fontFlags = CustomUI.fontFlags
+    else
+        fontFlags = self:GetFontFlags()
+    end
+
 	self.statusbar.value:SetFont(ff,fh,fontFlags)
 	self.statusbar.value:SetText(self.statusbar.value:GetText())
 	self.statusbar.time:SetFont(ff,fh,fontFlags)
@@ -2271,6 +2340,32 @@ function BloodShieldTracker:ResetFonts()
     end
 end
 
+function BloodShieldTracker:UpdateTextures()
+	if self.db.profile.estheal_bar_shown then
+		self:UpdateDamageBarTexture()
+	end
+	if self.db.profile.status_bar_shown then
+		self:UpdateShieldBarTexture()
+	end
+	if self.db.profile.pwsbar_shown then
+		self:UpdatePWSBarTexture()
+	end
+	if self.db.profile.illumbar_shown then
+		self:UpdateIllumBarTexture()
+	end
+	if self.db.profile.healthbar_shown then
+		self:UpdateHealthBarTexture()
+	end
+end
+
+function BloodShieldTracker:UpdateBorders()
+    self:UpdateShieldBarBorder()
+    self:UpdateDamageBarBorder()
+    self:UpdatePWSBarBorder()
+    self:UpdateIllumBarBorder()
+    self:UpdateHealthBarBorder()
+end
+
 function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 	if strlen(self.db.profile.font_face) > 1 and mediatype == "font" then
 		if self.db.profile.font_face == key then
@@ -2278,21 +2373,7 @@ function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 		end
 	end
 	if mediatype == "statusbar" then
-		if self.db.profile.estheal_bar_shown then
-			self:UpdateDamageBarTexture()
-		end
-		if self.db.profile.status_bar_shown then
-			self:UpdateShieldBarTexture()
-		end
-		if self.db.profile.pwsbar_shown then
-			self:UpdatePWSBarTexture()
-		end
-		if self.db.profile.illumbar_shown then
-			self:UpdateIllumBarTexture()
-		end
-		if self.db.profile.healthbar_shown then
-			self:UpdateHealthBarTexture()
-		end
+	    self:UpdateTextures()
 	end
 end
 
@@ -2568,7 +2649,9 @@ function BloodShieldTracker:PLAYER_DEAD()
     self.statusbar:Hide()
     -- Hide the heal bar if configured to do so for OOC
     if self.damagebar.hideooc then
-        self.damagebar:Hide()
+        if self.healthbar:IsVisible() then
+            self.damagebar:Hide()
+        end
     end
 end
 
@@ -2576,7 +2659,9 @@ function BloodShieldTracker:ToggleHealthBar(enable)
     if enable then
         self:RegisterEvent("UNIT_HEALTH")
         if self.healthbar.hideooc and (not InCombatLockdown() or idle) then
-            self.healthbar:Hide()
+            if self.healthbar:IsVisible() then
+                self.healthbar:Hide()
+            end
         else
             self.healthbar:Show()
         end
@@ -3850,48 +3935,92 @@ end
 
 -- show/hide borders
 function BloodShieldTracker:UpdateShieldBarBorder()
-	if self.statusbar then
-		if self.db.profile.status_bar_border then
-			self.statusbar.border:Show()
-		else
-			self.statusbar.border:Hide()
+    local bar = self.statusbar
+	if bar then
+	    if CustomUI.showBorders ~= nil then
+	        if CustomUI.showBorders == true then
+	            bar.border:Show()
+            else
+                bar.border:Hide()
+            end
+        else
+    		if self.db.profile.status_bar_border then
+    			bar.border:Show()
+    		else
+    			bar.border:Hide()
+    		end
 		end
 	end
 end
-
 function BloodShieldTracker:UpdateDamageBarBorder()
-	if self.damagebar then
-		if self.db.profile.estheal_bar_border then
-			self.damagebar.border:Show()
-		else
-			self.damagebar.border:Hide()
+    local bar = self.damagebar
+	if bar then
+	    if CustomUI.showBorders ~= nil then
+	        if CustomUI.showBorders == true then
+	            bar.border:Show()
+            else
+                bar.border:Hide()
+            end
+        else
+    		if self.db.profile.estheal_bar_border then
+    			bar.border:Show()
+    		else
+    			bar.border:Hide()
+    		end
 		end
 	end
 end
 function BloodShieldTracker:UpdatePWSBarBorder()
-	if self.pwsbar then
-		if self.db.profile.pwsbar_border then
-			self.pwsbar.border:Show()
-		else
-			self.pwsbar.border:Hide()
+    local bar = self.pwsbar
+	if bar then
+	    if CustomUI.showBorders ~= nil then
+	        if CustomUI.showBorders == true then
+	            bar.border:Show()
+            else
+                bar.border:Hide()
+            end
+        else
+    		if self.db.profile.pwsbar_border then
+    			bar.border:Show()
+    		else
+    			bar.border:Hide()
+    		end
 		end
 	end
 end
 function BloodShieldTracker:UpdateIllumBarBorder()
-	if self.illumbar then
-		if self.db.profile.illumbar_border then
-			self.illumbar.border:Show()
-		else
-			self.illumbar.border:Hide()
+    local bar = self.illumbar
+	if bar then
+	    if CustomUI.showBorders ~= nil then
+	        if CustomUI.showBorders == true then
+	            bar.border:Show()
+            else
+                bar.border:Hide()
+            end
+        else
+    		if self.db.profile.illumbar_border then
+    			bar.border:Show()
+    		else
+    			bar.border:Hide()
+    		end
 		end
 	end
 end
 function BloodShieldTracker:UpdateHealthBarBorder()
-	if self.healthbar then
-		if self.db.profile.healthbar_border then
-			self.healthbar.border:Show()
-		else
-			self.healthbar.border:Hide()
+    local bar = self.healthbar
+	if bar then
+	    if CustomUI.showBorders ~= nil then
+	        if CustomUI.showBorders == true then
+	            bar.border:Show()
+            else
+                bar.border:Hide()
+            end
+        else
+    		if self.db.profile.healthbar_border then
+    			bar.border:Show()
+    		else
+    			bar.border:Hide()
+    		end
 		end
 	end
 end
@@ -3899,7 +4028,12 @@ end
 -- Update Status bar status texture
 function BloodShieldTracker:UpdateShieldBarTexture()
 	if self.statusbar then
-		local bt = LSM:Fetch("statusbar",self.db.profile.status_bar_texture)
+		local bt
+        if CustomUI.texture then
+            bt = CustomUI.texture
+        else
+		    bt = LSM:Fetch("statusbar",self.db.profile.status_bar_texture)
+        end
 		self.statusbar:SetStatusBarTexture(bt)
 		self.statusbar.bg:SetTexture(bt)
 	    self.statusbar:GetStatusBarTexture():SetHorizTile(false)
@@ -3910,7 +4044,12 @@ end
 -- Update EstHeal bar status texture
 function BloodShieldTracker:UpdateDamageBarTexture()
 	if self.damagebar then
-		local bt = LSM:Fetch("statusbar",self.db.profile.estheal_bar_texture)
+		local bt
+        if CustomUI.texture then
+            bt = CustomUI.texture
+        else
+		    bt = LSM:Fetch("statusbar",self.db.profile.estheal_bar_texture)
+	    end
 		self.damagebar:SetStatusBarTexture(bt)
 		self.damagebar.bg:SetTexture(bt)
 	    self.damagebar:GetStatusBarTexture():SetHorizTile(false)
@@ -3920,7 +4059,12 @@ function BloodShieldTracker:UpdateDamageBarTexture()
 end
 function BloodShieldTracker:UpdatePWSBarTexture()
 	if self.pwsbar then
-		local bt = LSM:Fetch("statusbar",self.db.profile.pwsbar_texture)
+		local bt
+        if CustomUI.texture then
+            bt = CustomUI.texture
+        else
+		    bt = LSM:Fetch("statusbar",self.db.profile.pwsbar_texture)
+        end
 		self.pwsbar:SetStatusBarTexture(bt)
 		self.pwsbar.bg:SetTexture(bt)
 	    self.pwsbar:GetStatusBarTexture():SetHorizTile(false)
@@ -3930,7 +4074,12 @@ function BloodShieldTracker:UpdatePWSBarTexture()
 end
 function BloodShieldTracker:UpdateIllumBarTexture()
 	if self.illumbar then
-		local bt = LSM:Fetch("statusbar",self.db.profile.illumbar_texture)
+		local bt
+        if CustomUI.texture then
+            bt = CustomUI.texture
+        else
+		    bt = LSM:Fetch("statusbar",self.db.profile.illumbar_texture)
+	    end
 		self.illumbar:SetStatusBarTexture(bt)
 		self.illumbar.bg:SetTexture(bt)
 	    self.illumbar:GetStatusBarTexture():SetHorizTile(false)
@@ -3940,7 +4089,12 @@ function BloodShieldTracker:UpdateIllumBarTexture()
 end
 function BloodShieldTracker:UpdateHealthBarTexture()
 	if self.healthbar then
-		local bt = LSM:Fetch("statusbar",self.db.profile.healthbar_texture)
+		local bt
+        if CustomUI.texture then
+            bt = CustomUI.texture
+        else
+		    bt = LSM:Fetch("statusbar",self.db.profile.healthbar_texture)
+	    end
 		self.healthbar:SetStatusBarTexture(bt)
 		self.healthbar.bg:SetTexture(bt)
 	    self.healthbar:GetStatusBarTexture():SetHorizTile(false)
