@@ -2502,7 +2502,7 @@ function BloodShieldTracker:SetCustomFontFlags(flags)
 end
 
 function BloodShieldTracker:SetCustomShowBorders(show)
-    if show then
+    if show ~= nil then
         CustomUI.showBorders = show
         self:UpdateBorders()
     end
