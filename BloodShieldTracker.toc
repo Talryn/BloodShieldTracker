@@ -4,7 +4,7 @@
 ## Author: Talryn, kagaro
 ## Version: @project-version@
 ## SavedVariables: BloodShieldTrackerDB
-## OptionalDeps: Ace3, LibDataBroker-1.1, LibDBIcon-1.0, LibQTip-1.0, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets
+## OptionalDeps: Ace3, LibDataBroker-1.1, LibDBIcon-1.0, LibQTip-1.0, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets, Tukui, ElvUI
 
 embeds.xml
 
