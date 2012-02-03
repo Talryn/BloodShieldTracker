@@ -688,6 +688,7 @@ function BloodShieldTracker:GetOptions()
         							self.estimatebar:Show()
         							self.pwsbar:Show()
         							self.illumbar:Show()
+        							self.healthbar:Show()
         						else
         							self.shieldbar:Hide()
         							if self.estimatebar.hideooc and not InCombatLockdown() then
@@ -695,6 +696,9 @@ function BloodShieldTracker:GetOptions()
                                     end
                                     self.pwsbar:Hide()
                                     self.illumbar:Hide()
+        							if self.healthbar.hideooc and not InCombatLockdown() then
+        							    self.healthbar:Hide()
+                                    end
         						end
         					end,
         				},
