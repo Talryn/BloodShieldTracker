@@ -4244,7 +4244,7 @@ function BloodShieldTracker:UpdateHealthBarVisibility()
 			self.healthbar.border:Hide()
 		else
 			self:UpdateHealthBarTexture()
-			self:UpdateHelathBarBorder()
+			self:UpdateHealthBarBorder()
 		end
 	end
 end
