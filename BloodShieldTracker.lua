@@ -298,12 +298,26 @@ local function round(number)
     return ceil(number-0.5)
 end
 
+local function FormatNumber(number)
+    if tonumber(number) == nil then
+        return number
+    end
+    
+    if number > 1000000 then
+        return millFmt:format(number / 1000000)
+    elseif number > 1000 then
+        return thousandFmt:format(number / 1000)
+    end
+    
+    return number
+end
+
 local Broker = CreateFrame("Frame")
-Broker.obj = LDB:NewDataObject(GetAddOnMetadata(ADDON_NAME,"Title"), {
+Broker.obj = LDB:NewDataObject(GetAddOnMetadata(ADDON_NAME, "Title"), {
     type = "data source",
     icon = "Interface\\Icons\\Spell_DeathKnight_DeathStrike",
-    label = GetAddOnMetadata(ADDON_NAME,"Title"),
-    text = GetAddOnMetadata(ADDON_NAME,"Title"),
+    label = GetAddOnMetadata(ADDON_NAME, "Title"),
+    text = GetAddOnMetadata(ADDON_NAME, "Title"),
     barValue = 0,
     barR = 0,
     barG = 0,
@@ -322,6 +336,35 @@ Broker.obj = LDB:NewDataObject(GetAddOnMetadata(ADDON_NAME,"Title"), {
         end
 	end
 } )
+
+-- Track stats that are used for the LDB data feed.
+local LDBDataFeed = false
+local DataFeed = {
+    display = "",
+    lastDS = 0,
+    lastBS = 0,
+    estimateBar = 0,
+}
+
+local function UpdateLDBData()
+    if DataFeed.display == "LastBS" then
+        Broker.obj.text = FormatNumber(DataFeed.lastBS)
+    elseif DataFeed.display == "LastDS" then
+        Broker.obj.text = FormatNumber(DataFeed.lastDS)
+    elseif DataFeed.display == "EstimateBar" then
+        Broker.obj.text = FormatNumber(DataFeed.estimateBar)
+    else
+        Broker.obj.text = GetAddOnMetadata(ADDON_NAME, "Title")
+    end
+end
+
+local function SetBrokerLabel()
+    if BloodShieldTracker.db.profile.ldb_short_label then
+        Broker.obj.label = L["BST"]
+    else
+        Broker.obj.label = GetAddOnMetadata(ADDON_NAME, "Title")
+    end
+end
 
 local addonHdr = GREEN.."%s %s"
 local totalDataHdr = ORANGE..L["Total Data"]
@@ -370,8 +413,8 @@ function AddStats(tooltip, stats)
             avgShieldMaxValue or 0))
     tooltip:AddLine(shieldUsageLine1, 
         valuesWithPercFmt:format(
-            BloodShieldTracker:FormatNumber(stats.totalAbsorbs), 
-            BloodShieldTracker:FormatNumber(stats.totalShields), shieldUsagePerc))
+            FormatNumber(stats.totalAbsorbs), 
+            FormatNumber(stats.totalShields), shieldUsagePerc))
 end
 
 function Broker.obj:OnEnter()
@@ -526,6 +569,9 @@ local defaults = {
         elvui_texture = true,
         elvui_font = true,
         elvui_font_flags = true,
+        -- LDB Display
+        ldb_data_feed = "None",
+        ldb_short_label = false,
     }
 }
 
@@ -723,6 +769,50 @@ function BloodShieldTracker:GetOptions()
                                 return self.db.profile.font_thickoutline
                             end,
         				},
+					    ldb = {
+					        order = 300,
+					        type = "header",
+					        name = L["LDB"],
+					    },
+        				ldb_short_label = {
+        					name = L["Short Label"],
+        					desc = L["ShortLabel_OptionDesc"],
+        					type = "toggle",
+        					order = 310,
+        					set = function(info, val)
+        					    self.db.profile.ldb_short_label = val
+        					    SetBrokerLabel()
+        					end,
+                            get = function(info)
+                                return self.db.profile.ldb_short_label
+                            end,
+        				},
+        				ldb_data_feed = {
+        					name = L["Data Feed"],
+        					desc = L["DataFeed_OptionDesc"],
+        					type = "select",
+        					values = {
+        					    ["None"] = L["None"],
+        					    ["LastDS"] = L["Last Death Strike Heal"],
+        					    ["LastBS"] = L["Last Blood Shield Value"],
+        					    ["EstimateBar"] = L["Estimate Bar Value"],
+        					},
+        					order = 320,
+        					set = function(info, val)
+        					    self.db.profile.ldb_data_feed = val
+        					    DataFeed.display = val
+        					    if val == "None" then
+        					        LDBDataFeed = false
+    					        else
+    					            LDBDataFeed = true
+					            end
+        					    UpdateLDBData()
+        					end,
+                            get = function(info)
+                                return self.db.profile.ldb_data_feed
+                            end,
+        				},
+
         			},
         		},
         		shieldBarOpts = {
@@ -2339,6 +2429,13 @@ function BloodShieldTracker:OnInitialize()
     self:RegisterChatCommand("bst", "ChatCommand")
     self:RegisterChatCommand("bloodshield", "ChatCommand")
 
+    -- Set the LDB options
+    DataFeed.display = self.db.profile.ldb_data_feed
+    if DataFeed.display ~= "None" then
+        LDBDataFeed = true
+    end
+    SetBrokerLabel()
+
 	icon:Register("BloodShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
 	LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
 
@@ -2919,14 +3016,13 @@ function BloodShieldTracker:UpdateEstHealBar(timestamp)
         local shieldPercent = masteryRating*shieldPerMasteryPoint/100
 
         local predictedValue, minimumValue = 0, 0
+        local baseValue = recentDamage * dsHealModifier * ImpDSModifier
 
         if self.db.profile.estimate_bar_mode == "BS" then
-            predictedValue = round(
-                recentDamage * dsHealModifier * ImpDSModifier * shieldPercent)
+            predictedValue = round(baseValue * shieldPercent)
             minimumValue = maxHealth * dsMinHealPercent * shieldPercent
         else
-            predictedValue = round(
-                recentDamage * dsHealModifier * ImpDSModifier *
+            predictedValue = round(baseValue *
                 self:GetEffectiveHealingBuffModifiers() * 
                 self:GetEffectiveHealingDebuffModifiers())
             minimumValue = dsHealMin
@@ -2949,6 +3045,11 @@ function BloodShieldTracker:UpdateEstHealBar(timestamp)
             self:UpdateEstimateBarColors(true)
             self.estimatebar:SetValue(predictedValue)
         end
+
+        DataFeed.estimateBar = estimate
+        if LDBDataFeed then
+            UpdateLDBData()
+        end
     end
 end
 
@@ -2962,23 +3063,23 @@ function BloodShieldTracker:UpdateEstHealBarText(estimate)
         end
         self.estimatebar.value:SetText(
             healBarFormat:format(
-                text, self:FormatNumber(estimate)))
+                text, FormatNumber(estimate)))
     else
 	    self.estimatebar.value:SetText(
 	        healBarNoTextFormat:format(
-	            self:FormatNumber(estimate)))
+	            FormatNumber(estimate)))
     end
 end
 
 function BloodShieldTracker:UpdatePWSBarText(value)
     if self.db.profile.pwsbar_enabled then
-        self.pwsbar.value:SetText(self:FormatNumber(value))
+        self.pwsbar.value:SetText(FormatNumber(value))
     end
 end
 
 function BloodShieldTracker:UpdateIllumBarText(value)
     if self.db.profile.illumbar_enabled then
-        self.illumbar.value:SetText(self:FormatNumber(value))
+        self.illumbar.value:SetText(FormatNumber(value))
     end
 end
 
@@ -3051,45 +3152,31 @@ function BloodShieldTracker:UpdateHealthBar(maxChanged)
             text = percentIntFmt:format(percentHealth * 100)
         elseif self.healthbar.format == "Full" then
             text = shieldBarFormatFull:format(
-                self:FormatNumber(currentHealth), 
-                self:FormatNumber(maxHealth), 
+                FormatNumber(currentHealth), 
+                FormatNumber(maxHealth), 
                 percentHealth * 100)
         elseif self.healthbar.format == "CurrMax" then
             text = shieldBarFormatNoPer:format(
-                self:FormatNumber(currentHealth), 
-                self:FormatNumber(maxHealth))
+                FormatNumber(currentHealth), 
+                FormatNumber(maxHealth))
         elseif self.healthbar.format == "CurrPerc" then
             text = shieldBarFormatCurrPerc:format(
-                self:FormatNumber(currentHealth), 
+                FormatNumber(currentHealth), 
                 percentHealth * 100)
         else
-            text = self:FormatNumber(currentHealth)
+            text = FormatNumber(currentHealth)
         end
 
         self.healthbar.value:SetText(text)
     end
 end
 
-function BloodShieldTracker:FormatNumber(number)
-    if tonumber(number) == nil then
-        return number
-    end
-    
-    if number > 1000000 then
-        return millFmt:format(number / 1000000)
-    elseif number > 1000 then
-        return thousandFmt:format(number / 1000)
-    end
-    
-    return number
-end
-
 function BloodShieldTracker:UpdateShieldBarText(current, maximum, percent)
     local newText = ""
     local percentFormat = "%d%%"
     
-    local currentTxt = BloodShieldTracker:FormatNumber(current)
-    local maximumTxt = BloodShieldTracker:FormatNumber(maximum)
+    local currentTxt = FormatNumber(current)
+    local maximumTxt = FormatNumber(maximum)
     
     if self.db.profile.shield_bar_text_format == "Full" then
         newText = shieldBarFormatFull:format(currentTxt, maximumTxt, percent)
@@ -3348,6 +3435,13 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         local totalHeal = param12 or 0
         local overheal = param13 or 0
         local actualHeal = param12-param13
+
+        -- Update the LDB data feed
+        DataFeed.lastDS = totalHeal
+        if LDBDataFeed then
+            UpdateLDBData()
+        end
+
         -- Apparently the BS value server-side is calculated from the last
         -- five seconds of data since the DS heal is affected by modifiers
         -- and debuffs.  Because we cannot reliably calculate the server-
@@ -3480,6 +3574,12 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue)
     self.shieldbar.shield_max = self.shieldbar.shield_max + shieldValue
     self.shieldbar.shield_curr = self.shieldbar.shield_curr + shieldValue
 
+    -- Update the LDB data feed
+    DataFeed.lastBS = shieldValue
+    if LDBDataFeed then
+        UpdateLDBData()
+    end
+
     if self.db.profile.verbose or DEBUG_OUPUT then
         local shieldInd = ""
         if isMinimum then
@@ -3520,6 +3620,7 @@ function BloodShieldTracker:UpdateStatsShieldAbsorb(value)
     LastFightStats:ShieldAbsorb(value)
 end
 
+local shieldRefreshedFormat = "Blood Shield Refreshed: %d%s"
 function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
     if not IsBloodTank then return end
 
@@ -3539,6 +3640,7 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
     if current > curr then
         -- A new BS shield amount was added.  Update all of the stats.
         added = current - curr
+
         -- Check if it is a minimum heal.
         local shieldPercent = masteryRating*shieldPerMasteryPoint/100
         local minimumBS = round(maxHealth * actualDsMinHeal * shieldPercent)
@@ -3549,9 +3651,14 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
         self.shieldbar.expires = GetTime() + 10
         self.shieldbar.shield_max = self.shieldbar.shield_max + added
 
-        if DEBUG_OUTPUT then
-            local shieldRefreshedFormat = "Blood Shield Refreshed: %d%s"
+        -- Update the LDB data feed
+        DataFeed.lastBS = added
+        if LDBDataFeed then
+            UpdateLDBData()
+        end
 
+        if DEBUG_OUTPUT then
+            local shieldInd = ""
             if isMinimum then
                 shieldInd = " (min)"
             end
@@ -3936,7 +4043,7 @@ function BloodShieldTracker:CheckAurasOld()
                 OtherShields["PWS"] = value
                 pwsbar:Show()
                 if pwsValue and pwsValue ~= value then
-                    pwsbar.value:SetText(self:FormatNumber(value))
+                    pwsbar.value:SetText(FormatNumber(value))
                 end
             else
                 if self.db.profile.verbose == true then
