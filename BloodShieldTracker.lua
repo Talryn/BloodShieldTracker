@@ -4183,7 +4183,7 @@ function BloodShieldTracker:UpdateShieldBarVisibility()
 	if self.shieldbar then
 		local show = self.db.profile.status_bar_shown
 		if not show then
-			self.shieldbar:SetshieldbarTexture("")
+			self.shieldbar:SetStatusBarTexture("")
 			self.shieldbar.bg:SetTexture("")
 			self.shieldbar.border:Hide()
 		else
