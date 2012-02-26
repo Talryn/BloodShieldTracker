@@ -191,6 +191,8 @@ local PWS_SPELL = (GetSpellInfo(PWS_SPELL_ID)) or "Power Word: Shield"
 local OtherShields = {}
 local ILLUMINATED_HEALING_BUFF_ID = 86273
 local ILLUMINATED_HEALING_BUFF = (GetSpellInfo(ILLUMINATED_HEALING_BUFF_ID)) or "Illuminated Healing"
+local DIVINE_AEGIS_BUFF_ID = 47753
+local DIVINE_AEGIS_BUFF = (GetSpellInfo(DIVINE_AEGIS_BUFF_ID)) or "Divine Aegis"
 
 local CurrentPresence = nil
 local BLOOD_PRESENCE_BUFF_ID = 48263
@@ -526,6 +528,7 @@ local defaults = {
 		lock_pwsbar = false,
 		pwsbar_width = 75,
 		pwsbar_height = 15,
+		pwsbar_includeda = true,
         -- Settings for the Illum. Heal Bar
 		illumbar_enabled = false,
 		illumbar_color = {r = 0.96, g = 0.55, b = 0.73, a = 1},
@@ -1525,6 +1528,16 @@ function BloodShieldTracker:GetOptions()
         						BloodShieldTracker:PWSBarLock(val)
         					end,
                             get = function(info) return self.db.profile.lock_pwsbar end,
+        				},
+        				includeda = {
+        					name = L["Include Divine Aegis"],
+        					desc = L["IncludeDivineAegisDesc"],
+        					type = "toggle",
+        					order = 30,
+        					set = function(info, val)
+        					    self.db.profile.pwsbar_includeda = val
+        					end,
+                            get = function(info) return self.db.profile.pwsbar_includeda end,
         				},
                         dimensions = {
                             order = 300,
@@ -3770,11 +3783,18 @@ function BloodShieldTracker:CheckAuras()
         caster, stealable, consolidate, spellId
 
     local bsFound = false
+	-- PW:S variables
     local pwsFound = false
-    local pwsValue = OtherShields["PWS"]
+	local pwsPrevValue = OtherShields["PWS"] or 0
+    OtherShields["PWS"] = 0
+	-- Illuminated Healing variables
     local illumHealFound = false
     local illumPrevValue = OtherShields["IlluminatedHealing"] or 0
     OtherShields["IlluminatedHealing"] = 0
+	-- Divine Aegis variables
+    local divineAegisFound = false
+    local aegisPrevValue = OtherShields["DivineAegis"] or 0
+    OtherShields["DivineAegis"] = 0
     local iccBuffFound = false
     local vampBloodFound = false
     local healingDebuff = 0
@@ -3839,11 +3859,6 @@ function BloodShieldTracker:CheckAuras()
                 local value = GetNumericValue(TipFrame:GetRegions())
                 if value then
                     OtherShields["PWS"] = value
-                    if pwsValue and pwsValue ~= value then
-                        self:UpdatePWSBarText(value)
-                    end
-                    
-                    self.pwsbar:Show()
                 else
                     if self.db.profile.verbose == true then
                         self:Print("Error reading the Power Word: Shield tooltip.")
@@ -3865,6 +3880,24 @@ function BloodShieldTracker:CheckAuras()
                     end
                 end
             end
+
+	        elseif spellId == DIVINE_AEGIS_BUFF_ID then
+	            if self.db.profile.pwsbar_includeda == true and 
+					self.db.profile.pwsbar_enabled == true and IsBloodTank then
+
+	                divineAegisFound = true
+	                TipFrame:ClearLines()
+	                TipFrame:SetUnitBuff("player", name)
+	                local value = GetNumericValue(TipFrame:GetRegions())
+	                if value then
+	                    OtherShields["DivineAegis"] = 
+	                        OtherShields["DivineAegis"] + value
+	                else
+	                    if self.db.profile.verbose == true then
+	                        self:Print("Error reading the Divine Aegis tooltip.")
+	                    end
+	                end
+	            end
 
         elseif spellId == FROST_PRESENCE_BUFF_ID then
             CurrentPresence = "Frost"
@@ -3944,9 +3977,20 @@ function BloodShieldTracker:CheckAuras()
         BSAuraValue = 0
     end
     
-    if not pwsFound then
-        OtherShields["PWS"] = 0
-        self.pwsbar:Hide()
+    if self.db.profile.pwsbar_enabled == true and IsBloodTank then
+		local pwsValue = OtherShields["PWS"]
+		local aegisValue = OtherShields["DivineAegis"]
+		local pwsbarPrev = pwsPrevValue + aegisPrevValue
+		local pwsbarTotal = pwsValue + aegisValue
+
+		if pwsFound or divineAegisFound then
+            if pwsbarTotal and pwsbarTotal ~= pwsbarPrev then
+                self:UpdatePWSBarText(pwsbarTotal)
+            end
+            self.pwsbar:Show()
+        else
+            self.pwsbar:Hide()
+        end
     end
 
     if self.db.profile.illumbar_enabled == true and IsBloodTank then
