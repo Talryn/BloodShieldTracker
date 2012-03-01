@@ -10,8 +10,20 @@ local LibStub = _G.LibStub
 
 local BloodShieldTracker = LibStub("AceAddon-3.0"):NewAddon("BloodShieldTracker", "AceConsole-3.0", "AceEvent-3.0","AceTimer-3.0")
 
+-- Try to remove the Git hash at the end, otherwise return the passed in value.
+local function cleanupVersion(version)
+	local iter = string.gmatch(version, "(.*)-[a-z0-9]+$")
+	if iter then
+		local ver = iter()
+		if ver and #ver >= 3 then
+			return ver
+		end
+	end
+	return version
+end
+
 local ADDON_NAME = ...
-local ADDON_VERSION = "@project-version@"
+local ADDON_VERSION = cleanupVersion("@project-version@")
 
 local DEBUG_OUTPUT = false
 local DEBUG_BUFFER = ""
