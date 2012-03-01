@@ -2561,7 +2561,7 @@ function BloodShieldTracker:Skin()
     end
     
     if ElvUI and self.db.profile.elvui_enabled then
-        local E, L, DF = unpack(ElvUI)
+        local E, L, P, G = unpack(ElvUI)
         if E and E["media"] then
             local media = E["media"]
             if media.normTex and self.db.profile.elvui_texture then
