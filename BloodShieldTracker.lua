@@ -56,10 +56,6 @@ CustomUI.fontSize = nil
 CustomUI.fontFlags = nil
 CustomUI.showBorders = nil
 
--- Create the frame used to get the BS tooltip text
-local TipFrame = CreateFrame("GameTooltip", "BST_Tooltip", nil, "GameTooltipTemplate")
-TipFrame:SetOwner(UIParent, "ANCHOR_NONE")
-
 -- Keep track of time.  Start with current client time
 -- but will use the combat log timestamps after that.
 local currentTime = time()
@@ -3855,7 +3851,7 @@ function BloodShieldTracker:CheckAuras()
             else
                 if self.db.profile.verbose == true then
                     if self.db.profile.verbose == true then
-                        self:Print("Error reading the Blood Shield tooltip.")
+                        self:Print("Error reading the Blood Shield value.")
                     end
                 end
             end
@@ -3869,7 +3865,7 @@ function BloodShieldTracker:CheckAuras()
                     OtherShields["PWS"] = value
                 else
                     if self.db.profile.verbose == true then
-                        self:Print("Error reading the Power Word: Shield tooltip.")
+                        self:Print("Error reading the Power Word: Shield value.")
                     end
                 end
             end
@@ -3881,7 +3877,7 @@ function BloodShieldTracker:CheckAuras()
                         OtherShields["IlluminatedHealing"] + value
                 else
                     if self.db.profile.verbose == true then
-                        self:Print("Error reading the Illuminated Healing tooltip.")
+                        self:Print("Error reading the Illuminated Healing value.")
                     end
                 end
             end
@@ -3896,7 +3892,7 @@ function BloodShieldTracker:CheckAuras()
 	                        OtherShields["DivineAegis"] + value
 	                else
 	                    if self.db.profile.verbose == true then
-	                        self:Print("Error reading the Divine Aegis tooltip.")
+	                        self:Print("Error reading the Divine Aegis value.")
 	                    end
 	                end
 	            end
