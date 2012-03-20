@@ -3792,7 +3792,8 @@ local PWSAuraValue = 0
 
 function BloodShieldTracker:CheckAuras()
     local name, rank, icon, count, dispelType, duration, expires,
-        caster, stealable, consolidate, spellId
+        caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
+		value, value2, value3
 
     local bsFound = false
 	-- PW:S variables
@@ -3823,15 +3824,13 @@ function BloodShieldTracker:CheckAuras()
     i = 1
     repeat
         name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-            consolidate, spellId = UnitAura("player", i)
+            consolidate, spellId, canApplyAura, isBossDebuff, 
+			value, value2, value3 = UnitAura("player", i)
         if name == nil or spellId == nil then break end
 
         if spellId == BS_SPELL_ID then
-            -- Blood Shield present.  Get the value next from the tooltip.
+            -- Blood Shield present.
             bsFound = true
-            TipFrame:ClearLines()
-            TipFrame:SetUnitBuff("player", name)
-            local value = GetNumericValue(TipFrame:GetRegions())
             if value then
                 if BSAuraPresent == false then
                     -- Blood Shield applied
@@ -3841,7 +3840,7 @@ function BloodShieldTracker:CheckAuras()
                     self:NewBloodShield(GetTime(), value)
                 else
                     if value ~= BSAuraValue or 
-                        (expires ~= BSAuraExpires and value > 0) then
+                        (expires ~= BSAuraExpires and value1 > 0) then
                         -- Blood Shield refreshed
                         if self.db.profile.verbose == true then
                             self:Print("AURA: Blood Shield refreshed. "..value
@@ -3866,9 +3865,6 @@ function BloodShieldTracker:CheckAuras()
             -- Check for a Power Word: Shield
             if self.db.profile.pwsbar_enabled == true and IsBloodTank then
                 pwsFound = true
-                TipFrame:ClearLines()
-                TipFrame:SetUnitBuff("player", name)
-                local value = GetNumericValue(TipFrame:GetRegions())
                 if value then
                     OtherShields["PWS"] = value
                 else
@@ -3880,9 +3876,6 @@ function BloodShieldTracker:CheckAuras()
         elseif spellId == ILLUMINATED_HEALING_BUFF_ID then
             if self.db.profile.illumbar_enabled == true and IsBloodTank then
                 illumHealFound = true
-                TipFrame:ClearLines()
-                TipFrame:SetUnitBuff("player", name)
-                local value = GetNumericValue(TipFrame:GetRegions())
                 if value then
                     OtherShields["IlluminatedHealing"] = 
                         OtherShields["IlluminatedHealing"] + value
@@ -3898,9 +3891,6 @@ function BloodShieldTracker:CheckAuras()
 					self.db.profile.pwsbar_enabled == true and IsBloodTank then
 
 	                divineAegisFound = true
-	                TipFrame:ClearLines()
-	                TipFrame:SetUnitBuff("player", name)
-	                local value = GetNumericValue(TipFrame:GetRegions())
 	                if value then
 	                    OtherShields["DivineAegis"] = 
 	                        OtherShields["DivineAegis"] + value
@@ -3970,7 +3960,6 @@ function BloodShieldTracker:CheckAuras()
         		end
             end
         end 
-        
 
         i = i + 1
     until name == nil
@@ -4032,208 +4021,6 @@ function BloodShieldTracker:CheckAuras()
 	-- Just in case make sure the healing modifier is a sane value
 	if healingDebuffMultiplier > 1 then
 	    healingDebuffMultiplier = 1
-    end
-
-    self:UpdateMinHeal("CheckAura", "player")
-end
-
-function BloodShieldTracker:CheckAurasOld()
-    local name, rank, icon, count, dispelType, duration, expires,
-        caster, stealable, consolidate, spellId
-
-    -- Check for the Blood Shield
-    if self.db.profile.useAuraForShield == true then
-        name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-            consolidate, spellId = UnitAura("player", BS_SPELL)
-        if spellId then
-            -- Blood Shield present.  Get the value next from the tooltip.
-            TipFrame:ClearLines()
-            TipFrame:SetUnitBuff("player", name)
-            local value = GetNumericValue(TipFrame:GetRegions())
-            if value then
-                if BSAuraPresent == false then
-                    -- Blood Shield applied
-                    if self.db.profile.verbose == true then
-                        self:Print("AURA: Blood Shield applied. "..value)
-                    end
-                    self:NewBloodShield(GetTime(), value)
-                else
-                    if value ~= BSAuraValue then
-                        -- Blood Shield refreshed
-                        if self.db.profile.verbose == true then
-                            self:Print("AURA: Blood Shield refreshed. "..value
-                                .." ["..(value - BSAuraValue).."]")
-                        end
-                        self:BloodShieldUpdated("refreshed", GetTime(), value)
-                    end
-                end
-
-                BSAuraValue = value
-            else
-                if self.db.profile.verbose == true then
-                    self:Print("Error reading the Blood Shield tooltip.")
-                end
-            end
-            BSAuraPresent = true
-        else
-            if BSAuraPresent == true then
-                -- Blood Shield removed
-                if self.db.profile.verbose == true then
-                    self:Print("AURA: Blood Shield removed. "..BSAuraValue)
-                end
-
-                self:BloodShieldUpdated("removed", GetTime(), BSAuraValue)
-            end
-                
-            BSAuraPresent = false
-            BSAuraValue = 0
-        end
-    end
-
-    -- Check for a Power Word: Shield
-    if self.db.profile.pwsbar_enabled == true then
-        local pwsValue = OtherShields["PWS"]
-        name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-            consolidate, spellId = UnitAura("player", PWS_SPELL)
-        if spellId then
-            TipFrame:ClearLines()
-            TipFrame:SetUnitBuff("player", name)
-            local value = GetNumericValue(TipFrame:GetRegions())
-            if value then
-                OtherShields["PWS"] = value
-                pwsbar:Show()
-                if pwsValue and pwsValue ~= value then
-                    pwsbar.value:SetText(FormatNumber(value))
-                end
-            else
-                if self.db.profile.verbose == true then
-                    self:Print("Error reading the Power Word: Shield tooltip.")
-                end
-            end
-        else
-            OtherShields["PWS"] = 0
-            pwsbar:Hide()
-        end
-    end
-
-    -- Determine the presence
-    CurrentPresence = nil
-    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-        consolidate, spellId = UnitAura("player", FROST_PRESENCE_BUFF)
-    if spellId then
-        CurrentPresence = "Frost"
-    end
-    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-        consolidate, spellId = UnitAura("player", UNHOLY_PRESENCE_BUFF)
-    if spellId then
-        CurrentPresence = "Unholy"
-    end
-    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-        consolidate, spellId = UnitAura("player", BLOOD_PRESENCE_BUFF)
-    if spellId then
-        CurrentPresence = "Blood"
-    end
-
-    -- Check for the Dark Succor buff
-    DarkSuccorBuff = false
-    if DARK_SUCCOR_BUFF_NAME and #DARK_SUCCOR_BUFF_NAME > 0 then
-        name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-            consolidate, spellId = UnitAura("player", DARK_SUCCOR_BUFF_NAME)
-        if spellId then
-            DarkSuccorBuff = true
-        end
-    end
-
-    -- Check for the Luck of the Draw buff
-    luckOfTheDrawBuff = false
-    luckOfTheDrawAmt = 0
-    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-        consolidate, spellId = UnitAura("player", LUCK_OF_THE_DRAW_BUFF)
-    if spellId then
-        luckOfTheDrawBuff = true
-	    if not count or count == 0 then
-	        count = 1
-        end
-        luckOfTheDrawAmt = LUCK_OF_THE_DRAW_MOD * count
-    end
-
-    local iccBuffFound = false
-
-    -- Check for Hellscream's Warsong ICC buff
-    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-        consolidate, spellId = UnitAura("player", HELLSCREAM_BUFF)
-    if spellId then
-        iccBuffFound = true
-        iccBuff = true
-        iccBuffAmt = hellscreamBuffs[spellId] or hellscreamBuffs[HELLSCREAM_BUFF_30]
-    end
-
-    -- Check for Strength of Wrynn ICC buff
-    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-        consolidate,spellId = UnitAura("player", WRYNN_BUFF)
-    if spellId then
-        iccBuffFound = true
-        iccBuff = true
-        iccBuffAmt = wrynnBuffs[spellId] or wrynnBuffs[WRYNN_BUFF_30]
-    end
-
-    -- If the ICC buff isn't present, reset the values
-    if not iccBuffFound then
-        iccBuff = false
-        iccBuffAmt = 0.0
-    end
-
-    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-        consolidate, spellId = UnitAura("player", VB_BUFF)
-    if name then
-        vbBuff = true
-		-- No Need to check how much bonus health we get from VB since we listen
-		-- for Unit Max Health updates
-        if vbGlyphed then
-            vbHealthInc = vbGlyphedHealthInc
-            vbHealingInc = vbGlyphedHealingInc
-        else
-            vbHealthInc = vbUnglyphedHealthInc
-            vbHealingInc = vbUnglyphedHealingInc
-        end
-    else
-        vbBuff = false
-        vbHealthInc = 0.0
-        vbHealingInc = 0.0
-    end
-
-    local healingDebuff = 0
-	healingDebuffMultiplier = 0
-	-- Scan for healing debuffs
-	for k,v in pairs(healing_debuff_names) do
-		name, rank, icon, count, dispelType, duration, expires, caster, 
-		    stealable, consolidate, spellId = UnitDebuff("player", k)
-		if spellId and HEALING_DEBUFFS[spellId] then
-		    if not count or count == 0 then
-		        count = 1
-	        end
-			healingDebuff = HEALING_DEBUFFS[spellId] * count
-			if healingDebuff > healingDebuffMultiplier then
-			    healingDebuffMultiplier = healingDebuff
-			end
-		end
-	end
-	-- Just in case make sure the modifier is a sane value
-	if healingDebuffMultiplier > 1 then
-	    healingDebuffMultiplier = 1
-    end
-
-    --
-    -- Check for other healing buffs
-    --
-    -- Check for Guardian Spirit
-    gsBuff = false
-    gsHealModifier = 0.0
-    name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-        consolidate, spellId = UnitAura("player", GUARDIAN_SPIRIT_BUFF)
-    if name then
-        gsBuff = true
-        gsHealModifier = guardianSpiritHealBuff
     end
 
     self:UpdateMinHeal("CheckAura", "player")
