@@ -680,14 +680,11 @@ function BloodShieldTracker:GetOptions()
         					func = function()
         					    configMode = not configMode
         						if configMode then
-        							self.shieldbar:Show()
-        							self.estimatebar.bar:Show()
-									self.bars["PWSBar"].bar:Show()
-									self.bars["IllumBar"].bar:Show()
-									self.healthbar.bar:Show()
-									self.bars["TotalAbsorbsBar"].bar:Show()
+									for name, bar in pairs(self.bars) do
+										bar.bar:Show()
+									end
         						else
-        							self.shieldbar:Hide()
+        							self.shieldbar.bar:Hide()
         							if self.estimatebar.db.hide_ooc and not InCombatLockdown() then
         							    self.estimatebar.bar:Hide()
                                     end
