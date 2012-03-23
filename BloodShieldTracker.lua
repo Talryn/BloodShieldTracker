@@ -28,6 +28,9 @@ local ADDON_VERSION = cleanupVersion("@project-version@")
 local DEBUG_OUTPUT = false
 local DEBUG_BUFFER = ""
 
+-- Define Bar for now but the rest is at the bottom of the file.
+local Bar = {}
+
 local AGU = LibStub("AceGUI-3.0")
 
 -- Local versions for performance
@@ -478,97 +481,12 @@ local defaults = {
         verbose = false,
         enable_only_for_blood = true,
         precision = "Zero",
-        shield_bar_progress = "Time",
-        shield_bar_show_time = true,
-        shield_bar_time_pos = "RIGHT",
-        shield_sound_enabled = false,
-        shield_applied_sound = "None",
-        shield_removed_sound = "None",
-        status_bar_enabled = true,
-        shield_bar_text_format = "OnlyCurrent",
-        damage_bar_enabled = true,
-        hide_damage_bar_ooc = true,
-		lock_status_bar = false,
-		lock_damage_bar = false,
-		damage_bar_width = 100,
-		damage_bar_height = 15,
-		status_bar_width = 150,
-		status_bar_height = 15,
+		-- Font Settings
 		font_size = 12,
 		font_face = "Friz Quadrata TT",
 		font_outline = true,
 		font_monochrome = false,
 		font_thickoutline = false,
-		status_bar_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
-		status_bar_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-		status_bar_bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
-		estheal_bar_min_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-		estheal_bar_min_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
-		estheal_bar_min_bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
-		estheal_bar_opt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-		estheal_bar_opt_color = {r = 0.0, g = 1.0, b = 0.0, a = 1},
-		estheal_bar_opt_bgcolor = {r = 0.0, g = 0.65, b = 0.0, a = 0.8},
-		status_bar_texture = "Blizzard",
-		estheal_bar_texture = "Blizzard",
-		status_bar_border = true,
-		estimate_bar_mode = "DS",
-		estheal_bar_border = true,
-		estheal_bar_shown = true,
-		estheal_bar_show_text = true,
-		status_bar_shown = true,
-		est_heal_x = 0, est_heal_y = -40,
-		shield_bar_x = 0, shield_bar_y = 0,
-		estheal_bar_scale = 1,
-		status_bar_scale = 1,
-		useAuraForShield = true,
-		latencyMethod = "None",
-		latencyFixed = 0,
-        -- Settings for the PW:S Bar
-		pwsbar_enabled = false,
-		pwsbar_color = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-		pwsbar_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-		pwsbar_bgcolor = {r = 0.65, g = 0.65, b = 0.65, a = 0.8},
-		pwsbar_texture = "Blizzard",
-		pwsbar_border = true,
-		pwsbar_shown = true,
-		pwsbar_x = 0, pwsbar_y = 0,
-		pwsbar_scale = 1,
-		lock_pwsbar = false,
-		pwsbar_width = 75,
-		pwsbar_height = 15,
-		pwsbar_includeda = true,
-        -- Settings for the Illum. Heal Bar
-		illumbar_enabled = false,
-		illumbar_color = {r = 0.96, g = 0.55, b = 0.73, a = 1},
-		illumbar_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-		illumbar_bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
-		illumbar_texture = "Blizzard",
-		illumbar_border = true,
-		illumbar_shown = true,
-		illumbar_x = 0, illumbar_y = 0,
-		illumbar_scale = 1,
-		lock_illum = false,
-		illumbar_width = 75,
-		illumbar_height = 15,
-        -- Settings for the Health Bar
-		healthbar_enabled = false,
-		healthbar_hide_ooc = false,
-		healthbar_color = {r = 0.0, g = 0.5, b = 0.8, a = 1},
-		healthbar_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-		healthbar_bgcolor = {r = 0.0, g = 0.3, b = 0.6, a = 0.8},
-		healthbar_low_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
-		healthbar_low_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-		healthbar_low_bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
-		healthbar_texture = "Blizzard",
-		healthbar_border = true,
-		healthbar_shown = true,
-		healthbar_x = 0, healthbar_y = 0,
-		healthbar_scale = 1,
-		lock_healthbar = false,
-		healthbar_width = 75,
-		healthbar_height = 15,
-		healthbar_low_percent = 0.3,
-		healthbar_text_format = "OnlyCurrent",
         -- Skinning options
         tukui_enabled = true,
         tukui_borders = true,
@@ -583,9 +501,76 @@ local defaults = {
         -- LDB Display
         ldb_data_feed = "None",
         ldb_short_label = false,
+		-- Bars
+		bars = {
+			-- Provide defaults for all bars.
+			-- These are inherited if no bar or no value is set.
+			['**'] = {
+				enabled = false,
+				shown = true,
+				locked = false,
+				texture = "Blizzard",
+				border = true,
+				color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
+				bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
+				textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+				x = 0, 
+				y = 0,
+				width = 75,
+				height = 15,
+				scale = 1,
+			},
+			["ShieldBar"] = {
+				enabled = true,
+		        progress = "Time",
+		        show_time = true,
+		        time_pos = "RIGHT",
+		        sound_enabled = false,
+		        sound_applied = "None",
+		        sound_removed = "None",
+		        text_format = "OnlyCurrent",
+				useAuraForShield = true,
+			},
+			["EstimateBar"] = {
+				enabled = true,
+				hide_ooc = false,
+				show_text = true,
+				bar_mode = "DS",
+				latencyMethod = "None",
+				latencyFixed = 0,
+				color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
+				bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
+				alt_color = {r = 0.0, g = 1.0, b = 0.0, a = 1},
+				alt_bgcolor = {r = 0.0, g = 0.65, b = 0.0, a = 0.8},
+				alt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+			},
+			["HealthBar"] = {
+				hide_ooc = false,
+				low_percent = 0.3,
+				text_format = "OnlyCurrent",
+				color = {r = 0.0, g = 0.5, b = 0.8, a = 1},
+				bgcolor = {r = 0.0, g = 0.3, b = 0.6, a = 0.8},
+				alt_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
+				alt_bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
+				alt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+			},
+			["PWSBar"] = {
+				color = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
+				includeda = true
+			},
+			["IllumBar"] = {
+				color = {r = 0.96, g = 0.55, b = 0.73, a = 1},
+				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
+			},
+			["TotalAbsorbsBar"] = {
+				color = {r = 0.5, g = 0.5, b = 0.5, a = 1},
+				bgcolor = {r = 0.5, g = 0.5, b = 0.5, a = 0.7},
+				includebs = false
+			},
+		}
     }
 }
-
 
 local options
 
@@ -696,19 +681,22 @@ function BloodShieldTracker:GetOptions()
         					    configMode = not configMode
         						if configMode then
         							self.shieldbar:Show()
-        							self.estimatebar:Show()
-        							self.pwsbar:Show()
-        							self.illumbar:Show()
-        							self.healthbar:Show()
+        							self.estimatebar.bar:Show()
+									self.bars["PWSBar"].bar:Show()
+									self.bars["IllumBar"].bar:Show()
+									self.healthbar.bar:Show()
+									self.bars["TotalAbsorbsBar"].bar:Show()
         						else
         							self.shieldbar:Hide()
-        							if self.estimatebar.hideooc and not InCombatLockdown() then
-        							    self.estimatebar:Hide()
+        							if self.estimatebar.db.hide_ooc and not InCombatLockdown() then
+        							    self.estimatebar.bar:Hide()
                                     end
-                                    self.pwsbar:Hide()
-                                    self.illumbar:Hide()
-        							if self.healthbar.hideooc and not InCombatLockdown() then
-        							    self.healthbar:Hide()
+									self.bars["PWSBar"].bar:Hide()
+									self.bars["IllumBar"].bar:Hide()
+									self.bars["TotalAbsorbsBar"].bar:Hide()
+        							if self.db.profile.bars["HealthBar"].hide_ooc and 
+										not InCombatLockdown() then
+        							    self.healthbar.bar:Hide()
                                     end
         						end
         					end,
@@ -852,25 +840,29 @@ function BloodShieldTracker:GetOptions()
         					type = "toggle",
         					order = 10,
         					set = function(info, val)
-        					    self.db.profile.status_bar_enabled = val
+        					    self.db.profile.bars["ShieldBar"].enabled = val
         					    if not val then
-        						    BloodShieldTracker.shieldbar:Hide()
+        						    self.shieldbar.bar:Hide()
         						end
         					end,
-                            get = function(info) return self.db.profile.status_bar_enabled end,
+                            get = function(info)
+								return self.db.profile.bars["ShieldBar"].enabled
+							end,
         				},
-        				lock_status_bar = {
+        				lock_bar = {
         					name = L["Lock bar"],
         					desc = L["LockBarDesc"],
         					type = "toggle",
         					order = 20,
         					set = function(info, val)
-        					    self.db.profile.lock_status_bar = val 
-        						BloodShieldTracker:ShieldBarLock(val)
+        					    self.db.profile.bars["ShieldBar"].locked = val 
+        						self.shieldbar:Lock()
         					end,
-                            get = function(info) return self.db.profile.lock_status_bar end,
+                            get = function(info)
+								return self.db.profile.bars["ShieldBar"].locked
+							end,
         				},
-        				shield_bar_text_format = {
+        				text_format = {
         					name = L["Text Format"],
         					desc = L["ShieldTextFormat_OptionDesc"],
         					type = "select",
@@ -883,13 +875,13 @@ function BloodShieldTracker:GetOptions()
         					},
         					order = 30,
         					set = function(info, val)
-        					    self.db.profile.shield_bar_text_format = val
+        					    self.db.profile.bars["ShieldBar"].text_format = val
         					end,
                             get = function(info)
-                                return self.db.profile.shield_bar_text_format
+                                return self.db.profile.bars["ShieldBar"].text_format
                             end,
         				},
-        				shield_bar_progress = {
+        				progress = {
         					name = L["Progress Bar"],
         					desc = L["ShieldProgress_OptionDesc"],
         					type = "select",
@@ -900,13 +892,13 @@ function BloodShieldTracker:GetOptions()
         					},
         					order = 40,
         					set = function(info, val)
-        					    self.db.profile.shield_bar_progress = val
+        					    self.db.profile.bars["ShieldBar"].progress = val
         					    if val == "Time" or val == "None" then
         					        self:UpdateShieldBarMode()
     					        end
         					end,
                             get = function(info)
-                                return self.db.profile.shield_bar_progress
+                                return self.db.profile.bars["ShieldBar"].progress
                             end,
         				},
                         timeRemaining = {
@@ -914,24 +906,24 @@ function BloodShieldTracker:GetOptions()
                             type = "header",
                             name = L["Time Remaining"],
                         },
-        				shield_bar_show_time = {
+        				show_time = {
         					name = L["Show Time"],
         					desc = L["ShowTime_OptionDesc"],
         					type = "toggle",
         					order = 110,
         					set = function(info, val)
-        					    self.db.profile.shield_bar_show_time = val
+        					    self.db.profile.bars["ShieldBar"].show_time = val
         					    if val then
-        					        self.shieldbar.time:Show()
+        					        self.shieldbar.bar.time:Show()
     					        else
-    					            self.shieldbar.time:Hide()
+    					            self.shieldbar.bar.time:Hide()
 					            end
         					end,
                             get = function(info)
-                                return self.db.profile.shield_bar_show_time
+                                return self.db.profile.bars["ShieldBar"].show_time
                             end,
         				},
-        				shield_bar_time_pos = {
+        				time_pos = {
         					name = L["Position"],
         					desc = L["TimePosition_OptionDesc"],
         					type = "select",
@@ -941,15 +933,15 @@ function BloodShieldTracker:GetOptions()
         					},
         					order = 120,
         					set = function(info, val)
-        					    self.db.profile.shield_bar_time_pos = val
-    					        self.shieldbar.time:SetPoint(val or "RIGHT")
-    					        self.shieldbar.time:SetJustifyH(val or "RIGHT")
+        					    self.db.profile.bars["ShieldBar"].time_pos = val
+    					        self.shieldbar.bar.time:SetPoint(val or "RIGHT")
+    					        self.shieldbar.bar.time:SetJustifyH(val or "RIGHT")
         					end,
                             get = function(info)
-                                return self.db.profile.shield_bar_time_pos
+                                return self.db.profile.bars["ShieldBar"].time_pos
                             end,
                             disabled = function()
-                                return not self.db.profile.shield_bar_show_time
+                                return not self.db.profile.bars["ShieldBar"].show_time
                             end,
         				},
                         sound = {
@@ -957,19 +949,19 @@ function BloodShieldTracker:GetOptions()
                             type = "header",
                             name = L["Sound"],
                         },
-        				shield_sound_enabled = {
+        				sound_enabled = {
         					name = L["Enabled"],
         					desc = L["ShieldSoundEnabledDesc"],
         					type = "toggle",
         					order = 210,
         					set = function(info, val)
-        					    self.db.profile.shield_sound_enabled = val
+        					    self.db.profile.bars["ShieldBar"].sound_enabled = val
         					end,
                             get = function(info)
-                                return self.db.profile.shield_sound_enabled
+                                return self.db.profile.bars["ShieldBar"].sound_enabled
                             end,
         				},
-        				shield_bar_applied_sound = {
+        				applied_sound = {
         					order = 220,
         					name = L["Applied Sound"],
         					desc = L["AppliedSoundDesc"],
@@ -977,16 +969,16 @@ function BloodShieldTracker:GetOptions()
         					values = LSM:HashTable("sound"),
         					dialogControl = 'LSM30_Sound',
         					get = function()
-        					    return self.db.profile.shield_applied_sound
+        					    return self.db.profile.bars["ShieldBar"].sound_applied
         					end,
         					set = function(info, val)
-        					    self.db.profile.shield_applied_sound = val
+        					    self.db.profile.bars["ShieldBar"].sound_applied = val
         					end,
         					disabled = function()
-        					    return not self.db.profile.shield_sound_enabled
+        					    return not self.db.profile.bars["ShieldBar"].sound_enabled
         					end,
         				},
-        				shield_bar_removed_sound = {
+        				removed_sound = {
         					order = 230,
         					name = L["Removed Sound"],
         					desc = L["RemovedSoundDesc"],
@@ -994,13 +986,13 @@ function BloodShieldTracker:GetOptions()
         					values = LSM:HashTable("sound"),
         					dialogControl = 'LSM30_Sound',
         					get = function()
-        					    return self.db.profile.shield_removed_sound
+        					    return self.db.profile.bars["ShieldBar"].sound_removed
         					end,
         					set = function(info, val)
-        					    self.db.profile.shield_removed_sound = val
+        					    self.db.profile.bars["ShieldBar"].sound_removed = val
         					end,
         					disabled = function()
-        					    return not self.db.profile.shield_sound_enabled
+        					    return not self.db.profile.bars["ShieldBar"].sound_enabled
         					end,
         				},
                         dimensions = {
@@ -1008,7 +1000,7 @@ function BloodShieldTracker:GetOptions()
                             type = "header",
                             name = L["Dimensions"],
                         },
-        				status_bar_width = {
+        				width = {
         					order = 310,
         					name = L["Width"],
         					desc = L["BarWidth_Desc"],	
@@ -1017,15 +1009,15 @@ function BloodShieldTracker:GetOptions()
         					max = 300,
         					step = 1,
         					set = function(info, val)
-        					    self.db.profile.status_bar_width = val 
-        						self.shieldbar:SetWidth(val)
-        						self.shieldbar.border:SetWidth(val+9)
+        					    self.db.profile.bars["ShieldBar"].width = val 
+        						self.shieldbar.bar:SetWidth(val)
+        						self.shieldbar.bar.border:SetWidth(val+9)
         					end,
         					get = function(info, val)
-        					    return self.db.profile.status_bar_width
+        					    return self.db.profile.bars["ShieldBar"].width
         					end,
         				},
-        				status_bar_height = {
+        				height = {
         					order = 320,
         					name = L["Height"],
         					desc = L["BarHeight_Desc"],
@@ -1034,15 +1026,15 @@ function BloodShieldTracker:GetOptions()
         					max = 30,
         					step = 1,
         					set = function(info, val)
-        					    self.db.profile.status_bar_height = val 
-        						self.shieldbar:SetHeight(val)
-        						self.shieldbar.border:SetHeight(val + 8)
+        					    self.db.profile.bars["ShieldBar"].height = val 
+        						self.shieldbar.bar:SetHeight(val)
+        						self.shieldbar.bar.border:SetHeight(val + 8)
         					end,
         					get = function(info, val)
-        					    return self.db.profile.status_bar_height
+        					    return self.db.profile.bars["ShieldBar"].height
         					end,					
         				},
-        				status_bar_scaling = {
+        				scale = {
         					order = 330,
         					name = L["Scale"],
         					desc = L["ScaleDesc"],
@@ -1050,10 +1042,12 @@ function BloodShieldTracker:GetOptions()
         					min = 0.1,
         					max = 3,
         					step = 0.1,
-        					get = function() return self.db.profile.status_bar_scale end,
+        					get = function()
+								return self.db.profile.bars["ShieldBar"].scale
+							end,
         					set = function(info, val)
-        					    self.db.profile.status_bar_scale = val
-        					    self.shieldbar:SetScale(val)
+        					    self.db.profile.bars["ShieldBar"].scale = val
+        					    self.shieldbar.bar:SetScale(val)
         					end
         				},
                         colors = {
@@ -1061,51 +1055,51 @@ function BloodShieldTracker:GetOptions()
                             type = "header",
                             name = L["Colors"],
                         },
-        				status_bar_textcolor = {
+        				textcolor = {
         					order = 410,
         					name = L["Text Color"],
         					desc = L["BloodShieldBarTextColor_OptionDesc"],
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.status_bar_textcolor
+        					    local c = self.db.profile.bars["ShieldBar"].textcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self:UpdateShieldBarGraphics()
+        					    self.shieldbar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.status_bar_textcolor
+        				        local c = self.db.profile.bars["ShieldBar"].textcolor
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
-        				status_bar_color = {
+        				color = {
         					order = 420,
         					name = L["Bar Color"],
         					desc = L["BloodShieldBarColor_OptionDesc"],
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.status_bar_color
+        					    local c = self.db.profile.bars["ShieldBar"].color
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self:UpdateShieldBarGraphics()
+        					    self.shieldbar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.status_bar_color
+        				        local c = self.db.profile.bars["ShieldBar"].color
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
-        				status_bar_bgcolor = {
+        				bgcolor = {
         					order = 430,
         					name = L["Bar Depleted Color"],
         					desc = L["BloodShieldDepletedBarColor_OptionDesc"],
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.status_bar_bgcolor
+        					    local c = self.db.profile.bars["ShieldBar"].bgcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self:UpdateShieldBarGraphics()
+        					    self.shieldbar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.status_bar_bgcolor
+        				        local c = self.db.profile.bars["ShieldBar"].bgcolor
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
@@ -1114,7 +1108,7 @@ function BloodShieldTracker:GetOptions()
                             type = "header",
                             name = L["Appearance"],
                         },
-        				status_bar_texture_opt = {
+        				texture_opt = {
         					order = 510,
         					name = L["Texture"],
         					desc = L["BarTexture_OptionDesc"],
@@ -1122,49 +1116,50 @@ function BloodShieldTracker:GetOptions()
         					values = LSM:HashTable("statusbar"),
         					dialogControl = 'LSM30_Statusbar',
         					get = function()
-        					    return self.db.profile.status_bar_texture
+        					    return self.db.profile.bars["ShieldBar"].texture
         					end,
         					set = function(info, val)
-        					    self.db.profile.status_bar_texture = val
-        					    self:UpdateShieldBarTexture()
+        					    self.db.profile.bars["ShieldBar"].texture = val
+        					    self.shieldbar:UpdateTexture()
         					end,
         					disabled = function()
-        					    return not self.db.profile.status_bar_shown
+        					    return not self.db.profile.bars["ShieldBar"].shown
         					end,
         				},
-        				status_bar_border_visible_opt = {
+        				border_visible_opt = {
         					order = 520,
         					name = L["ShowBorder"],
         					desc = L["ShowBorderDesc"],
         					type = "toggle",
         					get = function()
-        					    return self.db.profile.status_bar_border
+        					    return self.db.profile.bars["ShieldBar"].border
         					end,
         					set = function(info, val)
-        					    self.db.profile.status_bar_border = val
-        					    self:UpdateShieldBarBorder()
+        					    self.db.profile.bars["ShieldBar"].border = val
+        					    self.shieldbar:UpdateBorder()
         					end,
         				},
-        				status_bar_visible_opt = {
+        				visible_opt = {
         					order = 530,
         					name = L["ShowBar"],
         					desc = L["ShowBarDesc"],
         					type = "toggle",
-        					get = function() return self.db.profile.status_bar_shown end,
+        					get = function()
+								return self.db.profile.bars["ShieldBar"].shown
+							end,
         					set = function(info,val) 
-        				        self.db.profile.status_bar_shown = val
-        				        self:UpdateShieldBarVisibility()
+        				        self.db.profile.bars["ShieldBar"].shown = val
+        				        self.shieldbar:UpdateVisibility()
         				    end,
         				},
         			},
     			},
-    			estHealBarOpts = {
+    			estimateBarOpts = {
     			    order = 3,
     			    type = "group",
     			    name = L["Estimated Healing Bar"],
     			    desc = L["Estimated Healing Bar"],
     			    args = {
-        				-- Estimated Healing
 					    description = {
 					        order = 1,
 					        type = "description",
@@ -1175,53 +1170,54 @@ function BloodShieldTracker:GetOptions()
                             type = "header",
                             name = L["General Options"],
                         },
-                		estheal_bar_enabled = {
+                		enabled = {
         					name = L["Enabled"],
         					desc = L["Enable the Estimated Healing Bar."],
         					type = "toggle",
         					order = 10,
         					set = function(info, val)
-        					    self.db.profile.damage_bar_enabled = val
+        					    self.db.profile.bars["EstimateBar"].enabled = val
         					    if not val then
-        						    self.estimatebar:Hide()
+        						    self.estimatebar.bar:Hide()
         						end
         					end,
-                            get = function(info) return self.db.profile.damage_bar_enabled end,
+                            get = function(info)
+								return self.db.profile.bars["EstimateBar"].enabled 
+							end,
         				},
-        				lock_estheal_bar = {
+        				lock_bar = {
         					name = L["Lock bar"],
         					desc = L["LockBarDesc"],
         					type = "toggle",
         					order = 20,
         					set = function(info, val)
-        					    self.db.profile.lock_damage_bar = val 
-        						BloodShieldTracker:EstHealBarLock(val)
+        					    self.db.profile.bars["EstimateBar"].locked = val 
+        						self.estimatebar:Lock()
         					end,
-                            get = function(info) return self.db.profile.lock_damage_bar end,
+                            get = function(info)
+								return self.db.profile.bars["EstimateBar"].locked
+							end,
         				},
-        				hide_damage_bar_ooc = {
+        				hide_ooc = {
         					name = L["Hide out of combat"],
         					desc = L["HideOOC_OptionDesc"],
         					type = "toggle",
         					order = 30,
         					set = function(info, val)
-        					    self.db.profile.hide_damage_bar_ooc = val 
-        						if BloodShieldTracker.estimatebar then
-        							BloodShieldTracker.estimatebar.hideooc = val
-        							if not InCombatLockdown() then
-        							    if val then
-        							        self.estimatebar:Hide()
-        						        elseif self:IsTrackerEnabled() then
-        						            self.estimatebar:Show()
-        					            end
-        					        end
-        						end					
+        					    self.db.profile.bars["EstimateBar"].hide_ooc = val
+    							if not InCombatLockdown() then
+    							    if val then
+    							        self.estimatebar.bar:Hide()
+    						        elseif self:IsTrackerEnabled() then
+    						            self.estimatebar.bar:Show()
+    					            end
+    					        end
         					end,
                             get = function(info)
-                                return self.db.profile.hide_damage_bar_ooc
+                                return self.db.profile.bars["EstimateBar"].hide_ooc
                             end,
         				},
-        				estimate_bar_mode = {
+        				bar_mode = {
         					name = L["Mode"],
         					desc = L["Mode"],
         					type = "select",
@@ -1231,29 +1227,31 @@ function BloodShieldTracker:GetOptions()
         					},
         					order = 40,
         					set = function(info, val)
-        					    self.db.profile.estimate_bar_mode = val
+        					    self.db.profile.bars["EstimateBar"].bar_mode = val
         					end,
                             get = function(info)
-                                return self.db.profile.estimate_bar_mode
+                                return self.db.profile.bars["EstimateBar"].bar_mode
                             end,
         				},
-        				estheal_bar_show_text = {
+        				show_text = {
         					name = L["Show Text"],
         					desc = L["EstHealBarShowText_OptDesc"],
         					type = "toggle",
         					order = 35,
         					set = function(info, val)
-        					    self.db.profile.estheal_bar_show_text = val
+        					    self.db.profile.bars["EstimateBar"].show_text = val
         					    self:UpdateMinHeal("UpdateShowText", "player")
         					end,
-                            get = function(info) return self.db.profile.estheal_bar_show_text end,
+                            get = function(info)
+								return self.db.profile.bars["EstimateBar"].show_text
+							end,
         				},
                         dimensions = {
                             order = 50,
                             type = "header",
                             name = L["Dimensions"],
                         },
-        				estheal_bar_width = {
+        				bar_width = {
         					order = 60,
         					name = L["Width"],
         					desc = L["Change the width of the estimated healing bar."],	
@@ -1261,15 +1259,15 @@ function BloodShieldTracker:GetOptions()
         					min = 10,
         					max = 200,
         					set = function(info, val)
-        					    self.db.profile.damage_bar_width = val 
-        						self.estimatebar:SetWidth(val)
-        						self.estimatebar.border:SetWidth(val+9)
+        					    self.db.profile.bars["EstimateBar"].width = val 
+        						self.estimatebar.bar:SetWidth(val)
+        						self.estimatebar.bar.border:SetWidth(val+9)
         					end,
         					get = function(info, val)
-        					    return self.db.profile.damage_bar_width
+        					    return self.db.profile.bars["EstimateBar"].width
         					end,
         				},
-        				estheal_bar_height = {
+        				bar_height = {
         					order = 70,
         					name = L["Height"],
         					desc = L["Change the height of the estimated healing bar."],	
@@ -1278,15 +1276,15 @@ function BloodShieldTracker:GetOptions()
         					max = 30,
         					step = 1,
         					set = function(info, val)
-        					    self.db.profile.damage_bar_height = val 
-        						self.estimatebar:SetHeight(val)
-        						self.estimatebar.border:SetHeight(val + 8)
+        					    self.db.profile.bars["EstimateBar"].height = val 
+        						self.estimatebar.bar:SetHeight(val)
+        						self.estimatebar.bar.border:SetHeight(val + 8)
         					end,
         					get = function(info, val)
-        					    return self.db.profile.damage_bar_height
+        					    return self.db.profile.bars["EstimateBar"].height
         					end,
         				},
-        				estheal_bar_scaling = {
+        				bar_scaling = {
         					order = 80,
         					name = L["Scale"],
         					desc = L["ScaleDesc"],
@@ -1295,11 +1293,11 @@ function BloodShieldTracker:GetOptions()
         					max = 3,
         					step = 0.1,
         					get = function()
-        					    return self.db.profile.estheal_bar_scale
+        					    return self.db.profile.bars["EstimateBar"].scale
         					end,
         					set = function(info, val)
-        					    self.db.profile.estheal_bar_scale = val
-        					    self.estimatebar:SetScale(val)
+        					    self.db.profile.bars["EstimateBar"].scale = val
+        					    self.estimatebar.bar:SetScale(val)
         					end
         				},
                         colorsMinimum = {
@@ -1307,60 +1305,51 @@ function BloodShieldTracker:GetOptions()
                             type = "header",
                             name = L["Colors for Minimum Heal"],
                         },
-        				estheal_bar_min_textcolor = {
+        				min_textcolor = {
         					order = 100,
         					name = L["Minimum Text Color"],
         					desc = L["EstHealBarMinTextColor_OptionDesc"],
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.estheal_bar_min_textcolor
+        					    local c = self.db.profile.bars["EstimateBar"].textcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    if self.estimatebar then
-        					        self:UpdateEstimateBarColors(
-        					            self.estimatebar.minheal or true)
-        					    end
+								self.estimatebar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.estheal_bar_min_textcolor
+        				        local c = self.db.profile.bars["EstimateBar"].textcolor
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
-        				estheal_bar_min_color = {
+        				min_color = {
         					order = 110,
         					name = L["Minimum Bar Color"],
         					desc = L["EstHealBarMinColor_OptionDesc"],
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.estheal_bar_min_color
+        					    local c = self.db.profile.bars["EstimateBar"].color
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    if self.estimatebar then
-        					        self:UpdateEstimateBarColors(
-        					            self.estimatebar.minheal or true)
-        					    end
+       					        self.estimatebar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.estheal_bar_min_color
+        				        local c = self.db.profile.bars["EstimateBar"].color
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
-        				estheal_bar_min_bgcolor = {
+        				min_bgcolor = {
         					order = 120,
         					name = L["Minimum Bar Background Color"],
         					desc = L["EstHealBarMinBackgroundColor_OptionDesc"],
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.estheal_bar_min_bgcolor
+        					    local c = self.db.profile.bars["EstimateBar"].bgcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    if self.estimatebar then
-        					        self:UpdateEstimateBarColors(
-        					            self.estimatebar.minheal or true)
-        					    end
+       					        self.estimatebar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.estheal_bar_min_bgcolor
+        				        local c = self.db.profile.bars["EstimateBar"].bgcolor
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
@@ -1369,41 +1358,35 @@ function BloodShieldTracker:GetOptions()
                             type = "header",
                             name = L["Colors for Optimal Heal"],
                         },
-        				estheal_bar_opt_textcolor = {
+        				opt_textcolor = {
         					order = 140,
         					name = L["Optimal Text Color"],
         					desc = L["EstHealBarOptTextColor_OptionDesc"],
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.estheal_bar_opt_textcolor
+        					    local c = self.db.profile.bars["EstimateBar"].alt_textcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    if self.estimatebar then
-        					        self:UpdateEstimateBarColors(
-        					            self.estimatebar.minheal or true)
-        					    end
+       					        self.estimatebar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.estheal_bar_opt_textcolor
+        				        local c = self.db.profile.bars["EstimateBar"].alt_textcolor
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
-        				estheal_bar_opt_color = {
+        				opt_color = {
         					order = 150,
         					name = L["Optimal Bar Color"],
         					desc = L["EstHealBarOptColor_OptionDesc"],
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.estheal_bar_opt_color
+        					    local c = self.db.profile.bars["EstimateBar"].alt_color
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    if self.estimatebar then
-        					        self:UpdateEstimateBarColors(
-        					            self.estimatebar.minheal or true)
-        					    end
+       					        self.estimatebar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.estheal_bar_opt_color
+        				        local c = self.db.profile.bars["EstimateBar"].alt_color
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
@@ -1412,7 +1395,7 @@ function BloodShieldTracker:GetOptions()
                             type = "header",
                             name = L["Appearance"],
                         },
-        				estheal_bar_texture_opt = {
+        				texture_opt = {
         					order = 170,
         					name = L["Texture"],
         					desc = L["BarTexture_OptionDesc"],
@@ -1420,40 +1403,40 @@ function BloodShieldTracker:GetOptions()
         					values = LSM:HashTable("statusbar"),
         					dialogControl = 'LSM30_Statusbar',
         					get = function()
-        					    return self.db.profile.estheal_bar_texture
+        					    return self.db.profile.bars["EstimateBar"].texture
         					end,
         					set = function(info, val)
-        					    self.db.profile.estheal_bar_texture = val
-        					    self:UpdateEstimateBarTexture()
+        					    self.db.profile.bars["EstimateBar"].texture = val
+        					    self.estimatebar:UpdateTexture()
         					end,
         					disabled = function()
-        					    return not self.db.profile.estheal_bar_shown
+        					    return not self.db.profile.bars["EstimateBar"].shown
         					end,
         				},
-        				estheal_bar_border_visible_opt = {
+        				border_visible_opt = {
         					order = 180,
         					name = L["ShowBorder"],
         					desc = L["ShowBorderDesc"],
         					type = "toggle",
         					get = function()
-        					    return self.db.profile.estheal_bar_border
+        					    return self.db.profile.bars["EstimateBar"].border
         					end,
         					set = function(info, val)
-        					    self.db.profile.estheal_bar_border = val
-        					    self:UpdateEstimateBarBorder()
+        					    self.db.profile.bars["EstimateBar"].border = val
+        					    self.estimatebar:UpdateBorder()
         					end,
         				},
-        				estheal_bar_visible_opt = {
+        				visible_opt = {
         					order = 190,
         					name = L["ShowBar"],
         					desc = L["ShowBarDesc"],
         					type = "toggle",
         					get = function()
-        					    return self.db.profile.estheal_bar_shown
+        					    return self.db.profile.bars["EstimateBar"].shown
         					end,
         					set = function(info,val)
-        					    self.db.profile.estheal_bar_shown = val
-        					    self:UpdateEstimateBarVisibility()
+        					    self.db.profile.bars["EstimateBar"].shown = val
+        					    self.estimatebar:UpdateVisibility()
         					end,
         				},
                         latencyOptions = {
@@ -1472,10 +1455,10 @@ function BloodShieldTracker:GetOptions()
         					},
         					order = 510,
         					set = function(info, val)
-        					    self.db.profile.latencyMethod = val
+        					    self.db.profile.bars["EstimateBar"].latencyMethod = val
         					end,
                             get = function(info)
-                                return self.db.profile.latencyMethod
+                                return self.db.profile.bars["EstimateBar"].latencyMethod
                             end,
         				},
         				latencyFixed = {
@@ -1487,10 +1470,10 @@ function BloodShieldTracker:GetOptions()
         					max = 2000,
         					step = 1,
         					set = function(info, val)
-        					    self.db.profile.latencyFixed = val 
+        					    self.db.profile.bars["EstimateBar"].latencyFixed = val 
         					end,
         					get = function(info, val)
-        					    return self.db.profile.latencyFixed
+        					    return self.db.profile.bars["EstimateBar"].latencyFixed
         					end,					
         				},
 
@@ -1513,29 +1496,33 @@ function BloodShieldTracker:GetOptions()
                             type = "header",
                             name = L["General Options"],
                         },
-                		pwsbar_enabled = {
+                		enabled = {
         					name = L["Enabled"],
         					desc = L["EnableBarDesc"],
         					type = "toggle",
         					order = 10,
         					set = function(info, val)
-        					    self.db.profile.pwsbar_enabled = val
+        					    self.db.profile.bars["PWSBar"].enabled = val
         					    if not val then
-        						    BloodShieldTracker.pwsbar:Hide()
+        						    self.bars["PWSBar"].bar:Hide()
         						end
         					end,
-                            get = function(info) return self.db.profile.pwsbar_enabled end,
+                            get = function(info)
+								return self.db.profile.bars["PWSBar"].enabled
+							end,
         				},
-        				lock_pwsbar = {
+        				locked = {
         					name = L["Lock bar"],
         					desc = L["LockBarDesc"],
         					type = "toggle",
         					order = 20,
         					set = function(info, val)
-        					    self.db.profile.lock_pwsbar = val 
-        						BloodShieldTracker:PWSBarLock(val)
+        					    self.db.profile.bars["PWSBar"].locked = val 
+        						self.bars["PWSBar"]:Lock(val)
         					end,
-                            get = function(info) return self.db.profile.lock_pwsbar end,
+                            get = function(info)
+								return self.db.profile.bars["PWSBar"].locked
+							end,
         				},
         				includeda = {
         					name = L["Include Divine Aegis"],
@@ -1543,16 +1530,18 @@ function BloodShieldTracker:GetOptions()
         					type = "toggle",
         					order = 30,
         					set = function(info, val)
-        					    self.db.profile.pwsbar_includeda = val
+        					    self.db.profile.bars["PWSBar"].includeda = val
         					end,
-                            get = function(info) return self.db.profile.pwsbar_includeda end,
+                            get = function(info)
+								return self.db.profile.bars["PWSBar"].includeda
+							end,
         				},
                         dimensions = {
                             order = 300,
                             type = "header",
                             name = L["Dimensions"],
                         },
-        				pwsbar_width = {
+        				width = {
         					order = 310,
         					name = L["Width"],
         					desc = L["BarWidth_Desc"],	
@@ -1561,15 +1550,15 @@ function BloodShieldTracker:GetOptions()
         					max = 300,
         					step = 1,
         					set = function(info, val)
-        					    self.db.profile.pwsbar_width = val 
-        						self.pwsbar:SetWidth(val)
-        						self.pwsbar.border:SetWidth(val+9)
+        					    self.db.profile.bars["PWSBar"].width = val 
+        						self.bars["PWSBar"].bar:SetWidth(val)
+        						self.bars["PWSBar"].bar.border:SetWidth(val+9)
         					end,
         					get = function(info, val)
-        					    return self.db.profile.pwsbar_width
+        					    return self.db.profile.bars["PWSBar"].width
         					end,
         				},
-        				pwsbar_height = {
+        				height = {
         					order = 320,
         					name = L["Height"],
         					desc = L["BarHeight_Desc"],
@@ -1578,15 +1567,15 @@ function BloodShieldTracker:GetOptions()
         					max = 30,
         					step = 1,
         					set = function(info, val)
-        					    self.db.profile.pwsbar_height = val 
-        						self.pwsbar:SetHeight(val)
-        						self.pwsbar.border:SetHeight(val + 8)
+        					    self.db.profile.bars["PWSBar"].height = val 
+        						self.bars["PWSBar"].bar:SetHeight(val)
+        						self.bars["PWSBar"].bar.border:SetHeight(val + 8)
         					end,
         					get = function(info, val)
-        					    return self.db.profile.pwsbar_height
+        					    return self.db.profile.bars["PWSBar"].height
         					end,					
         				},
-        				pwsbar_scaling = {
+        				scaling = {
         					order = 330,
         					name = L["Scale"],
         					desc = L["ScaleDesc"],
@@ -1594,10 +1583,12 @@ function BloodShieldTracker:GetOptions()
         					min = 0.1,
         					max = 3,
         					step = 0.1,
-        					get = function() return self.db.profile.pwsbar_scale end,
+        					get = function()
+								return self.db.profile.bars["PWSBar"].scale
+							end,
         					set = function(info, val)
-        					    self.db.profile.pwsbar_scale = val
-        					    self.pwsbar:SetScale(val)
+        					    self.db.profile.bars["PWSBar"].scale = val
+        					    self.bars["PWSBar"].bar:SetScale(val)
         					end
         				},
                         colors = {
@@ -1605,35 +1596,35 @@ function BloodShieldTracker:GetOptions()
                             type = "header",
                             name = L["Colors"],
                         },
-        				pwsbar_textcolor = {
+        				textcolor = {
         					order = 410,
         					name = L["Text Color"],
         					desc = L["BarTextColor_OptionDesc"],
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.pwsbar_textcolor
+        					    local c = self.db.profile.bars["PWSBar"].textcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self:UpdatePWSBarGraphics()
+        					    self.bars["PWSBar"]:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.pwsbar_textcolor
+        				        local c = self.db.profile.bars["PWSBar"].textcolor
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
-        				pwsbar_color = {
+        				color = {
         					order = 420,
         					name = L["Bar Color"],
         					desc = L["BarColor_OptionDesc"],
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.pwsbar_color
+        					    local c = self.db.profile.bars["PWSBar"].color
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self:UpdatePWSBarGraphics()
+        					    self.bars["PWSBar"]:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.pwsbar_color
+        				        local c = self.db.profile.bars["PWSBar"].color
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
@@ -1642,7 +1633,7 @@ function BloodShieldTracker:GetOptions()
                             type = "header",
                             name = L["Appearance"],
                         },
-        				pwsbar_texture_opt = {
+        				texture_opt = {
         					order = 510,
         					name = L["Texture"],
         					desc = L["BarTexture_OptionDesc"],
@@ -1650,38 +1641,40 @@ function BloodShieldTracker:GetOptions()
         					values = LSM:HashTable("statusbar"),
         					dialogControl = 'LSM30_Statusbar',
         					get = function()
-        					    return self.db.profile.pwsbar_texture
+        					    return self.db.profile.bars["PWSBar"].texture
         					end,
         					set = function(info, val)
-        					    self.db.profile.pwsbar_texture = val
-        					    self:UpdatePWSBarTexture()
+        					    self.db.profile.bars["PWSBar"].texture = val
+        					    self.bars["PWSBar"]:UpdateTexture()
         					end,
         					disabled = function()
-        					    return not self.db.profile.pwsbar_shown
+        					    return not self.db.profile.bars["PWSBar"].shown
         					end,
         				},
-        				pwsbar_border_visible_opt = {
+        				border_visible_opt = {
         					order = 520,
         					name = L["ShowBorder"],
         					desc = L["ShowBorderDesc"],
         					type = "toggle",
         					get = function()
-        					    return self.db.profile.pwsbar_border
+        					    return self.db.profile.bars["PWSBar"].border
         					end,
         					set = function(info, val)
-        					    self.db.profile.pwsbar_border = val
-        					    self:UpdatePWSBarBorder()
+        					    self.db.profile.bars["PWSBar"].border = val
+        					    self.bars["PWSBar"]:UpdateBorder()
         					end,
         				},
-        				pwsbar_visible_opt = {
+        				visible_opt = {
         					order = 530,
         					name = L["ShowBar"],
         					desc = L["ShowBarDesc"],
         					type = "toggle",
-        					get = function() return self.db.profile.pwsbar_shown end,
+        					get = function()
+								return self.db.profile.bars["PWSBar"].shown
+							end,
         					set = function(info,val) 
-        				        self.db.profile.pwsbar_shown = val
-        				        self:UpdatePWSBarVisibility()
+        				        self.db.profile.bars["PWSBar"].shown = val
+        				        self.bars["PWSBar"]:UpdateVisibility()
         				    end,
         				},
         			},
@@ -1709,12 +1702,14 @@ function BloodShieldTracker:GetOptions()
         					type = "toggle",
         					order = 10,
         					set = function(info, val)
-        					    self.db.profile.illumbar_enabled = val
+        					    self.db.profile.bars["IllumBar"].enabled = val
         					    if not val then
-        						    BloodShieldTracker.illumbar:Hide()
+        						    self.bars["IllumBar"].bar:Hide()
         						end
         					end,
-                            get = function(info) return self.db.profile.illumbar_enabled end,
+                            get = function(info)
+								return self.db.profile.bars["IllumBar"].enabled
+							end,
         				},
         				lock_bar = {
         					name = L["Lock bar"],
@@ -1722,10 +1717,12 @@ function BloodShieldTracker:GetOptions()
         					type = "toggle",
         					order = 20,
         					set = function(info, val)
-        					    self.db.profile.lock_illumbar = val 
-        						BloodShieldTracker:IllumBarLock(val)
+        					    self.db.profile.bars["IllumBar"].locked = val 
+        						self.bars["IllumBar"]:Lock(val)
         					end,
-                            get = function(info) return self.db.profile.lock_illumbar end,
+                            get = function(info)
+								return self.db.profile.bars["IllumBar"].locked
+							end,
         				},
                         dimensions = {
                             order = 300,
@@ -1741,12 +1738,12 @@ function BloodShieldTracker:GetOptions()
         					max = 300,
         					step = 1,
         					set = function(info, val)
-        					    self.db.profile.illumbar_width = val 
-        						self.illumbar:SetWidth(val)
-        						self.illumbar.border:SetWidth(val+9)
+        					    self.db.profile.bars["IllumBar"].width = val 
+        						self.bars["IllumBar"].bar:SetWidth(val)
+        						self.bars["IllumBar"].bar.border:SetWidth(val+9)
         					end,
         					get = function(info, val)
-        					    return self.db.profile.illumbar_width
+        					    return self.db.profile.bars["IllumBar"].width
         					end,
         				},
         				bar_height = {
@@ -1758,12 +1755,12 @@ function BloodShieldTracker:GetOptions()
         					max = 30,
         					step = 1,
         					set = function(info, val)
-        					    self.db.profile.illumbar_height = val 
-        						self.illumbar:SetHeight(val)
-        						self.illumbar.border:SetHeight(val + 8)
+        					    self.db.profile.bars["IllumBar"].height = val 
+        						self.bars["IllumBar"].bar:SetHeight(val)
+        						self.bars["IllumBar"].bar.border:SetHeight(val + 8)
         					end,
         					get = function(info, val)
-        					    return self.db.profile.illumbar_height
+        					    return self.db.profile.bars["IllumBar"].height
         					end,					
         				},
         				bar_scaling = {
@@ -1774,10 +1771,12 @@ function BloodShieldTracker:GetOptions()
         					min = 0.1,
         					max = 3,
         					step = 0.1,
-        					get = function() return self.db.profile.illumbar_scale end,
+        					get = function()
+								return self.db.profile.bars["IllumBar"].scale
+							end,
         					set = function(info, val)
-        					    self.db.profile.illumbar_scale = val
-        					    self.illumbar:SetScale(val)
+        					    self.db.profile.bars["IllumBar"].scale = val
+        					    self.bars["IllumBar"].bar:SetScale(val)
         					end
         				},
                         colors = {
@@ -1792,12 +1791,12 @@ function BloodShieldTracker:GetOptions()
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.illumbar_textcolor
+        					    local c = self.db.profile.bars["IllumBar"].textcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self:UpdateIllumBarGraphics()
+        					    self.bars["IllumBar"]:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.illumbar_textcolor
+        				        local c = self.db.profile.bars["IllumBar"].textcolor
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
@@ -1808,12 +1807,12 @@ function BloodShieldTracker:GetOptions()
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.illumbar_color
+        					    local c = self.db.profile.bars["IllumBar"].color
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self:UpdateIllumBarGraphics()
+        					    self.bars["IllumBar"]:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.illumbar_color
+        				        local c = self.db.profile.bars["IllumBar"].color
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
@@ -1830,14 +1829,14 @@ function BloodShieldTracker:GetOptions()
         					values = LSM:HashTable("statusbar"),
         					dialogControl = 'LSM30_Statusbar',
         					get = function()
-        					    return self.db.profile.illumbar_texture
+        					    return self.db.profile.bars["IllumBar"].texture
         					end,
         					set = function(info, val)
-        					    self.db.profile.illumbar_texture = val
-        					    self:UpdateIllumBarTexture()
+        					    self.db.profile.bars["IllumBar"].texture = val
+        					    self.bars["IllumBar"]:UpdateTexture()
         					end,
         					disabled = function()
-        					    return not self.db.profile.illumbar_shown
+        					    return not self.db.profile.bars["IllumBar"].shown
         					end,
         				},
         				bar_border_visible_opt = {
@@ -1846,11 +1845,11 @@ function BloodShieldTracker:GetOptions()
         					desc = L["ShowBorderDesc"],
         					type = "toggle",
         					get = function()
-        					    return self.db.profile.illumbar_border
+        					    return self.db.profile.bars["IllumBar"].border
         					end,
         					set = function(info, val)
-        					    self.db.profile.illumbar_border = val
-        					    self:UpdateIllumBarBorder()
+        					    self.db.profile.bars["IllumBar"].border = val
+        					    self.bars["IllumBar"]:UpdateBorder()
         					end,
         				},
         				bar_visible_opt = {
@@ -1858,17 +1857,219 @@ function BloodShieldTracker:GetOptions()
         					name = L["ShowBar"],
         					desc = L["ShowBarDesc"],
         					type = "toggle",
-        					get = function() return self.db.profile.illumbar_shown end,
+        					get = function()
+								return self.db.profile.bars["IllumBar"].shown
+							end,
         					set = function(info,val) 
-        				        self.db.profile.illumbar_shown = val
-        				        self:UpdateIllumBarVisibility()
+        				        self.db.profile.bars["IllumBar"].shown = val
+        				        self.bars["IllumBar"]:UpdateVisibility()
+        				    end,
+        				},
+        			},
+        		},
+
+        		absorbsBarOpts = {
+        			order = 6,
+        			type = "group",
+        			name = L["Total Absorbs Bar"],
+        			desc = L["Total Absorbs Bar"],
+        			args = {
+					    description = {
+					        order = 1,
+					        type = "description",
+					        name = L["TotalAbsorbsBar_Desc"],
+					    },
+                        generalOptions = {
+                            order = 2,
+                            type = "header",
+                            name = L["General Options"],
+                        },
+                		bar_enabled = {
+        					name = L["Enabled"],
+        					desc = L["EnableBarDesc"],
+        					type = "toggle",
+        					order = 10,
+        					set = function(info, val)
+        					    self.db.profile.bars["TotalAbsorbsBar"].enabled = val
+        					    if not val then
+        						    self.bars["TotalAbsorbsBar"].bar:Hide()
+        						end
+        					end,
+                            get = function(info) 
+								return self.db.profile.bars["TotalAbsorbsBar"].enabled
+							end,
+        				},
+        				lock_bar = {
+        					name = L["Lock bar"],
+        					desc = L["LockBarDesc"],
+        					type = "toggle",
+        					order = 20,
+        					set = function(info, val)
+        					    self.db.profile.bars["TotalAbsorbsBar"].locked = val 
+        						self.bars["TotalAbsorbsBar"]:Lock(val)
+        					end,
+                            get = function(info)
+								return self.db.profile.bars["TotalAbsorbsBar"].locked
+							end,
+        				},
+        				includebs = {
+        					name = L["Include Blood Shield"],
+        					desc = L["IncludeBS_Desc"],
+        					type = "toggle",
+        					order = 30,
+        					set = function(info, val)
+        					    self.db.profile.bars["TotalAbsorbsBar"].includebs = val
+        					end,
+                            get = function(info)
+								return self.db.profile.bars["TotalAbsorbsBar"].includebs
+							end,
+        				},
+                        dimensions = {
+                            order = 300,
+                            type = "header",
+                            name = L["Dimensions"],
+                        },
+        				bar_width = {
+        					order = 310,
+        					name = L["Width"],
+        					desc = L["BarWidth_Desc"],	
+        					type = "range",
+        					min = 50,
+        					max = 300,
+        					step = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["TotalAbsorbsBar"].width = val 
+        						self.bars["TotalAbsorbsBar"].bar:SetWidth(val)
+        						self.bars["TotalAbsorbsBar"].bar.border:SetWidth(val+9)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["TotalAbsorbsBar"].width
+        					end,
+        				},
+        				bar_height = {
+        					order = 320,
+        					name = L["Height"],
+        					desc = L["BarHeight_Desc"],
+        					type = "range",
+        					min = 10,
+        					max = 30,
+        					step = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["TotalAbsorbsBar"].height = val 
+        						self.bars["TotalAbsorbsBar"].bar:SetHeight(val)
+        						self.bars["TotalAbsorbsBar"].bar.border:SetHeight(val + 8)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["TotalAbsorbsBar"].height
+        					end,					
+        				},
+        				bar_scaling = {
+        					order = 330,
+        					name = L["Scale"],
+        					desc = L["ScaleDesc"],
+        					type = "range",
+        					min = 0.1,
+        					max = 3,
+        					step = 0.1,
+        					get = function()
+								return self.db.profile.bars["TotalAbsorbsBar"].scale
+							end,
+        					set = function(info, val)
+        					    self.db.profile.bars["TotalAbsorbsBar"].scale = val
+        					    self.bars["TotalAbsorbsBar"].bar:SetScale(val)
+        					end
+        				},
+                        colors = {
+                            order = 400,
+                            type = "header",
+                            name = L["Colors"],
+                        },
+        				bar_textcolor = {
+        					order = 410,
+        					name = L["Text Color"],
+        					desc = L["BarTextColor_OptionDesc"],
+        					type = "color",
+        					hasAlpha = true,
+        					set = function(info, r, g, b, a)
+        					    local c = self.db.profile.bars["TotalAbsorbsBar"].textcolor
+        					    c.r, c.g, c.b, c.a = r, g, b, a
+        					    self.bars["TotalAbsorbsBar"]:UpdateGraphics()
+        					end,
+        					get = function(info)
+        				        local c = self.db.profile.bars["TotalAbsorbsBar"].textcolor
+        					    return c.r, c.g, c.b, c.a
+        					end,					
+        				},
+        				bar_color = {
+        					order = 420,
+        					name = L["Bar Color"],
+        					desc = L["BarColor_OptionDesc"],
+        					type = "color",
+        					hasAlpha = true,
+        					set = function(info, r, g, b, a)
+        					    local c = self.db.profile.bars["TotalAbsorbsBar"].color
+        					    c.r, c.g, c.b, c.a = r, g, b, a
+        					    self.bars["TotalAbsorbsBar"]:UpdateGraphics()
+        					end,
+        					get = function(info)
+        				        local c = self.db.profile.bars["TotalAbsorbsBar"].color
+        					    return c.r, c.g, c.b, c.a
+        					end,					
+        				},
+                        appearance = {
+                            order = 500,
+                            type = "header",
+                            name = L["Appearance"],
+                        },
+        				bar_texture_opt = {
+        					order = 510,
+        					name = L["Texture"],
+        					desc = L["BarTexture_OptionDesc"],
+        					type = "select",
+        					values = LSM:HashTable("statusbar"),
+        					dialogControl = 'LSM30_Statusbar',
+        					get = function()
+        					    return self.db.profile.bars["TotalAbsorbsBar"].texture
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.bars["TotalAbsorbsBar"].texture = val
+        					    self.bars["TotalAbsorbsBar"]:UpdateTexture()
+        					end,
+        					disabled = function()
+        					    return not self.db.profile.bars["TotalAbsorbsBar"].shown
+        					end,
+        				},
+        				bar_border_visible_opt = {
+        					order = 520,
+        					name = L["ShowBorder"],
+        					desc = L["ShowBorderDesc"],
+        					type = "toggle",
+        					get = function()
+        					    return self.db.profile.bars["TotalAbsorbsBar"].border
+        					end,
+        					set = function(info, val)
+        					    self.db.profile.bars["TotalAbsorbsBar"].border = val
+        					    self.bars["TotalAbsorbsBar"]:UpdateBorder()
+        					end,
+        				},
+        				bar_visible_opt = {
+        					order = 530,
+        					name = L["ShowBar"],
+        					desc = L["ShowBarDesc"],
+        					type = "toggle",
+        					get = function()
+								return self.db.profile.bars["TotalAbsorbsBar"].shown
+							end,
+        					set = function(info,val) 
+        				        self.db.profile.bars["TotalAbsorbsBar"].shown = val
+        				        self.bars["TotalAbsorbsBar"]:UpdateVisibility()
         				    end,
         				},
         			},
         		},
         		
     			healthBarOpts = {
-    			    order = 6,
+    			    order = 7,
     			    type = "group",
     			    name = L["Health Bar"],
     			    desc = L["Health Bar"],
@@ -1889,11 +2090,11 @@ function BloodShieldTracker:GetOptions()
         					type = "toggle",
         					order = 10,
         					set = function(info, val)
-        					    self.db.profile.healthbar_enabled = val
+        					    self.db.profile.bars["HealthBar"].enabled = val
     					        self:ToggleHealthBar(val)
         					end,
                             get = function(info)
-                                return self.db.profile.healthbar_enabled
+                                return self.db.profile.bars["HealthBar"].enabled
                             end,
         				},
         				lock_bar = {
@@ -1902,11 +2103,11 @@ function BloodShieldTracker:GetOptions()
         					type = "toggle",
         					order = 20,
         					set = function(info, val)
-        					    self.db.profile.lock_healthbar = val 
-        						BloodShieldTracker:HealthBarLock(val)
+        					    self.db.profile.bars["HealthBar"].locked = val 
+        						self.bars["HealthBar"]:Lock(val)
         					end,
                             get = function(info)
-                                return self.db.profile.lock_healthbar
+                                return self.db.profile.bars["HealthBar"].locked
                             end,
         				},
         				hide_bar_ooc = {
@@ -1915,20 +2116,17 @@ function BloodShieldTracker:GetOptions()
         					type = "toggle",
         					order = 30,
         					set = function(info, val)
-        					    self.db.profile.healthbar_hide_ooc = val 
-        						if BloodShieldTracker.healthbar then
-        							BloodShieldTracker.healthbar.hideooc = val
-        							if not InCombatLockdown() then
-        							    if val then
-        							        self.healthbar:Hide()
-        						        elseif self:IsTrackerEnabled() then
-        						            self.healthbar:Show()
-        					            end
-        					        end
-        						end					
+        					    self.db.profile.bars["HealthBar"].hide_ooc = val
+    							if not InCombatLockdown() then
+    							    if val then
+    							        self.healthbar.bar:Hide()
+    						        elseif self:IsTrackerEnabled() then
+    						            self.healthbar.bar:Show()
+    					            end
+    					        end
         					end,
                             get = function(info)
-                                return self.db.profile.healthbar_hide_ooc
+                                return self.db.profile.bars["HealthBar"].hide_ooc
                             end,
         				},
         				low_percent = {
@@ -1940,10 +2138,10 @@ function BloodShieldTracker:GetOptions()
         					max = 95,
         					step = 5,
         					set = function(info, val)
-        					    self.db.profile.healthbar_low_percent = val / 100
+        					    self.db.profile.bars["HealthBar"].low_percent = val / 100
         					end,
         					get = function(info, val)
-        					    return self.db.profile.healthbar_low_percent * 100
+        					    return self.db.profile.bars["HealthBar"].low_percent * 100
         					end,
         				},
         				text_format = {
@@ -1959,14 +2157,11 @@ function BloodShieldTracker:GetOptions()
         					},
         					order = 50,
         					set = function(info, val)
-        					    self.db.profile.healthbar_text_format = val
-        					    if self.healthbar then
-        					        self.healthbar.format = val
-        					        BloodShieldTracker:UpdateHealthBar(false)
-    					        end
+        					    self.db.profile.bars["HealthBar"].text_format = val
+       					        self:UpdateHealthBar(false)
         					end,
                             get = function(info)
-                                return self.db.profile.healthbar_text_format
+                                return self.db.profile.bars["HealthBar"].text_format
                             end,
         				},
                         dimensions = {
@@ -1982,12 +2177,12 @@ function BloodShieldTracker:GetOptions()
         					min = 10,
         					max = 200,
         					set = function(info, val)
-        					    self.db.profile.healthbar_width = val 
-        						self.healthbar:SetWidth(val)
-        						self.healthbar.border:SetWidth(val+9)
+        					    self.db.profile.bars["HealthBar"].width = val 
+        						self.healthbar.bar:SetWidth(val)
+        						self.healthbar.bar.border:SetWidth(val+9)
         					end,
         					get = function(info, val)
-        					    return self.db.profile.healthbar_width
+        					    return self.db.profile.bars["HealthBar"].width
         					end,
         				},
         				bar_height = {
@@ -1999,12 +2194,12 @@ function BloodShieldTracker:GetOptions()
         					max = 30,
         					step = 1,
         					set = function(info, val)
-        					    self.db.profile.healthbar_height = val 
-        						self.healthbar:SetHeight(val)
-        						self.healthbar.border:SetHeight(val + 8)
+        					    self.db.profile.bars["HealthBar"].height = val 
+        						self.healthbar.bar:SetHeight(val)
+        						self.healthbar.bar.border:SetHeight(val + 8)
         					end,
         					get = function(info, val)
-        					    return self.db.profile.healthbar_height
+        					    return self.db.profile.bars["HealthBar"].height
         					end,
         				},
         				bar_scaling = {
@@ -2016,11 +2211,11 @@ function BloodShieldTracker:GetOptions()
         					max = 3,
         					step = 0.1,
         					get = function()
-        					    return self.db.profile.healthbar_scale
+        					    return self.db.profile.bars["HealthBar"].scale
         					end,
         					set = function(info, val)
-        					    self.db.profile.healthbar_scale = val
-        					    self.healthbar:SetScale(val)
+        					    self.db.profile.bars["HealthBar"].scale = val
+        					    self.healthbar.bar:SetScale(val)
         					end
         				},
                         colors = {
@@ -2035,15 +2230,12 @@ function BloodShieldTracker:GetOptions()
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.healthbar_textcolor
+        					    local c = self.db.profile.bars["HealthBar"].textcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    if self.healthbar then
-        					        self:UpdateHealthBarColors(
-        					            self.healthbar.lowhealth or true)
-        					    end
+       					        self.healthbar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.healthbar_textcolor
+        				        local c = self.db.profile.bars["HealthBar"].textcolor
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
@@ -2054,15 +2246,12 @@ function BloodShieldTracker:GetOptions()
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.healthbar_color
+        					    local c = self.db.profile.bars["HealthBar"].color
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    if self.healthbar then
-        					        self:UpdateHealthBarColors(
-        					            self.healthbar.lowhealth or true)
-        					    end
+       					        self.healthbar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.healthbar_color
+        				        local c = self.db.profile.bars["HealthBar"].color
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
@@ -2073,15 +2262,12 @@ function BloodShieldTracker:GetOptions()
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.healthbar_bgcolor
+        					    local c = self.db.profile.bars["HealthBar"].bgcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    if self.healthbar then
-        					        self:UpdateHealthBarColors(
-        					            self.healthbar.lowhealth or true)
-        					    end
+       					        self.healthbar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.healthbar_bgcolor
+        				        local c = self.db.profile.bars["HealthBar"].bgcolor
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
@@ -2098,15 +2284,12 @@ function BloodShieldTracker:GetOptions()
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.healthbar_low_textcolor
+        					    local c = self.db.profile.bars["HealthBar"].alt_textcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    if self.healthbar then
-        					        self:UpdateHealthBarColors(
-        					            self.healthbar.lowhealth or true)
-        					    end
+       					        self.healthbar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.healthbar_low_textcolor
+        				        local c = self.db.profile.bars["HealthBar"].alt_textcolor
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
@@ -2117,15 +2300,12 @@ function BloodShieldTracker:GetOptions()
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.healthbar_low_color
+        					    local c = self.db.profile.bars["HealthBar"].alt_color
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    if self.healthbar then
-        					        self:UpdateHealthBarColors(
-        					            self.healthbar.lowhealth or true)
-        					    end
+       					        self.healthbar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.healthbar_low_color
+        				        local c = self.db.profile.bars["HealthBar"].alt_color
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
@@ -2136,15 +2316,12 @@ function BloodShieldTracker:GetOptions()
         					type = "color",
         					hasAlpha = true,
         					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.healthbar_low_bgcolor
+        					    local c = self.db.profile.bars["HealthBar"].alt_bgcolor
         					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    if self.healthbar then
-        					        self:UpdateHealthBarColors(
-        					            self.healthbar.lowhealth or true)
-        					    end
+       					        self.healthbar:UpdateGraphics()
         					end,
         					get = function(info)
-        				        local c = self.db.profile.healthbar_low_bgcolor
+        				        local c = self.db.profile.bars["HealthBar"].alt_bgcolor
         					    return c.r, c.g, c.b, c.a
         					end,					
         				},
@@ -2162,14 +2339,14 @@ function BloodShieldTracker:GetOptions()
         					values = LSM:HashTable("statusbar"),
         					dialogControl = 'LSM30_Statusbar',
         					get = function()
-        					    return self.db.profile.healthbar_texture
+        					    return self.db.profile.bars["HealthBar"].texture
         					end,
         					set = function(info, val)
-        					    self.db.profile.healthbar_texture = val
-        					    self:UpdateHealthBarTexture()
+        					    self.db.profile.bars["HealthBar"].texture = val
+        					    self.healthbar:UpdateTexture()
         					end,
         					disabled = function()
-        					    return not self.db.profile.healthbar_shown
+        					    return not self.db.profile.bars["HealthBar"].shown
         					end,
         				},
         				bar_border_visible_opt = {
@@ -2178,11 +2355,11 @@ function BloodShieldTracker:GetOptions()
         					desc = L["ShowBorderDesc"],
         					type = "toggle",
         					get = function()
-        					    return self.db.profile.healthbar_border
+        					    return self.db.profile.bars["HealthBar"].border
         					end,
         					set = function(info, val)
-        					    self.db.profile.healthbar_border = val
-        					    self:UpdateHealthBarBorder()
+        					    self.db.profile.bars["HealthBar"].border = val
+        					    self.healthbar:UpdateBorder()
         					end,
         				},
         				bar_visible_opt = {
@@ -2191,11 +2368,11 @@ function BloodShieldTracker:GetOptions()
         					desc = L["ShowBarDesc"],
         					type = "toggle",
         					get = function()
-        					    return self.db.profile.healthbar_shown
+        					    return self.db.profile.bars["HealthBar"].shown
         					end,
         					set = function(info,val)
-        					    self.db.profile.healthbar_shown = val
-        					    self:UpdateHealthBarVisibility()
+        					    self.db.profile.bars["HealthBar"].shown = val
+        					    self.healthbar:UpdateVisibility()
         					end,
         				},
 
@@ -2203,7 +2380,7 @@ function BloodShieldTracker:GetOptions()
         		},
 
 				skinningOpts = {
-				    order = 7,
+				    order = 8,
 					name = L["Skinning"],
 					type = "group",
 					args = {
@@ -2405,21 +2582,23 @@ end
 function BloodShieldTracker:OnInitialize()
     -- Load the settings
     self.db = LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", defaults, "Default")
-	-- Create the shield bar
-    self:CreateShieldBar()
-    self.bars["ShieldBar"] = self.shieldbar
-    -- Create the estimate/damage bar
-    self:CreateEstimateBar()
-    self.bars["EstimateBar"] = self.estimatebar
-	-- Create the PW:S bar
-    self:CreatePWSBar()
-    self.bars["PWSBar"] = self.pwsbar
-	-- Create the Illum. Heal bar
-    self:CreateIllumBar()
-    self.bars["IllumBar"] = self.illumbar
-    -- Create the Health Bar
-    self:CreateHealthBar()
-    self.bars["HealthBar"] = self.healthbar
+
+	-- Create the bars
+	self.shieldbar = Bar:Create("ShieldBar")
+	self:UpdateShieldBarMode()
+    self:UpdateShieldBarText(0, 0, 0)
+    self.estimatebar = Bar:Create("EstimateBar")
+	self.pwsbar = Bar:Create("PWSBar")
+	self.illumbar = Bar:Create("IllumBar")
+	self.healthbar = Bar:Create("HealthBar")
+	self.absorbsbar = Bar:Create("TotalAbsorbsBar")
+
+	-- Migrate the settings
+	self:MigrateShieldBarSettings()
+	self:MigrateEstimateBarSettings()
+	self:MigratePWSBarSettings()
+	self:MigrateIllumBarSettings()
+	self:MigrateHealthBarSettings()
 
 	-- Register for profile callbacks
 	self.db.RegisterCallback(self, "OnProfileChanged", "Reset")
@@ -2437,11 +2616,13 @@ function BloodShieldTracker:OnInitialize()
 	self.optionsFrame.ShieldBar = ACD:AddToBlizOptions(
 	    displayName, L["Blood Shield Bar"], displayName, "shieldBarOpts")
 	self.optionsFrame.EstHealBar = ACD:AddToBlizOptions(
-	    displayName, L["Estimated Healing Bar"], displayName, "estHealBarOpts")
-	self.optionsFrame.ShieldBar = ACD:AddToBlizOptions(
+	    displayName, L["Estimated Healing Bar"], displayName, "estimateBarOpts")
+	self.optionsFrame.PriestBar = ACD:AddToBlizOptions(
 	    displayName, L["PW:S Bar"], displayName, "pwsBarOpts")
-	self.optionsFrame.ShieldBar = ACD:AddToBlizOptions(
+	self.optionsFrame.IllumBar = ACD:AddToBlizOptions(
 	    displayName, L["Illuminated Healing Bar"], displayName, "illumBarOpts")
+	self.optionsFrame.AbsorbsBar = ACD:AddToBlizOptions(
+	    displayName, L["Total Absorbs Bar"], displayName, "absorbsBarOpts")
 	self.optionsFrame.HealthBar = ACD:AddToBlizOptions(
 	    displayName, L["Health Bar"], displayName, "healthBarOpts")
 	self.optionsFrame.Skinning = ACD:AddToBlizOptions(
@@ -2478,46 +2659,8 @@ end
 
 function BloodShieldTracker:Reset()
 	-- Reset positions
-	if self.estimatebar then
-		self.estimatebar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.est_heal_x, self.db.profile.est_heal_y)
-    	self:EstHealBarLock(self.db.profile.lock_damage_bar)
-    	self.estimatebar.hideooc = self.db.profile.hide_damage_bar_ooc
-		self:UpdateEstimateBarTexture()
-		self:UpdateEstimateBarBorder()
-		self:UpdateEstimateBarVisibility()
-		self:UpdateEstimateBarColors()
-	end
-	if self.shieldbar then
-		self.shieldbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.shield_bar_x, self.db.profile.shield_bar_y)
-    	self:ShieldBarLock(self.db.profile.lock_status_bar)
-		self:UpdateShieldBarTexture()
-		self:UpdateShieldBarBorder()
-		self:UpdateShieldBarVisibility()
-		self:UpdateShieldBarGraphics()
-	end
-	if self.pwsbar then
-		self.pwsbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.pwsbar_x, self.db.profile.pwsbar_y)
-    	self:PWSBarLock(self.db.profile.lock_pwsbar)
-		self:UpdatePWSBarTexture()
-		self:UpdatePWSBarBorder()
-		self:UpdatePWSBarVisibility()
-		self:UpdatePWSBarGraphics()
-	end
-	if self.illumbar then
-		self.illumbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.illumbar_x, self.db.profile.illumbar_y)
-    	self:IllumBarLock(self.db.profile.lock_illumbar)
-		self:UpdateIllumBarTexture()
-		self:UpdateIllumBarBorder()
-		self:UpdateIllumBarVisibility()
-		self:UpdateIllumBarGraphics()
-	end
-	if self.healthbar then
-		self.healthbar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.healthbar_x, self.db.profile.healthbar_y)
-    	self:HealthBarLock(self.db.profile.lock_healthbar)
-		self:UpdateHealthBarTexture()
-		self:UpdateHealthBarBorder()
-		self:UpdateHealthBarVisibility()
-		self:UpdateHealthBarGraphics(self.healthbar.lowhealth)
+	for name,bar in pairs(self.bars) do
+		bar:Reset()
 	end
 
 	self:ResetFonts()
@@ -2557,11 +2700,9 @@ function BloodShieldTracker:Skin()
             end
             if self.db.profile.tukui_borders then
                 self:SetCustomShowBorders(false)
-                self.shieldbar:CreateBackdrop()
-                self.estimatebar:CreateBackdrop()
-                self.pwsbar:CreateBackdrop()
-                self.illumbar:CreateBackdrop()
-                self.healthbar:CreateBackdrop()
+				for name, bar in pairs(self.bars) do
+					bar.bar:CreateBackdrop()
+				end
             end
         else
             self:Print("Could not find Tukui config.")
@@ -2583,11 +2724,9 @@ function BloodShieldTracker:Skin()
             end
             if self.db.profile.elvui_borders then
                 self:SetCustomShowBorders(false)
-                self.shieldbar:CreateBackdrop()
-                self.estimatebar:CreateBackdrop()
-                self.pwsbar:CreateBackdrop()
-                self.illumbar:CreateBackdrop()
-                self.healthbar:CreateBackdrop()
+				for name, bar in pairs(self.bars) do
+					bar.bar:CreateBackdrop()
+				end
             end
         else
             self:Print("Could not find the ElvUI config.")
@@ -2630,15 +2769,14 @@ function BloodShieldTracker:SetCustomShowBorders(show)
     end
 end
 
-function BloodShieldTracker:ResetFonts()
-	local fontName, fontHeight = self.shieldbar.value:GetFont()
+function BloodShieldTracker:GetFontSettings()
 	local ff, fh, fontFlags
 
     -- If a custom font is set, then override the settings
     if CustomUI.font then
         ff = CustomUI.font
     else
-	    ff = LSM:Fetch("font",self.db.profile.font_face)
+	    ff = LSM:Fetch("font", self.db.profile.font_face)
     end
     if CustomUI.fontSize then
         fh = CustomUI.fontSize
@@ -2651,50 +2789,25 @@ function BloodShieldTracker:ResetFonts()
         fontFlags = self:GetFontFlags()
     end
 
-	self.shieldbar.value:SetFont(ff,fh,fontFlags)
-	self.shieldbar.value:SetText(self.shieldbar.value:GetText())
-	self.shieldbar.time:SetFont(ff,fh,fontFlags)
-	self.shieldbar.time:SetText(self.shieldbar.time:GetText())
-	self.estimatebar.value:SetFont(ff,fh,fontFlags)						
-	self.estimatebar.value:SetText(self.estimatebar.value:GetText())
-    if self.pwsbar then
-    	self.pwsbar.value:SetFont(ff,fh,fontFlags)						
-    	self.pwsbar.value:SetText(self.pwsbar.value:GetText())
-    end
-    if self.illumbar then
-    	self.illumbar.value:SetFont(ff,fh,fontFlags)						
-    	self.illumbar.value:SetText(self.illumbar.value:GetText())
-    end
-    if self.healthbar then
-    	self.healthbar.value:SetFont(ff,fh,fontFlags)						
-    	self.healthbar.value:SetText(self.healthbar.value:GetText())
-    end
+	return ff, fh, fontFlags
+end
+
+function BloodShieldTracker:ResetFonts()
+	for name, bar in pairs(self.bars) do
+		bar:ResetFonts()
+	end
 end
 
 function BloodShieldTracker:UpdateTextures()
-	if self.db.profile.estheal_bar_shown then
-		self:UpdateEstimateBarTexture()
-	end
-	if self.db.profile.status_bar_shown then
-		self:UpdateShieldBarTexture()
-	end
-	if self.db.profile.pwsbar_shown then
-		self:UpdatePWSBarTexture()
-	end
-	if self.db.profile.illumbar_shown then
-		self:UpdateIllumBarTexture()
-	end
-	if self.db.profile.healthbar_shown then
-		self:UpdateHealthBarTexture()
+	for name, bar in pairs(self.bars) do
+		bar:UpdateTexture()
 	end
 end
 
 function BloodShieldTracker:UpdateBorders()
-    self:UpdateShieldBarBorder()
-    self:UpdateEstimateBarBorder()
-    self:UpdatePWSBarBorder()
-    self:UpdateIllumBarBorder()
-    self:UpdateHealthBarBorder()
+	for name, bar in pairs(self.bars) do
+		bar:UpdateBorder()
+	end
 end
 
 function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
@@ -2744,12 +2857,13 @@ function BloodShieldTracker:Load()
     self:RegisterEvent("PLAYER_ALIVE", "CheckAuras")
     self:RegisterEvent("UNIT_SPELLCAST_SENT")
     self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
-    if self:IsTrackerEnabled() and (not self.estimatebar.hideooc or InCombatLockdown()) then
-        self.estimatebar:Show()
+    if self:IsTrackerEnabled() and 
+		(not self.estimatebar.db.hide_ooc or InCombatLockdown()) then
+        self.estimatebar.bar:Show()
     end
-    self:ToggleHealthBar(self.db.profile.healthbar_enabled)
-    self:UpdateShieldBarVisibility()
-	self:UpdateEstimateBarVisibility()
+    self:ToggleHealthBar(self.db.profile.bars["HealthBar"].enabled)
+    self.shieldbar:UpdateVisibility()
+	self.estimatebar:UpdateVisibility()
 end
 
 function BloodShieldTracker:Unload()
@@ -2766,7 +2880,7 @@ function BloodShieldTracker:Unload()
     self:UnregisterEvent("UNIT_SPELLCAST_SENT")
     self:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     self:UnregisterEvent("UNIT_HEALTH")
-	self.estimatebar:Hide()
+	self.estimatebar.bar:Hide()
 end
 
 function BloodShieldTracker:OnDisable()
@@ -2921,7 +3035,7 @@ function BloodShieldTracker:UpdateMinHeal(event, unit)
 		    self:GetEffectiveHealingBuffModifiers() * 
 		    self:GetEffectiveHealingDebuffModifiers())
 		if idle then
-		    self:UpdateEstHealBarText(dsHealMin)
+		    self:UpdateEstimateBarText(dsHealMin)
 		end
 	end
 end
@@ -2935,12 +3049,12 @@ function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 	idle = false
 	if self:IsTrackerEnabled() then
     	updateTimer = self:ScheduleRepeatingTimer("UpdateBars", 0.5)
-        if self.db.profile.damage_bar_enabled and self.estimatebar then
-	        self.estimatebar:Show()
-	        self.estimatebar:SetScript("OnUpdate", UpdateTime)
+        if self.estimatebar.db.enabled then
+	        self.estimatebar.bar:Show()
+	        self.estimatebar.bar:SetScript("OnUpdate", UpdateTime)
         end
-        if self.healthbar and self.db.profile.healthbar_enabled then
-            self.healthbar:Show()
+        if self.healthbar.db.enabled then
+            self.healthbar.bar:Show()
         end
     end
     -- Reset the per fight stats
@@ -2954,21 +3068,21 @@ end
 
 function BloodShieldTracker:PLAYER_REGEN_ENABLED()
 	idle = true
-	self:UpdateEstHealBarText(dsHealMin)
-    self.estimatebar.minheal = true
-    self:UpdateEstimateBarColors(true)
-    self.estimatebar:SetMinMaxValues(0, 1)
-    self.estimatebar:SetValue(1)
+	self:UpdateEstimateBarText(dsHealMin)
+    self.estimatebar.altcolor = false
+    self.estimatebar:UpdateGraphics()
+    self.estimatebar.bar:SetMinMaxValues(0, 1)
+    self.estimatebar.bar:SetValue(1)
     
-    if self.estimatebar.hideooc then
-        self.estimatebar:Hide()
+    if self.estimatebar.db.hide_ooc then
+        self.estimatebar.bar:Hide()
     end
 
-    if self.healthbar and self.healthbar.hideooc then
-        self.healthbar:Hide()
+    if self.healthbar.db.hide_ooc then
+        self.healthbar.bar:Hide()
     end
 
-    self.estimatebar:SetScript("OnUpdate", nil)
+    self.estimatebar.bar:SetScript("OnUpdate", nil)
 
     LastFightStats:EndCombat()
 end
@@ -2977,28 +3091,18 @@ function BloodShieldTracker:PLAYER_DEAD()
     -- Just in case, hide the BS bar if the player dies
     self.shieldbar.expires = 0
     self:CheckAuras()
-    self.shieldbar:Hide()
-    -- Hide the heal bar if configured to do so for OOC
-    if self.estimatebar.hideooc then
-        if self.healthbar:IsVisible() then
-            self.estimatebar:Hide()
+    self.shieldbar.bar:Hide()
+    -- Hide the estimate bar if configured to do so for OOC
+    if self.estimatebar.db.hide_ooc then
+        if self.estimatebar.bar:IsVisible() then
+            self.estimatebar.bar:Hide()
         end
     end
-end
-
-function BloodShieldTracker:ToggleHealthBar(enable)
-    if enable then
-        self:RegisterEvent("UNIT_HEALTH")
-        if self.healthbar.hideooc and (not InCombatLockdown() or idle) then
-            if self.healthbar:IsVisible() then
-                self.healthbar:Hide()
-            end
-        else
-            self.healthbar:Show()
+    -- Hide the health bar if configured to do so for OOC
+    if self.healthbar.db.hide_ooc then
+        if self.healthbar.bar:IsVisible() then
+            self.healthbar.bar:Hide()
         end
-    else
-        self.healthbar:Hide()
-        self:UnregisterEvent("UNIT_HEALTH")
     end
 end
 
@@ -3011,7 +3115,7 @@ function BloodShieldTracker:UpdateBars(timestamp)
         end
     end
 
-    if self.db.profile.status_bar_enabled then
+    if self.shieldbar.db.enabled then
         local expires = self.shieldbar.expires
         local timeleft = 0
         local timeLeftFmt = "%d"
@@ -3025,25 +3129,25 @@ function BloodShieldTracker:UpdateBars(timestamp)
             timeleft = floor(timeleft)
         end
 
-        if self.db.profile.shield_bar_progress == "Time" then
-            self.shieldbar:SetValue(timeleft)
+        if self.shieldbar.db.progress == "Time" then
+            self.shieldbar.bar:SetValue(timeleft)
         end
 
-        self.shieldbar.time:SetText(timeLeftFmt:format(timeleft))
+        self.shieldbar.bar.time:SetText(timeLeftFmt:format(timeleft))
     end
 
-    self:UpdateEstHealBar(timestamp)
+    self:UpdateEstimateBar(timestamp)
 end
 
-function BloodShieldTracker:UpdateEstHealBar(timestamp)
-    if self.db.profile.damage_bar_enabled and not idle then
+function BloodShieldTracker:UpdateEstimateBar(timestamp)
+    if self.estimatebar.db.enabled and not idle then
         local recentDamage = self:GetRecentDamageTaken(timestamp)
         local shieldPercent = masteryRating*shieldPerMasteryPoint/100
 
         local predictedValue, minimumValue = 0, 0
         local baseValue = recentDamage * dsHealModifier * ImpDSModifier
 
-        if self.db.profile.estimate_bar_mode == "BS" then
+        if self.estimatebar.db.bar_mode == "BS" then
             predictedValue = round(baseValue * shieldPercent)
             minimumValue = maxHealth * dsMinHealPercent * shieldPercent
         else
@@ -3058,18 +3162,17 @@ function BloodShieldTracker:UpdateEstHealBar(timestamp)
     	    estimate = predictedValue
     	end
 
-        self:UpdateEstHealBarText(estimate)
-        self.estimatebar:SetMinMaxValues(0, minimumValue)
+        self:UpdateEstimateBarText(estimate)
+        self.estimatebar.bar:SetMinMaxValues(0, minimumValue)
 
         if predictedValue > minimumValue then
-            self.estimatebar.minheal = false
-            self:UpdateEstimateBarColors(false)
-            self.estimatebar:SetValue(minimumValue)        
+            self.estimatebar.altcolor = true
+            self.estimatebar.bar:SetValue(minimumValue)        
         else
-            self.estimatebar.minheal = true
-            self:UpdateEstimateBarColors(true)
-            self.estimatebar:SetValue(predictedValue)
+            self.estimatebar.altcolor = false
+            self.estimatebar.bar:SetValue(predictedValue)
         end
+        self.estimatebar:UpdateGraphics()
 
         DataFeed.estimateBar = estimate
         if LDBDataFeed then
@@ -3078,58 +3181,46 @@ function BloodShieldTracker:UpdateEstHealBar(timestamp)
     end
 end
 
-function BloodShieldTracker:UpdateEstHealBarText(estimate)
-    if self.db.profile.estheal_bar_show_text then
+function BloodShieldTracker:UpdateEstimateBarText(estimate)
+    if self.estimatebar.db.show_text then
         local text = ""
-        if self.db.profile.estimate_bar_mode == "BS" then
+        if self.estimatebar.db.bar_mode == "BS" then
             text = L["EstimateBarBSText"]
         else
             text = L["HealBarText"]
         end
-        self.estimatebar.value:SetText(
+        self.estimatebar.bar.value:SetText(
             healBarFormat:format(
                 text, FormatNumber(estimate)))
     else
-	    self.estimatebar.value:SetText(
+	    self.estimatebar.bar.value:SetText(
 	        healBarNoTextFormat:format(
 	            FormatNumber(estimate)))
     end
 end
 
-function BloodShieldTracker:UpdatePWSBarText(value)
-    if self.db.profile.pwsbar_enabled then
-        self.pwsbar.value:SetText(FormatNumber(value))
-    end
-end
-
-function BloodShieldTracker:UpdateIllumBarText(value)
-    if self.db.profile.illumbar_enabled then
-        self.illumbar.value:SetText(FormatNumber(value))
-    end
-end
-
 function BloodShieldTracker:UpdateShieldBarMode()
-    if self.shieldbar and self.db.profile.shield_bar_progress == "Time" then
-        self.shieldbar:SetMinMaxValues(0, BS_DURATION)
-        self.shieldbar:SetValue(BS_DURATION)
-    elseif self.db.profile.shield_bar_progress == "None" then
-        self.shieldbar:SetMinMaxValues(0, 1)
-        self.shieldbar:SetValue(1)        
+    if self.shieldbar.db.progress == "Time" then
+        self.shieldbar.bar:SetMinMaxValues(0, BS_DURATION)
+        self.shieldbar.bar:SetValue(BS_DURATION)
+    elseif self.shieldbar.db.progress == "None" then
+        self.shieldbar.bar:SetMinMaxValues(0, 1)
+        self.shieldbar.bar:SetValue(1)        
     end
 end
 
 function BloodShieldTracker:ShowShieldBar()
-    if self.db.profile.status_bar_enabled then
-        if self.db.profile.shield_bar_progress == "Time" then
+    if self.shieldbar.db.enabled then
+        if self.shieldbar.db.progress == "Time" then
             self.shieldbar:SetValue(BS_DURATION)
-        elseif self.db.profile.shield_bar_progress == "Current" then
-            self.shieldbar:SetMinMaxValues(0, self.shieldbar.shield_max)
-            self.shieldbar:SetValue(self.shieldbar.shield_curr)
+        elseif self.shieldbar.db.progress == "Current" then
+            self.shieldbar.bar:SetMinMaxValues(0, self.shieldbar.shield_max)
+            self.shieldbar.bar:SetValue(self.shieldbar.shield_curr)
         end
 
         self:UpdateShieldBarText(
             self.shieldbar.shield_curr, self.shieldbar.shield_max, 100)
-        self.shieldbar:Show()
+        self.shieldbar.bar:Show()
     end
 end
 
@@ -3142,9 +3233,9 @@ function BloodShieldTracker:UpdateShieldBar()
             self.shieldbar.shield_curr, damage, self.shieldbar.shield_max))
     end
 
-    if self.db.profile.shield_bar_progress == "Current" then
-        self.shieldbar:SetMinMaxValues(0, self.shieldbar.shield_max)
-	    self.shieldbar:SetValue(self.shieldbar.shield_curr)
+    if self.shieldbar.db.progress == "Current" then
+        self.shieldbar.bar:SetMinMaxValues(0, self.shieldbar.shield_max)
+	    self.shieldbar.bar:SetValue(self.shieldbar.shield_curr)
     end
 
 	local diff
@@ -3156,35 +3247,55 @@ function BloodShieldTracker:UpdateShieldBar()
     self:UpdateShieldBarText(self.shieldbar.shield_curr, self.shieldbar.shield_max, diff)
 end
 
+function BloodShieldTracker:ToggleHealthBar(enable)
+	if enable == nil then
+		enable = self.db.profile.bars["HealthBar"].enabled
+	end
+    if enable then
+        self:RegisterEvent("UNIT_HEALTH")
+        if self.healthbar.db.hide_ooc and (not InCombatLockdown() or idle) then
+            if self.healthbar.bar:IsVisible() then
+                self.healthbar.bar:Hide()
+            end
+        else
+            self.healthbar.bar:Show()
+        end
+    else
+        self.healthbar.bar:Hide()
+        self:UnregisterEvent("UNIT_HEALTH")
+    end
+end
+
 local percentIntFmt = "%d%%"
 function BloodShieldTracker:UpdateHealthBar(maxChanged)
-    if self.db.profile.healthbar_enabled then
+    if self.healthbar.db.enabled then
         if maxChanged then
-            self.healthbar:SetMinMaxValues(0, maxHealth)
+            self.healthbar.bar:SetMinMaxValues(0, maxHealth)
         end
 
-        local lowhealth = (percentHealth <= self.db.profile.healthbar_low_percent)
-        if lowhealth ~= self.healthbar.lowhealth then
-            self:UpdateHealthBarGraphics(lowhealth)
+        local low = (percentHealth <= self.healthbar.db.low_percent)
+		local changed = (low ~= self.healthbar.altcolor)
+        self.healthbar.altcolor = low
+        if changed then
+            self.healthbar:UpdateGraphics()
         end
-        self.healthbar.lowhealth = lowhealth
 
-        self.healthbar:SetValue(currentHealth)
+        self.healthbar.bar:SetValue(currentHealth)
 
         local text = ""
     
-        if self.healthbar.format == "OnlyPerc" then
+        if self.healthbar.db.text_format == "OnlyPerc" then
             text = percentIntFmt:format(percentHealth * 100)
-        elseif self.healthbar.format == "Full" then
+        elseif self.healthbar.db.text_format == "Full" then
             text = shieldBarFormatFull:format(
                 FormatNumber(currentHealth), 
                 FormatNumber(maxHealth), 
                 percentHealth * 100)
-        elseif self.healthbar.format == "CurrMax" then
+        elseif self.healthbar.db.text_format == "CurrMax" then
             text = shieldBarFormatNoPer:format(
                 FormatNumber(currentHealth), 
                 FormatNumber(maxHealth))
-        elseif self.healthbar.format == "CurrPerc" then
+        elseif self.healthbar.db.text_format == "CurrPerc" then
             text = shieldBarFormatCurrPerc:format(
                 FormatNumber(currentHealth), 
                 percentHealth * 100)
@@ -3192,7 +3303,7 @@ function BloodShieldTracker:UpdateHealthBar(maxChanged)
             text = FormatNumber(currentHealth)
         end
 
-        self.healthbar.value:SetText(text)
+        self.healthbar.bar.value:SetText(text)
     end
 end
 
@@ -3203,21 +3314,21 @@ function BloodShieldTracker:UpdateShieldBarText(current, maximum, percent)
     local currentTxt = FormatNumber(current)
     local maximumTxt = FormatNumber(maximum)
     
-    if self.db.profile.shield_bar_text_format == "Full" then
+    if self.shieldbar.db.text_format == "Full" then
         newText = shieldBarFormatFull:format(currentTxt, maximumTxt, percent)
-    elseif self.db.profile.shield_bar_text_format == "OnlyCurrent" then
+    elseif self.shieldbar.db.text_format == "OnlyCurrent" then
         newText = currentTxt
-    elseif self.db.profile.shield_bar_text_format == "OnlyMax" then
+    elseif self.shieldbar.db.text_format == "OnlyMax" then
         newText = maximumTxt
-    elseif self.db.profile.shield_bar_text_format == "OnlyPerc" then
+    elseif self.shieldbar.db.text_format == "OnlyPerc" then
         newText = percentFormat:format(percent)
-    elseif self.db.profile.shield_bar_text_format == "CurrMax" then
+    elseif self.shieldbar.db.text_format == "CurrMax" then
         newText = shieldBarFormatNoPer:format(currentTxt, maximumTxt)
     else
         newText = shieldBarFormatFull:format(currentTxt, maximumTxt, percent)
     end
 
-	self.shieldbar.value:SetText(newText)
+	self.shieldbar.bar.value:SetText(newText)
 end
 
 function BloodShieldTracker:GetRecentDamageTaken(timestamp)
@@ -3229,12 +3340,12 @@ function BloodShieldTracker:GetRecentDamageTaken(timestamp)
         current = currentTime
     end
 
-    if self.db.profile.latencyMethod == "DS" then
+    if self.estimatebar.db.latencyMethod == "DS" then
         if DS_Latency and DS_Latency > 0 and DS_Latency <= 2 then
             latency = DS_Latency
         end
-    elseif self.db.profile.latencyMethod == "Fixed" then
-        latency = self.db.profile.latencyFixed / 1000
+    elseif self.estimatebar.db.latencyMethod == "Fixed" then
+        latency = self.estimatebar.db.latencyFixed / 1000
     end
 
     if latency > 0 then
@@ -3525,7 +3636,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                 end
             end
 
-            if self.db.profile.useAuraForShield == false then
+            if self.shieldbar.db.useAuraForShield == false then
                 self:NewBloodShield(timestamp, spellAbsorb)
             end
         elseif param10 == VB_BUFF then
@@ -3549,7 +3660,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                     self:Print("Blood Shield refresh.  New value = "..spellAbsorb)
                 end
 
-                if self.db.profile.useAuraForShield == false then
+                if self.shieldbar.db.useAuraForShield == false then
                     self:BloodShieldUpdated("refreshed", timestamp, spellAbsorb or 0)
                 end
             end
@@ -3561,7 +3672,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if param13 then spellAbsorb = param13 end
 
         if param10 == BS_SPELL then
-            if self.db.profile.useAuraForShield == false then
+            if self.shieldbar.db.useAuraForShield == false then
                 self:BloodShieldUpdated("removed", timestamp, spellAbsorb or 0)
             end
 
@@ -3625,8 +3736,8 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue)
     self:UpdateStatsNewShield(shieldValue, isMinimum, false)
     self:ShowShieldBar()
 
-    if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
-        PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
+    if self.shieldbar.db.sound_enabled and self.shieldbar.db.sound_applied then
+        PlaySoundFile(LSM:Fetch("sound", self.shieldbar.db.sound_applied))
     end
 end
 
@@ -3692,8 +3803,8 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
                 shieldRefreshedFormat:format(added,shieldInd) .. "\n"
         end
 
-        if self.db.profile.shield_sound_enabled and self.db.profile.shield_applied_sound then
-            PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_applied_sound))
+        if self.shieldbar.db.sound_enabled and self.shieldbar.db.sound_applied then
+            PlaySoundFile(LSM:Fetch("sound", self.shieldbar.db.sound_applied))
         end
     elseif current == curr and type == "refreshed" then
         -- No damage taken but refresh the time.
@@ -3732,13 +3843,13 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
 
     if type == "removed" then
         self.shieldbar.expires = 0
-        self.shieldbar:Hide()
+        self.shieldbar.bar:Hide()
         self:UpdateStatsRemoveShield()
         self.shieldbar.shield_max = 0
         self.shieldbar.shield_curr = 0
 
-        if self.db.profile.shield_sound_enabled and self.db.profile.shield_removed_sound then
-            PlaySoundFile(LSM:Fetch("sound", self.db.profile.shield_removed_sound))
+        if self.shieldbar.db.sound_enabled and self.shieldbar.db.sound_removed then
+            PlaySoundFile(LSM:Fetch("sound", self.shieldbar.db.sound_removed))
         end
     end
 
@@ -3757,34 +3868,12 @@ function BloodShieldTracker:UNIT_AURA(...)
     end
 end
 
-local function GetNumericValue(...)
-    local value
-    local valueText
-    local region
-    local regionText
-
-    for i = 1, select("#", ...) do
-        region = select(i, ...)
-        if region and region:GetObjectType() == "FontString" then
-            regionText = region:GetText()
-            if regionText then
-                valueText = regionText:match("%d+")
-                if valueText then
-                    value = tonumber(valueText)
-                    if value then
-                        return value
-                    end
-                end
-            end
-        end
-    end
-end
-
 local BSAuraPresent = false
 local BSAuraValue = 0
 local BSAuraExpires = 0
 local PWSAuraPresent = false
 local PWSAuraValue = 0
+local TotalAbsorbs = 0
 
 function BloodShieldTracker:CheckAuras()
     local name, rank, icon, count, dispelType, duration, expires,
@@ -3836,7 +3925,7 @@ function BloodShieldTracker:CheckAuras()
                     self:NewBloodShield(GetTime(), value)
                 else
                     if value ~= BSAuraValue or 
-                        (expires ~= BSAuraExpires and value1 > 0) then
+                        (expires ~= BSAuraExpires and value > 0) then
                         -- Blood Shield refreshed
                         if self.db.profile.verbose == true then
                             self:Print("AURA: Blood Shield refreshed. "..value
@@ -3859,7 +3948,7 @@ function BloodShieldTracker:CheckAuras()
 
         elseif spellId == PWS_SPELL_ID then
             -- Check for a Power Word: Shield
-            if self.db.profile.pwsbar_enabled == true and IsBloodTank then
+            if self.pwsbar.db.enabled and IsBloodTank then
                 pwsFound = true
                 if value then
                     OtherShields["PWS"] = value
@@ -3870,7 +3959,7 @@ function BloodShieldTracker:CheckAuras()
                 end
             end
         elseif spellId == ILLUMINATED_HEALING_BUFF_ID then
-            if self.db.profile.illumbar_enabled == true and IsBloodTank then
+            if self.illumbar.db.enabled and IsBloodTank then
                 illumHealFound = true
                 if value then
                     OtherShields["IlluminatedHealing"] = 
@@ -3883,8 +3972,8 @@ function BloodShieldTracker:CheckAuras()
             end
 
 	        elseif spellId == DIVINE_AEGIS_BUFF_ID then
-	            if self.db.profile.pwsbar_includeda == true and 
-					self.db.profile.pwsbar_enabled == true and IsBloodTank then
+	            if self.pwsbar.db.includeda and 
+					self.pwsbar.db.enabled and IsBloodTank then
 
 	                divineAegisFound = true
 	                if value then
@@ -3974,7 +4063,7 @@ function BloodShieldTracker:CheckAuras()
         BSAuraValue = 0
     end
     
-    if self.db.profile.pwsbar_enabled == true and IsBloodTank then
+    if self.pwsbar.db.enabled and IsBloodTank then
 		local pwsValue = OtherShields["PWS"]
 		local aegisValue = OtherShields["DivineAegis"]
 		local pwsbarPrev = pwsPrevValue + aegisPrevValue
@@ -3982,25 +4071,47 @@ function BloodShieldTracker:CheckAuras()
 
 		if pwsFound or divineAegisFound then
             if pwsbarTotal and pwsbarTotal ~= pwsbarPrev then
-                self:UpdatePWSBarText(pwsbarTotal)
+                self.pwsbar:SetValue(pwsbarTotal)
             end
-            self.pwsbar:Show()
+            self.pwsbar.bar:Show()
         else
-            self.pwsbar:Hide()
+            self.pwsbar.bar:Hide()
         end
     end
 
-    if self.db.profile.illumbar_enabled == true and IsBloodTank then
+    if self.illumbar.db.enabled and IsBloodTank then
         local illumValue = OtherShields["IlluminatedHealing"]
         if illumHealFound then
             if illumValue and illumValue ~= illumPrevValue then
-                self:UpdateIllumBarText(illumValue)
+                self.illumbar:SetValue(illumValue)
             end
-            self.illumbar:Show()
+            self.illumbar.bar:Show()
         else
-            self.illumbar:Hide()
+            self.illumbar.bar:Hide()
         end
     end
+
+	if self.absorbsbar.db.enabled and IsBloodTank then
+		local shields = 0
+		for k,v in pairs(OtherShields) do
+			shields = shields + v
+		end
+
+		if self.absorbsbar.db.includebs and BSAuraPresent then
+			shields = shields + BSAuraValue
+		end
+
+		if shields > 0 then
+			if shields ~= TotalAbsorbs then
+				self.absorbsbar:SetValue(shields)
+			end
+			self.absorbsbar.bar:Show()
+		else
+			self.absorbsbar.bar:Hide()
+		end
+
+		TotalAbsorbs = shields
+	end
 
     -- If the ICC buff isn't present, reset the values
     if not iccBuffFound then
@@ -4022,749 +4133,628 @@ function BloodShieldTracker:CheckAuras()
     self:UpdateMinHeal("CheckAura", "player")
 end
 
-function BloodShieldTracker:UpdateShieldBarVisibility()
-	if self.shieldbar then
-		local show = self.db.profile.status_bar_shown
-		if not show then
-			self.shieldbar:SetStatusBarTexture("")
-			self.shieldbar.bg:SetTexture("")
-			self.shieldbar.border:Hide()
-		else
-			self:UpdateShieldBarTexture()
-			self:UpdateShieldBarBorder()
-		end
-	end
+-- Define a generic class for the bars
+Bar.__index = Bar
+
+function Bar:Create(name)
+    local object = setmetatable({}, Bar)
+	object.name = name
+	object:Initialize()
+	-- Add the bar to the addon's table of bars
+	BloodShieldTracker.bars[name] = object
+	return object
 end
 
-function BloodShieldTracker:UpdateEstimateBarVisibility()
-	if self.estimatebar then
-		local show = self.db.profile.estheal_bar_shown
-		if not show then
-			self.estimatebar:SetStatusBarTexture("")
-			self.estimatebar.bg:SetTexture("")
-			self.estimatebar.border:Hide()
-		else
-			self:UpdateEstimateBarTexture()
-			self:UpdateEstimateBarBorder()
-		end
-	end
-end
+function Bar:Initialize()
+	self.db = BloodShieldTracker.db.profile.bars[self.name]
 
-function BloodShieldTracker:UpdatePWSBarVisibility()
-	if self.pwsbar then
-		local show = self.db.profile.pwsbar_shown
-		if not show then
-			self.pwsbar:SetStatusBarTexture("")
-			self.pwsbar.bg:SetTexture("")
-			self.pwsbar.border:Hide()
-		else
-			self:UpdatePWSBarTexture()
-			self:UpdatePWSBarBorder()
-		end
+    local bar = CreateFrame("StatusBar", "BloodShieldTracker_"..self.name, UIParent)
+	self.bar = bar
+	bar.object = self
+    bar:SetPoint("CENTER", UIParent, "CENTER", self.db.x, self.db.y)
+	bar:SetScale(self.db.scale)
+    bar:SetOrientation("HORIZONTAL")
+    bar:SetWidth(self.db.width)
+    bar:SetHeight(self.db.height)
+	local bt = LSM:Fetch("statusbar", self.db.texture)
+    bar:SetStatusBarTexture(bt)
+    bar:GetStatusBarTexture():SetHorizTile(false)
+    bar:GetStatusBarTexture():SetVertTile(false)
+    local bc = self.db.color
+    bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+    bar.bg = bar:CreateTexture(nil, "BACKGROUND")
+    bar.bg:SetTexture(bt)
+    bar.bg:SetAllPoints(true)
+    local bgc = self.db.bgcolor
+    bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+    bar.border = bar:CreateTexture(nil, "BACKGROUND")
+    bar.border:SetPoint("CENTER")
+    bar.border:SetWidth(bar:GetWidth()+9)
+    bar.border:SetHeight(bar:GetHeight()+8)
+    bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
+	if not self.db.border then
+		bar.border:Hide()
 	end
-end
+	local font = LSM:Fetch("font", BloodShieldTracker.db.profile.font_face)
+    bar.value = bar:CreateFontString(nil, "OVERLAY")
+    bar.value:SetPoint("CENTER")
+    bar.value:SetFont(font, 
+		BloodShieldTracker.db.profile.font_size, 
+		BloodShieldTracker:GetFontFlags())
+    bar.value:SetJustifyH("CENTER")
+    bar.value:SetShadowOffset(1, -1)
+    local tc = self.db.textcolor
+    bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    bar.value:SetText("0")
+    bar.lock = false
 
-function BloodShieldTracker:UpdateIllumBarVisibility()
-	if self.illumbar then
-		local show = self.db.profile.illumbar_shown
-		if not show then
-			self.illumbar:SetStatusBarTexture("")
-			self.illumbar.bg:SetTexture("")
-			self.illumbar.border:Hide()
-		else
-			self:UpdateIllumBarTexture()
-			self:UpdateIllumBarBorder()
-		end
-	end
-end
-
-function BloodShieldTracker:UpdateHealthBarVisibility()
-	if self.healthbar then
-		local show = self.db.profile.healthbar_shown
-		if not show then
-			self.healthbar:SetStatusBarTexture("")
-			self.healthbar.bg:SetTexture("")
-			self.healthbar.border:Hide()
-		else
-			self:UpdateHealthBarTexture()
-			self:UpdateHealthBarBorder()
-		end
-	end
-end
-
--- show/hide borders
-function BloodShieldTracker:UpdateShieldBarBorder()
-    local bar = self.shieldbar
-	if bar then
-	    if CustomUI.showBorders ~= nil then
-	        if CustomUI.showBorders == true then
-	            bar.border:Show()
-            else
-                bar.border:Hide()
-            end
-        else
-    		if self.db.profile.status_bar_border then
-    			bar.border:Show()
-    		else
-    			bar.border:Hide()
-    		end
-		end
-	end
-end
-function BloodShieldTracker:UpdateEstimateBarBorder()
-    local bar = self.estimatebar
-	if bar then
-	    if CustomUI.showBorders ~= nil then
-	        if CustomUI.showBorders == true then
-	            bar.border:Show()
-            else
-                bar.border:Hide()
-            end
-        else
-    		if self.db.profile.estheal_bar_border then
-    			bar.border:Show()
-    		else
-    			bar.border:Hide()
-    		end
-		end
-	end
-end
-function BloodShieldTracker:UpdatePWSBarBorder()
-    local bar = self.pwsbar
-	if bar then
-	    if CustomUI.showBorders ~= nil then
-	        if CustomUI.showBorders == true then
-	            bar.border:Show()
-            else
-                bar.border:Hide()
-            end
-        else
-    		if self.db.profile.pwsbar_border then
-    			bar.border:Show()
-    		else
-    			bar.border:Hide()
-    		end
-		end
-	end
-end
-function BloodShieldTracker:UpdateIllumBarBorder()
-    local bar = self.illumbar
-	if bar then
-	    if CustomUI.showBorders ~= nil then
-	        if CustomUI.showBorders == true then
-	            bar.border:Show()
-            else
-                bar.border:Hide()
-            end
-        else
-    		if self.db.profile.illumbar_border then
-    			bar.border:Show()
-    		else
-    			bar.border:Hide()
-    		end
-		end
-	end
-end
-function BloodShieldTracker:UpdateHealthBarBorder()
-    local bar = self.healthbar
-	if bar then
-	    if CustomUI.showBorders ~= nil then
-	        if CustomUI.showBorders == true then
-	            bar.border:Show()
-            else
-                bar.border:Hide()
-            end
-        else
-    		if self.db.profile.healthbar_border then
-    			bar.border:Show()
-    		else
-    			bar.border:Hide()
-    		end
-		end
-	end
-end
-
--- Update Status bar status texture
-function BloodShieldTracker:UpdateShieldBarTexture()
-	if self.shieldbar then
-		local bt
-        if CustomUI.texture then
-            bt = CustomUI.texture
-        else
-		    bt = LSM:Fetch("statusbar",self.db.profile.status_bar_texture)
-        end
-		self.shieldbar:SetStatusBarTexture(bt)
-		self.shieldbar.bg:SetTexture(bt)
-	    self.shieldbar:GetStatusBarTexture():SetHorizTile(false)
-	    self.shieldbar:GetStatusBarTexture():SetVertTile(false)
-		self:UpdateShieldBarGraphics()
-	end
-end
--- Update EstHeal bar status texture
-function BloodShieldTracker:UpdateEstimateBarTexture()
-	if self.estimatebar then
-		local bt
-        if CustomUI.texture then
-            bt = CustomUI.texture
-        else
-		    bt = LSM:Fetch("statusbar",self.db.profile.estheal_bar_texture)
+	if self.name == "ShieldBar" then
+	    bar.time = bar:CreateFontString(nil, "OVERLAY")
+	    bar.time:SetPoint(self.db.time_pos or "RIGHT")
+	    bar.time:SetFont(font, 
+			BloodShieldTracker.db.profile.font_size, 
+			BloodShieldTracker:GetFontFlags())
+	    bar.time:SetJustifyH(self.db.time_pos or "RIGHT")
+	    bar.time:SetShadowOffset(1, -1)
+	    bar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+	    bar.time:SetText("0")
+	    if self.db.show_time then
+	        bar.time:Show()
+	    else
+	        bar.time:Hide()
 	    end
-		self.estimatebar:SetStatusBarTexture(bt)
-		self.estimatebar.bg:SetTexture(bt)
-	    self.estimatebar:GetStatusBarTexture():SetHorizTile(false)
-	    self.estimatebar:GetStatusBarTexture():SetVertTile(false)
-		self:UpdateEstimateBarColors(true)
 	end
-end
-function BloodShieldTracker:UpdatePWSBarTexture()
-	if self.pwsbar then
-		local bt
-        if CustomUI.texture then
-            bt = CustomUI.texture
-        else
-		    bt = LSM:Fetch("statusbar",self.db.profile.pwsbar_texture)
-        end
-		self.pwsbar:SetStatusBarTexture(bt)
-		self.pwsbar.bg:SetTexture(bt)
-	    self.pwsbar:GetStatusBarTexture():SetHorizTile(false)
-	    self.pwsbar:GetStatusBarTexture():SetVertTile(false)
-		self:UpdatePWSBarGraphics()
+
+    bar:SetMovable()
+    bar:RegisterForDrag("LeftButton")
+    bar:SetScript("OnDragStart",
+        function(self, button)
+			if not self.lock then
+            	self:StartMoving()
+			end
+        end)
+    bar:SetScript("OnDragStop",
+        function(self)
+            self:StopMovingOrSizing()
+			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
+			local x, y = self:GetCenter()
+			x, y = x * scale, y * scale
+			x = x - GetScreenWidth()/2
+			y = y - GetScreenHeight()/2
+			x = x / self:GetScale()
+			y = y / self:GetScale()
+			-- These need to be per bar but cannot use self
+			self.object.db.x, self.object.db.y = x, y
+			self:SetUserPlaced(false);
+        end)
+    bar:EnableMouse(true)
+    bar:SetMinMaxValues(0, 1)
+    bar:SetValue(1)
+    bar:Hide()
+	self:Lock(self.db.locked)
+
+	if self.name == "HealthBar" or self.name == "EstimateBar" then
+		self.altcolor = false
 	end
-end
-function BloodShieldTracker:UpdateIllumBarTexture()
-	if self.illumbar then
-		local bt
-        if CustomUI.texture then
-            bt = CustomUI.texture
-        else
-		    bt = LSM:Fetch("statusbar",self.db.profile.illumbar_texture)
+
+	if self.name == "ShieldBar" then
+		self.shield_curr = 0
+		self.shield_max = 0
+	    self.expires = 0
+	    self.active = false
+	elseif self.name == "EstimateBar" then
+	    local text = ""
+	    if self.db.bar_mode == "BS" then
+	        text = L["EstimateBarBSText"]
+	    else
+	        text = L["HealBarText"]
 	    end
-		self.illumbar:SetStatusBarTexture(bt)
-		self.illumbar.bg:SetTexture(bt)
-	    self.illumbar:GetStatusBarTexture():SetHorizTile(false)
-	    self.illumbar:GetStatusBarTexture():SetVertTile(false)
-		self:UpdateIllumBarGraphics()
-	end
-end
-function BloodShieldTracker:UpdateHealthBarTexture()
-	if self.healthbar then
-		local bt
-        if CustomUI.texture then
-            bt = CustomUI.texture
-        else
-		    bt = LSM:Fetch("statusbar",self.db.profile.healthbar_texture)
-	    end
-		self.healthbar:SetStatusBarTexture(bt)
-		self.healthbar.bg:SetTexture(bt)
-	    self.healthbar:GetStatusBarTexture():SetHorizTile(false)
-	    self.healthbar:GetStatusBarTexture():SetVertTile(false)
-		self:UpdateHealthBarGraphics(self.healthbar.lowhealth)
+	    bar.value:SetText(healBarFormat:format(text, dsHealMin))
 	end
 end
 
-function BloodShieldTracker:UpdateShieldBarGraphics()
-    if self.shieldbar then
-        if self.db.profile.shield_bar_show_time then
-            self.shieldbar.time:Show()
-        else
-            self.shieldbar.time:Hide()
-        end
-        
-        self.shieldbar.time:SetPoint(self.db.profile.shield_bar_time_pos or "RIGHT")
+function Bar:Lock(locked)
+	if locked == nil then
+		locked = self.db.locked
+	end
 
-        local bc = self.db.profile.status_bar_color
-        self.shieldbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-        local bgc = self.db.profile.status_bar_bgcolor
-        self.shieldbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-        local tc = self.db.profile.status_bar_textcolor
-        self.shieldbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-        self.shieldbar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+	self.bar.lock = locked
+    if locked then
+        self.bar:EnableMouse(false)
+    else
+        self.bar:EnableMouse(true)
     end
 end
 
-function BloodShieldTracker:UpdateEstimateBarColors(min)
+function Bar:SetValue(value)
+	if self.db.enabled then
+		self.bar.value:SetText(FormatNumber(value))
+	end
+end
+
+function Bar:Reset()
+	self.bar:SetPoint("CENTER", UIParent, "CENTER", self.db.x, self.db.y)
+	self:Lock()
+	self:UpdateTexture()
+	self:UpdateBorder()
+	self:UpdateVisibility()
+	self:UpdateGraphics()
+end
+
+function Bar:ResetFonts()
+	local ff, fh, fontFlags = BloodShieldTracker:GetFontSettings()
+	self.bar.value:SetFont(ff, fh, fontFlags)						
+	self.bar.value:SetText(self.bar.value:GetText())
+	if self.name == "ShieldBar" then
+		self.bar.time:SetFont(ff, fh, fontFlags)
+		self.bar.time:SetText(self.bar.time:GetText())
+	end
+end
+
+function Bar:UpdateVisibility()
+	local show = self.db.shown
+	if not show then
+		self.bar:SetStatusBarTexture("")
+		self.bar.bg:SetTexture("")
+		self.bar.border:Hide()
+	else
+		self:UpdateTexture()
+		self:UpdateBorder()
+	end
+end
+
+function Bar:UpdateBorder()
+    local bar = self.bar
+	if bar then
+	    if CustomUI.showBorders ~= nil then
+	        if CustomUI.showBorders == true then
+	            bar.border:Show()
+            else
+                bar.border:Hide()
+            end
+        else
+    		if self.db.border then
+    			bar.border:Show()
+    		else
+    			bar.border:Hide()
+    		end
+		end
+	end
+end
+
+function Bar:UpdateTexture()
+	if not self.db.shown then
+		return
+	end
+
+	local bt
+    if CustomUI.texture then
+        bt = CustomUI.texture
+    else
+	    bt = LSM:Fetch("statusbar", self.db.texture)
+    end
+	self.bar:SetStatusBarTexture(bt)
+	self.bar.bg:SetTexture(bt)
+    self.bar:GetStatusBarTexture():SetHorizTile(false)
+    self.bar:GetStatusBarTexture():SetVertTile(false)
+	self:UpdateGraphics()
+end
+
+function Bar:UpdateGraphics()
     local bc, bgc, tc
-    if min then
-        bc = self.db.profile.estheal_bar_min_color
-        bgc = self.db.profile.estheal_bar_min_bgcolor
-        tc = self.db.profile.estheal_bar_min_textcolor
-    else
-        bc = self.db.profile.estheal_bar_opt_color
-        bgc = self.db.profile.estheal_bar_opt_bgcolor
-        tc = self.db.profile.estheal_bar_opt_textcolor
-    end
-    self.estimatebar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-    self.estimatebar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-    self.estimatebar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-end
 
-function BloodShieldTracker:UpdatePWSBarGraphics()
-    if self.pwsbar then
-        local bc = self.db.profile.pwsbar_color
-        self.pwsbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-        local bgc = self.db.profile.pwsbar_bgcolor
-        self.pwsbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-        local tc = self.db.profile.pwsbar_textcolor
-        self.pwsbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-    end
-end
-
-function BloodShieldTracker:UpdateIllumBarGraphics()
-    if self.illumbar then
-        local bc = self.db.profile.illumbar_color
-        self.illumbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-        local bgc = self.db.profile.illumbar_bgcolor
-        self.illumbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-        local tc = self.db.profile.illumbar_textcolor
-        self.illumbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-    end
-end
-
-function BloodShieldTracker:UpdateHealthBarGraphics(low)
-    if self.healthbar then
-        local bc, bgc, tc
-        if low then
-            bc = self.db.profile.healthbar_low_color
-            bgc = self.db.profile.healthbar_low_bgcolor
-            tc = self.db.profile.healthbar_low_textcolor
-        else
-            bc = self.db.profile.healthbar_color
-            bgc = self.db.profile.healthbar_bgcolor
-            tc = self.db.profile.healthbar_textcolor
-        end
-        self.healthbar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-        self.healthbar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-        self.healthbar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-    end
-end
-
-function BloodShieldTracker:ShieldBarLock(locked)
-    if self.shieldbar then
-        self.shieldbar.lock = locked
-        if locked then
-            self.shieldbar:EnableMouse(false)
-        else
-            self.shieldbar:EnableMouse(true)
-        end
-    end
-end
-
-function BloodShieldTracker:EstHealBarLock(locked)
-    if self.estimatebar then
-        self.estimatebar.lock = locked
-        if locked then
-            self.estimatebar:EnableMouse(false)
-        else
-            self.estimatebar:EnableMouse(true)
-        end
-    end
-end
-
-function BloodShieldTracker:PWSBarLock(locked)
-    if self.pwsbar then
-        self.pwsbar.lock = locked
-        if locked then
-            self.pwsbar:EnableMouse(false)
-        else
-            self.pwsbar:EnableMouse(true)
-        end
-    end
-end
-
-function BloodShieldTracker:IllumBarLock(locked)
-    if self.illumbar then
-        self.illumbar.lock = locked
-        if locked then
-            self.illumbar:EnableMouse(false)
-        else
-            self.illumbar:EnableMouse(true)
-        end
-    end
-end
-
-function BloodShieldTracker:HealthBarLock(locked)
-    if self.healthbar then
-        self.healthbar.lock = locked
-        if locked then
-            self.healthbar:EnableMouse(false)
-        else
-            self.healthbar:EnableMouse(true)
-        end
-    end
-end
-
-function BloodShieldTracker:CreateShieldBar()
-    local bar = CreateFrame("StatusBar", "BloodShieldTracker_StatusBar", UIParent)
-    self.shieldbar = bar
-
-    bar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.shield_bar_x, self.db.profile.shield_bar_y)
-	bar:SetScale(self.db.profile.status_bar_scale)
-    bar:SetOrientation("HORIZONTAL")
-    bar:SetWidth(self.db.profile.status_bar_width)
-    bar:SetHeight(self.db.profile.status_bar_height)
-	local bt = LSM:Fetch("statusbar",self.db.profile.status_bar_texture)
-    bar:SetStatusBarTexture(bt)
-    bar:GetStatusBarTexture():SetHorizTile(false)
-    bar:GetStatusBarTexture():SetVertTile(false)
-    local bc = self.db.profile.status_bar_color
-    bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-    bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-    bar.bg:SetTexture(bt)
-    bar.bg:SetAllPoints(true)
-    local bgc = self.db.profile.status_bar_bgcolor
-    bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-    bar.border = bar:CreateTexture(nil, "BACKGROUND")
-    bar.border:SetPoint("CENTER")
-    bar.border:SetWidth(bar:GetWidth()+9)
-    bar.border:SetHeight(bar:GetHeight()+8)
-    bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
-	if not self.db.profile.status_bar_border then
-		bar.border:Hide()
+	if self.altcolor then
+	    bc = self.db.alt_color
+	    bgc = self.db.alt_bgcolor
+	    tc = self.db.alt_textcolor
+	else
+	    bc = self.db.color
+	    bgc = self.db.bgcolor
+	    tc = self.db.textcolor
 	end
-	local font = LSM:Fetch("font",self.db.profile.font_face)
-    bar.value = bar:CreateFontString(nil, "OVERLAY")
-    bar.value:SetPoint("CENTER")
-    bar.value:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
-    bar.value:SetJustifyH("CENTER")
-    bar.value:SetShadowOffset(1, -1)
-    local tc = self.db.profile.status_bar_textcolor
-    bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-    bar.lock = false
 
-    bar.time = bar:CreateFontString(nil, "OVERLAY")
-    bar.time:SetPoint(self.db.profile.shield_bar_time_pos or "RIGHT")
-    bar.time:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
-    bar.time:SetJustifyH(self.db.profile.shield_bar_time_pos or "RIGHT")
-    bar.time:SetShadowOffset(1, -1)
-    bar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-    bar.time:SetText("0")
-    if self.db.profile.shield_bar_show_time then
-        bar.time:Show()
-    else
-        bar.time:Hide()
-    end
+    self.bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+    self.bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+    self.bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 
-    bar:SetMovable()
-    bar:RegisterForDrag("LeftButton")
-    bar:SetScript("OnDragStart",
-        function(self,button)
-			if not self.lock then
-            	self:StartMoving()
-			end
-        end)
-    bar:SetScript("OnDragStop",
-        function(self)
-            self:StopMovingOrSizing()
-			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
-			local x, y = self:GetCenter()
-			x, y = x * scale, y * scale
-			x = x - GetScreenWidth()/2
-			y = y - GetScreenHeight()/2
-			x = x / self:GetScale()
-			y = y / self:GetScale()
-			BloodShieldTracker.db.profile.shield_bar_x, BloodShieldTracker.db.profile.shield_bar_y = x, y
-			self:SetUserPlaced(false);
-        end)
-    bar:EnableMouse(true)
-    bar:Hide()
-	bar.shield_curr = 0
-	bar.shield_max = 0
-    bar.expires = 0
-    bar.active = false
-
-	self:ShieldBarLock(self.db.profile.lock_status_bar)
-	self:UpdateShieldBarMode()
-    self:UpdateShieldBarText(0, 0, 0)
-
-    return bar
+	if self.name == "ShieldBar" then
+	    if self.db.show_time then
+	        self.bar.time:Show()
+	    else
+	        self.bar.time:Hide()
+	    end
+	    self.bar.time:SetPoint(self.db.time_pos or "RIGHT")
+        self.bar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+	end
 end
 
-function BloodShieldTracker:CreatePWSBar()
-    local bar = CreateFrame("StatusBar", "BloodShieldTracker_Shield_PWS", UIParent)
-    self.pwsbar = bar
+function BloodShieldTracker:MigrateIllumBarSettings()
+	if self.db.profile.illumbar_enabled ~= nil then
+		local settings = self.db.profile.bars["IllumBar"]
+		if self.db.profile.illumbar_enabled ~= nil then
+			settings.enabled = self.db.profile.illumbar_enabled
+		end
+		if self.db.profile.illumbar_shown ~= nil then
+			settings.shown = self.db.profile.illumbar_shown
+		end
+		if self.db.profile.lock_illum ~= nil then
+			settings.locked = self.db.profile.lock_illum
+		end
+		if self.db.profile.illumbar_texture ~= nil then
+			settings.texture = self.db.profile.illumbar_texture
+		end
+		if self.db.profile.illumbar_border ~= nil then
+			settings.border = self.db.profile.illumbar_border
+		end
+		if self.db.profile.illumbar_color ~= nil then
+			settings.color = self.db.profile.illumbar_color
+		end
+		if self.db.profile.illumbar_bgcolor ~= nil then
+			settings.bgcolor = self.db.profile.illumbar_bgcolor
+		end
+		if self.db.profile.illumbar_textcolor ~= nil then
+			settings.textcolor = self.db.profile.illumbar_textcolor
+		end
+		if self.db.profile.illumbar_x ~= nil then
+			settings.x = self.db.profile.illumbar_x
+		end
+		if self.db.profile.illumbar_y ~= nil then
+			settings.y = self.db.profile.illumbar_y
+		end
+		if self.db.profile.illumbar_width ~= nil then
+			settings.width = self.db.profile.illumbar_width
+		end
+		if self.db.profile.illumbar_height ~= nil then
+			settings.height = self.db.profile.illumbar_height
+		end
+		if self.db.profile.illumbar_scale ~= nil then
+			settings.scale = self.db.profile.illumbar_scale
+		end
 
-    bar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.pwsbar_x, self.db.profile.pwsbar_y)
-	bar:SetScale(self.db.profile.pwsbar_scale)
-    bar:SetOrientation("HORIZONTAL")
-    bar:SetWidth(self.db.profile.pwsbar_width)
-    bar:SetHeight(self.db.profile.pwsbar_height)
-	local bt = LSM:Fetch("statusbar",self.db.profile.pwsbar_texture)
-    bar:SetStatusBarTexture(bt)
-    bar:GetStatusBarTexture():SetHorizTile(false)
-    bar:GetStatusBarTexture():SetVertTile(false)
-    local bc = self.db.profile.pwsbar_color
-    bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-    bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-    bar.bg:SetTexture(bt)
-    bar.bg:SetAllPoints(true)
-    local bgc = self.db.profile.pwsbar_bgcolor
-    bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-    bar.border = bar:CreateTexture(nil, "BACKGROUND")
-    bar.border:SetPoint("CENTER")
-    bar.border:SetWidth(bar:GetWidth()+9)
-    bar.border:SetHeight(bar:GetHeight()+8)
-    bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
-	if not self.db.profile.pwsbar_border then
-		bar.border:Hide()
+		self.db.profile.illumbar_enabled = nil
+		self.db.profile.illumbar_shown = nil
+		self.db.profile.lock_illum = nil
+		self.db.profile.illumbar_texture = nil
+		self.db.profile.illumbar_border = nil
+		self.db.profile.illumbar_color = nil
+		self.db.profile.illumbar_bgcolor = nil
+		self.db.profile.illumbar_textcolor = nil
+		self.db.profile.illumbar_x = nil
+		self.db.profile.illumbar_y = nil
+		self.db.profile.illumbar_width = nil
+		self.db.profile.illumbar_height = nil
+		self.db.profile.illumbar_scale = nil
 	end
-	local font = LSM:Fetch("font",self.db.profile.font_face)
-    bar.value = bar:CreateFontString(nil, "OVERLAY")
-    bar.value:SetPoint("CENTER")
-    bar.value:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
-    bar.value:SetJustifyH("CENTER")
-    bar.value:SetShadowOffset(1, -1)
-    local tc = self.db.profile.pwsbar_textcolor
-    bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-    bar.value:SetText("0")
-    bar.lock = false
-
-    bar:SetMovable()
-    bar:RegisterForDrag("LeftButton")
-    bar:SetScript("OnDragStart",
-        function(self,button)
-			if not self.lock then
-            	self:StartMoving()
-			end
-        end)
-    bar:SetScript("OnDragStop",
-        function(self)
-            self:StopMovingOrSizing()
-			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
-			local x, y = self:GetCenter()
-			x, y = x * scale, y * scale
-			x = x - GetScreenWidth()/2
-			y = y - GetScreenHeight()/2
-			x = x / self:GetScale()
-			y = y / self:GetScale()
-			BloodShieldTracker.db.profile.pwsbar_x, BloodShieldTracker.db.profile.pwsbar_y = x, y
-			self:SetUserPlaced(false);
-        end)
-    bar:EnableMouse(true)
-    bar:SetMinMaxValues(0, 1)
-    bar:SetValue(1)
-    bar:Hide()
-
-	self:PWSBarLock(self.db.profile.lock_pwsbar)
-
-    return bar
 end
 
-function BloodShieldTracker:CreateIllumBar()
-    local bar = CreateFrame("StatusBar", "BloodShieldTracker_Shield_IllumHeal", UIParent)
-    self.illumbar = bar
+function BloodShieldTracker:MigratePWSBarSettings()
+	if self.db.profile.pwsbar_enabled ~= nil then
+		local settings = self.db.profile.bars["PWSBar"]
+		if self.db.profile.pwsbar_enabled ~= nil then
+			settings.enabled = self.db.profile.pwsbar_enabled
+		end
+		if self.db.profile.pwsbar_shown ~= nil then
+			settings.shown = self.db.profile.pwsbar_shown
+		end
+		if self.db.profile.lock_pwsbar ~= nil then
+			settings.locked = self.db.profile.lock_pwsbar
+		end
+		if self.db.profile.pwsbar_texture ~= nil then
+			settings.texture = self.db.profile.pwsbar_texture
+		end
+		if self.db.profile.pwsbar_border ~= nil then
+			settings.border = self.db.profile.pwsbar_border
+		end
+		if self.db.profile.pwsbar_color ~= nil then
+			settings.color = self.db.profile.pwsbar_color
+		end
+		if self.db.profile.pwsbar_bgcolor ~= nil then
+			settings.bgcolor = self.db.profile.pwsbar_bgcolor
+		end
+		if self.db.profile.pwsbar_textcolor ~= nil then
+			settings.textcolor = self.db.profile.pwsbar_textcolor
+		end
+		if self.db.profile.pwsbar_x ~= nil then
+			settings.x = self.db.profile.pwsbar_x
+		end
+		if self.db.profile.pwsbar_y ~= nil then
+			settings.y = self.db.profile.pwsbar_y
+		end
+		if self.db.profile.pwsbar_width ~= nil then
+			settings.width = self.db.profile.pwsbar_width
+		end
+		if self.db.profile.pwsbar_height ~= nil then
+			settings.height = self.db.profile.pwsbar_height
+		end
+		if self.db.profile.pwsbar_scale ~= nil then
+			settings.scale = self.db.profile.pwsbar_scale
+		end
+		if self.db.profile.pwsbar_includeda ~= nil then
+			settings.includeda = self.db.profile.pwsbar_includeda
+		end
 
-    bar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.illumbar_x, self.db.profile.illumbar_y)
-	bar:SetScale(self.db.profile.illumbar_scale)
-    bar:SetOrientation("HORIZONTAL")
-    bar:SetWidth(self.db.profile.illumbar_width)
-    bar:SetHeight(self.db.profile.illumbar_height)
-	local bt = LSM:Fetch("statusbar",self.db.profile.illumbar_texture)
-    bar:SetStatusBarTexture(bt)
-    bar:GetStatusBarTexture():SetHorizTile(false)
-    bar:GetStatusBarTexture():SetVertTile(false)
-    local bc = self.db.profile.illumbar_color
-    bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-    bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-    bar.bg:SetTexture(bt)
-    bar.bg:SetAllPoints(true)
-    local bgc = self.db.profile.illumbar_bgcolor
-    bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-    bar.border = bar:CreateTexture(nil, "BACKGROUND")
-    bar.border:SetPoint("CENTER")
-    bar.border:SetWidth(bar:GetWidth()+9)
-    bar.border:SetHeight(bar:GetHeight()+8)
-    bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
-	if not self.db.profile.illumbar_border then
-		bar.border:Hide()
+		self.db.profile.pwsbar_enabled = nil
+		self.db.profile.pwsbar_shown = nil
+		self.db.profile.lock_pwsbar = nil
+		self.db.profile.pwsbar_texture = nil
+		self.db.profile.pwsbar_border = nil
+		self.db.profile.pwsbar_color = nil
+		self.db.profile.pwsbar_bgcolor = nil
+		self.db.profile.pwsbar_textcolor = nil
+		self.db.profile.pwsbar_x = nil
+		self.db.profile.pwsbar_y = nil
+		self.db.profile.pwsbar_width = nil
+		self.db.profile.pwsbar_height = nil
+		self.db.profile.pwsbar_scale = nil
+		self.db.profile.pwsbar_includeda = nil
 	end
-	local font = LSM:Fetch("font",self.db.profile.font_face)
-    bar.value = bar:CreateFontString(nil, "OVERLAY")
-    bar.value:SetPoint("CENTER")
-    bar.value:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
-    bar.value:SetJustifyH("CENTER")
-    bar.value:SetShadowOffset(1, -1)
-    local tc = self.db.profile.illumbar_textcolor
-    bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-    bar.value:SetText("0")
-    bar.lock = false
-
-    bar:SetMovable()
-    bar:RegisterForDrag("LeftButton")
-    bar:SetScript("OnDragStart",
-        function(self,button)
-			if not self.lock then
-            	self:StartMoving()
-			end
-        end)
-    bar:SetScript("OnDragStop",
-        function(self)
-            self:StopMovingOrSizing()
-			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
-			local x, y = self:GetCenter()
-			x, y = x * scale, y * scale
-			x = x - GetScreenWidth()/2
-			y = y - GetScreenHeight()/2
-			x = x / self:GetScale()
-			y = y / self:GetScale()
-			BloodShieldTracker.db.profile.illumbar_x, BloodShieldTracker.db.profile.illumbar_y = x, y
-			self:SetUserPlaced(false);
-        end)
-    bar:EnableMouse(true)
-    bar:SetMinMaxValues(0, 1)
-    bar:SetValue(1)
-    bar:Hide()
-	self:IllumBarLock(self.db.profile.lock_illumbar)
-
-    return bar
 end
 
-function BloodShieldTracker:CreateEstimateBar()
-    local bar = CreateFrame("StatusBar", "BloodShieldTracker_EstimateBar", UIParent)
-    self.estimatebar = bar
+function BloodShieldTracker:MigrateHealthBarSettings()
+	if self.db.profile.healthbar_enabled ~= nil then
+		local settings = self.db.profile.bars["HealthBar"]
+		if self.db.profile.healthbar_enabled ~= nil then
+			settings.enabled = self.db.profile.healthbar_enabled
+		end
+		if self.db.profile.healthbar_shown ~= nil then
+			settings.shown = self.db.profile.healthbar_shown
+		end
+		if self.db.profile.lock_healthbar ~= nil then
+			settings.locked = self.db.profile.lock_healthbar
+		end
+		if self.db.profile.healthbar_texture ~= nil then
+			settings.texture = self.db.profile.healthbar_texture
+		end
+		if self.db.profile.healthbar_border ~= nil then
+			settings.border = self.db.profile.healthbar_border
+		end
+		if self.db.profile.healthbar_color ~= nil then
+			settings.color = self.db.profile.healthbar_color
+		end
+		if self.db.profile.healthbar_bgcolor ~= nil then
+			settings.bgcolor = self.db.profile.healthbar_bgcolor
+		end
+		if self.db.profile.healthbar_textcolor ~= nil then
+			settings.textcolor = self.db.profile.healthbar_textcolor
+		end
+		if self.db.profile.healthbar_x ~= nil then
+			settings.x = self.db.profile.healthbar_x
+		end
+		if self.db.profile.healthbar_y ~= nil then
+			settings.y = self.db.profile.healthbar_y
+		end
+		if self.db.profile.healthbar_width ~= nil then
+			settings.width = self.db.profile.healthbar_width
+		end
+		if self.db.profile.healthbar_height ~= nil then
+			settings.height = self.db.profile.healthbar_height
+		end
+		if self.db.profile.healthbar_scale ~= nil then
+			settings.scale = self.db.profile.healthbar_scale
+		end
+		if self.db.profile.healthbar_hide_ooc ~= nil then
+			settings.hide_ooc = self.db.profile.healthbar_hide_ooc
+		end
+		if self.db.profile.healthbar_low_color ~= nil then
+			settings.alt_color = self.db.profile.healthbar_low_color
+		end
+		if self.db.profile.healthbar_low_textcolor ~= nil then
+			settings.alt_textcolor = self.db.profile.healthbar_low_textcolor
+		end
+		if self.db.profile.healthbar_low_bgcolor ~= nil then
+			settings.alt_bgcolor = self.db.profile.healthbar_low_bgcolor
+		end
+		if self.db.profile.healthbar_low_percent ~= nil then
+			settings.low_percent = self.db.profile.healthbar_low_percent
+		end
+		if self.db.profile.healthbar_text_format ~= nil then
+			settings.text_format = self.db.profile.healthbar_text_format
+		end
 
-	local scale = self.db.profile.estheal_bar_scale
-    bar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.est_heal_x, self.db.profile.est_heal_y)
-	bar:SetScale(scale)
-    bar:SetWidth(self.db.profile.damage_bar_width)
-    bar:SetHeight(self.db.profile.damage_bar_height)
-	local bt = LSM:Fetch("statusbar",self.db.profile.estheal_bar_texture)
-   	bar:SetStatusBarTexture(bt)
-    bar:GetStatusBarTexture():SetHorizTile(false)
-    bar:GetStatusBarTexture():SetVertTile(false)
-    local bc = self.db.profile.estheal_bar_min_color
-    bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-    bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-    bar.bg:SetTexture(bt)
-    bar.bg:SetAllPoints(true)
-    local bgc = self.db.profile.estheal_bar_min_bgcolor
-    bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-    bar.border = bar:CreateTexture(nil, "BACKGROUND")
-    bar.border:SetPoint("CENTER")
-    bar.border:SetWidth(bar:GetWidth()+9)
-    bar.border:SetHeight(bar:GetHeight()+8)
-    bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
-	if not self.db.profile.estheal_bar_border then
-		bar.border:Hide()
+		self.db.profile.healthbar_enabled = nil
+		self.db.profile.healthbar_shown = nil
+		self.db.profile.lock_healthbar = nil
+		self.db.profile.healthbar_texture = nil
+		self.db.profile.healthbar_border = nil
+		self.db.profile.healthbar_color = nil
+		self.db.profile.healthbar_bgcolor = nil
+		self.db.profile.healthbar_textcolor = nil
+		self.db.profile.healthbar_x = nil
+		self.db.profile.healthbar_y = nil
+		self.db.profile.healthbar_width = nil
+		self.db.profile.healthbar_height = nil
+		self.db.profile.healthbar_scale = nil
+		self.db.profile.healthbar_hide_ooc = nil
+		self.db.profile.healthbar_low_color  = nil
+		self.db.profile.healthbar_low_textcolor  = nil
+		self.db.profile.healthbar_low_bgcolor  = nil
+		self.db.profile.healthbar_low_percent = nil
+		self.db.profile.healthbar_text_format = nil
 	end
-    bar.value = bar:CreateFontString(nil, "OVERLAY")
-    bar.value:SetPoint("CENTER")
-	local font = LSM:Fetch("font",self.db.profile.font_face)
-    bar.value:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
-    bar.value:SetJustifyH("CENTER")
-    bar.value:SetShadowOffset(1, -1)
-    local tc = self.db.profile.estheal_bar_min_textcolor
-    bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-    bar.lock = false
-    bar:SetMovable()
-    bar:RegisterForDrag("LeftButton")
-    bar:SetScript("OnDragStart",
-        function(self,button)
-			if not self.lock then
-            	self:StartMoving()
-			end
-        end)
-    bar:SetScript("OnDragStop",
-        function(self)
-            self:StopMovingOrSizing()
-			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
-			local x, y = self:GetCenter()
-			x, y = x * scale, y * scale
-			x = x - GetScreenWidth()/2
-			y = y - GetScreenHeight()/2
-			x = x / self:GetScale()
-			y = y / self:GetScale()
-			BloodShieldTracker.db.profile.est_heal_x, BloodShieldTracker.db.profile.est_heal_y = x, y
-			self:SetUserPlaced(false);
-        end)
-
-    bar:SetMinMaxValues(0,1)
-    bar:SetValue(1)
-
-    local text = ""
-    if self.db.profile.estimate_bar_mode == "BS" then
-        text = L["EstimateBarBSText"]
-    else
-        text = L["HealBarText"]
-    end
-    bar.value:SetText(healBarFormat:format(text, dsHealMin))
-    bar:EnableMouse(true)
-    bar:Hide()
-
-	self:EstHealBarLock(self.db.profile.lock_damage_bar)
-	bar.hideooc = self.db.profile.hide_damage_bar_ooc
-	bar.minheal = true
-
-    return bar
 end
 
-function BloodShieldTracker:CreateHealthBar()
-    local bar = CreateFrame("StatusBar", "BloodShieldTracker_HealthBar", UIParent)
-    self.healthbar = bar
+function BloodShieldTracker:MigrateEstimateBarSettings()
+	if self.db.profile.est_heal_x ~= nil or 
+		self.db.profile.lock_damage_bar ~= nil then
 
-	local scale = self.db.profile.healthbar_scale
-    bar:SetPoint("CENTER", UIParent, "CENTER", self.db.profile.healthbar_x, self.db.profile.healthbar_y)
-	bar:SetScale(scale)
-    bar:SetWidth(self.db.profile.healthbar_width)
-    bar:SetHeight(self.db.profile.healthbar_height)
-	local bt = LSM:Fetch("statusbar",self.db.profile.healthbar_texture)
-   	bar:SetStatusBarTexture(bt)
-    bar:GetStatusBarTexture():SetHorizTile(false)
-    bar:GetStatusBarTexture():SetVertTile(false)
-    local bc = self.db.profile.healthbar_color
-    bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-    bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-    bar.bg:SetTexture(bt)
-    bar.bg:SetAllPoints(true)
-    local bgc = self.db.profile.healthbar_bgcolor
-    bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-    bar.border = bar:CreateTexture(nil, "BACKGROUND")
-    bar.border:SetPoint("CENTER")
-    bar.border:SetWidth(bar:GetWidth()+9)
-    bar.border:SetHeight(bar:GetHeight()+8)
-    bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
-	if not self.db.profile.healthbar_border then
-		bar.border:Hide()
+		local settings = self.db.profile.bars["EstimateBar"]
+		if self.db.profile.damage_bar_enabled ~= nil then
+			settings.enabled = self.db.profile.damage_bar_enabled
+		end
+		if self.db.profile.hide_damage_bar_ooc ~= nil then
+			settings.hide_ooc = self.db.profile.hide_damage_bar_ooc
+		end
+		if self.db.profile.lock_damage_bar ~= nil then
+			settings.locked = self.db.profile.lock_damage_bar
+		end
+		if self.db.profile.damage_bar_width ~= nil then
+			settings.width = self.db.profile.damage_bar_width
+		end
+		if self.db.profile.damage_bar_height ~= nil then
+			settings.height = self.db.profile.damage_bar_height
+		end
+		if self.db.profile.estheal_bar_texture ~= nil then
+			settings.texture = self.db.profile.estheal_bar_texture
+		end
+		if self.db.profile.estheal_bar_min_textcolor ~= nil then
+			settings.textcolor = self.db.profile.estheal_bar_min_textcolor
+		end
+		if self.db.profile.estheal_bar_min_color ~= nil then
+			settings.color = self.db.profile.estheal_bar_min_color
+		end
+		if self.db.profile.estheal_bar_min_bgcolor ~= nil then
+			settings.bgcolor = self.db.profile.estheal_bar_min_bgcolor
+		end
+		if self.db.profile.estheal_bar_opt_textcolor ~= nil then
+			settings.alt_textcolor = self.db.profile.estheal_bar_opt_textcolor
+		end
+		if self.db.profile.estheal_bar_opt_color ~= nil then
+			settings.alt_color = self.db.profile.estheal_bar_opt_color
+		end
+		if self.db.profile.estheal_bar_opt_bgcolor ~= nil then
+			settings.alt_bgcolor = self.db.profile.estheal_bar_opt_bgcolor
+		end
+		if self.db.profile.estimate_bar_mode ~= nil then
+			settings.bar_mode = self.db.profile.estimate_bar_mode
+		end
+		if self.db.profile.estheal_bar_border ~= nil then
+			settings.border = self.db.profile.estheal_bar_border
+		end
+		if self.db.profile.estheal_bar_shown ~= nil then
+			settings.shown = self.db.profile.estheal_bar_shown
+		end
+		if self.db.profile.estheal_bar_show_text ~= nil then
+			settings.show_text = self.db.profile.estheal_bar_show_text
+		end
+		if self.db.profile.est_heal_x ~= nil then
+			settings.x = self.db.profile.est_heal_x
+		end
+		if self.db.profile.est_heal_y ~= nil then
+			settings.y = self.db.profile.est_heal_y
+		end
+		if self.db.profile.estheal_bar_scale ~= nil then
+			settings.scale = self.db.profile.estheal_bar_scale
+		end
+		if self.db.profile.latencyMethod ~= nil then
+			settings.latencyMethod = self.db.profile.latencyMethod
+		end
+		if self.db.profile.latencyFixed ~= nil then
+			settings.latencyFixed = self.db.profile.latencyFixed
+		end
+
+	    self.db.profile.damage_bar_enabled = nil
+	    self.db.profile.hide_damage_bar_ooc = nil
+		self.db.profile.lock_damage_bar = nil
+		self.db.profile.damage_bar_width = nil
+		self.db.profile.damage_bar_height = nil
+		self.db.profile.estheal_bar_texture = nil
+		self.db.profile.estheal_bar_min_textcolor = nil
+		self.db.profile.estheal_bar_min_color = nil
+		self.db.profile.estheal_bar_min_bgcolor = nil
+		self.db.profile.estheal_bar_opt_textcolor = nil
+		self.db.profile.estheal_bar_opt_color = nil
+		self.db.profile.estheal_bar_opt_bgcolor = nil
+		self.db.profile.estimate_bar_mode = nil
+		self.db.profile.estheal_bar_border = nil
+		self.db.profile.estheal_bar_shown = nil
+		self.db.profile.estheal_bar_show_text = nil
+		self.db.profile.est_heal_x = nil
+		self.db.profile.est_heal_y = nil
+		self.db.profile.estheal_bar_scale = nil
+		self.db.profile.latencyMethod = nil
+		self.db.profile.latencyFixed = nil
 	end
-    bar.value = bar:CreateFontString(nil, "OVERLAY")
-    bar.value:SetPoint("CENTER")
-	local font = LSM:Fetch("font",self.db.profile.font_face)
-    bar.value:SetFont(font, self.db.profile.font_size, self:GetFontFlags())
-    bar.value:SetJustifyH("CENTER")
-    bar.value:SetShadowOffset(1, -1)
-    local tc = self.db.profile.healthbar_textcolor
-    bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-    bar.lock = false
-    bar:SetMovable()
-    bar:RegisterForDrag("LeftButton")
-    bar:SetScript("OnDragStart",
-        function(self,button)
-			if not self.lock then
-            	self:StartMoving()
-			end
-        end)
-    bar:SetScript("OnDragStop",
-        function(self)
-            self:StopMovingOrSizing()
-			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
-			local x, y = self:GetCenter()
-			x, y = x * scale, y * scale
-			x = x - GetScreenWidth()/2
-			y = y - GetScreenHeight()/2
-			x = x / self:GetScale()
-			y = y / self:GetScale()
-			BloodShieldTracker.db.profile.healthbar_x, BloodShieldTracker.db.profile.healthbar_y = x, y
-			self:SetUserPlaced(false);
-        end)
+end
 
-    bar:SetMinMaxValues(0,1)
-    bar:SetValue(1)
-    bar.value:SetText("0")
-    bar:EnableMouse(true)
-    bar:Hide()
-    bar.hideooc = self.db.profile.healthbar_hide_ooc
-    bar.lowhealth = false
-    bar.format = self.db.profile.healthbar_text_format
-	self:HealthBarLock(self.db.profile.lock_healthbar)
+function BloodShieldTracker:MigrateShieldBarSettings()
+	if self.db.profile.shield_bar_x ~= nil or 
+		self.db.profile.lock_status_bar ~= nil then
 
-    return bar
+		local settings = self.db.profile.bars["ShieldBar"]
+		if self.db.profile.status_bar_enabled ~= nil then
+			settings.enabled = self.db.profile.status_bar_enabled
+		end
+		if self.db.profile.lock_status_bar ~= nil then
+			settings.locked = self.db.profile.lock_status_bar
+		end
+		if self.db.profile.status_bar_width ~= nil then
+			settings.width = self.db.profile.status_bar_width
+		end
+		if self.db.profile.status_bar_height ~= nil then
+			settings.height = self.db.profile.status_bar_height
+		end
+		if self.db.profile.shield_bar_progress ~= nil then
+			settings.progress = self.db.profile.shield_bar_progress
+		end
+		if self.db.profile.shield_bar_show_time ~= nil then
+			settings.show_time = self.db.profile.shield_bar_show_time
+		end
+		if self.db.profile.shield_bar_time_pos ~= nil then
+			settings.time_pos = self.db.profile.shield_bar_time_pos
+		end
+		if self.db.profile.shield_sound_enabled ~= nil then
+			settings.sound_enabled = self.db.profile.shield_sound_enabled
+		end
+		if self.db.profile.shield_applied_sound ~= nil then
+			settings.sound_applied = self.db.profile.shield_applied_sound
+		end
+		if self.db.profile.shield_removed_sound ~= nil then
+			settings.sound_removed = self.db.profile.shield_removed_sound
+		end
+		if self.db.profile.shield_bar_text_format ~= nil then
+			settings.text_format = self.db.profile.shield_bar_text_format
+		end
+		if self.db.profile.status_bar_color ~= nil then
+			settings.color = self.db.profile.status_bar_color
+		end
+		if self.db.profile.status_bar_textcolor ~= nil then
+			settings.textcolor = self.db.profile.status_bar_textcolor
+		end
+		if self.db.profile.status_bar_bgcolor ~= nil then
+			settings.bgcolor = self.db.profile.status_bar_bgcolor
+		end
+		if self.db.profile.status_bar_texture ~= nil then
+			settings.texture = self.db.profile.status_bar_texture
+		end
+		if self.db.profile.status_bar_border ~= nil then
+			settings.border = self.db.profile.status_bar_border
+		end
+		if self.db.profile.status_bar_shown ~= nil then
+			settings.shown = self.db.profile.status_bar_shown
+		end
+		if self.db.profile.shield_bar_x ~= nil then
+			settings.x = self.db.profile.shield_bar_x
+		end
+		if self.db.profile.shield_bar_y ~= nil then
+			settings.y = self.db.profile.shield_bar_y
+		end
+		if self.db.profile.status_bar_scale ~= nil then
+			settings.scale = self.db.profile.status_bar_scale
+		end
+		if self.db.profile.useAuraForShield ~= nil then
+			settings.useAuraForShield = self.db.profile.useAuraForShield
+		end
+
+		self.db.profile.status_bar_enabled = nil
+		self.db.profile.lock_status_bar = nil
+		self.db.profile.status_bar_width = nil
+		self.db.profile.status_bar_height = nil
+		self.db.profile.shield_bar_progress = nil
+		self.db.profile.shield_bar_show_time = nil
+		self.db.profile.shield_bar_time_pos = nil
+		self.db.profile.shield_sound_enabled = nil
+		self.db.profile.shield_applied_sound = nil
+		self.db.profile.shield_removed_sound = nil
+		self.db.profile.shield_bar_text_format = nil
+		self.db.profile.status_bar_color = nil
+		self.db.profile.status_bar_textcolor = nil
+		self.db.profile.status_bar_bgcolor = nil
+		self.db.profile.status_bar_texture = nil
+		self.db.profile.status_bar_border = nil
+		self.db.profile.status_bar_shown = nil
+		self.db.profile.shield_bar_x = nil
+		self.db.profile.shield_bar_y = nil
+		self.db.profile.status_bar_scale = nil
+		self.db.profile.useAuraForShield = nil
+	end
 end
