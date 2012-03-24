@@ -481,6 +481,7 @@ local defaults = {
         verbose = false,
         enable_only_for_blood = true,
         precision = "Zero",
+		useAuraForShield = true,
 		-- Font Settings
 		font_size = 12,
 		font_face = "Friz Quadrata TT",
@@ -529,7 +530,6 @@ local defaults = {
 		        sound_applied = "None",
 		        sound_removed = "None",
 		        text_format = "OnlyCurrent",
-				useAuraForShield = true,
 			},
 			["EstimateBar"] = {
 				enabled = true,
@@ -669,8 +669,12 @@ function BloodShieldTracker:GetOptions()
         					order = 40,
                             desc = L["UseAura_OptionDesc"],
                             type = "toggle",
-                            set = function(info, val) self.db.profile.useAuraForShield = val end,
-                            get = function(info) return self.db.profile.useAuraForShield end,
+                            set = function(info, val)
+								self.db.profile.useAuraForShield = val
+							end,
+                            get = function(info)
+								return self.db.profile.useAuraForShield
+							end,
                         },
         				config_mode = {
         					name = L["Config Mode"],
@@ -688,10 +692,10 @@ function BloodShieldTracker:GetOptions()
         							if self.estimatebar.db.hide_ooc and not InCombatLockdown() then
         							    self.estimatebar.bar:Hide()
                                     end
-									self.bars["PWSBar"].bar:Hide()
-									self.bars["IllumBar"].bar:Hide()
-									self.bars["TotalAbsorbsBar"].bar:Hide()
-        							if self.db.profile.bars["HealthBar"].hide_ooc and 
+									self.pwsbar.bar:Hide()
+									self.illumbar.bar:Hide()
+									self.absorbsbar.bar:Hide()
+        							if self.healthbar.db.hide_ooc and 
 										not InCombatLockdown() then
         							    self.healthbar.bar:Hide()
                                     end
@@ -1047,13 +1051,57 @@ function BloodShieldTracker:GetOptions()
         					    self.shieldbar.bar:SetScale(val)
         					end
         				},
-                        colors = {
+                        position = {
                             order = 400,
+                            type = "header",
+                            name = L["Position"],
+                        },
+        				x = {
+        					order = 410,
+        					name = L["X Offset"],
+        					desc = L["XOffset_Desc"],	
+        					type = "range",
+        					softMin = -floor(GetScreenWidth()/2),
+        					softMax = floor(GetScreenWidth()/2),
+        					bigStep = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["ShieldBar"].x = val
+								self.shieldbar.bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars["ShieldBar"].x, 
+									self.db.profile.bars["ShieldBar"].y)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["ShieldBar"].x
+        					end,
+        				},
+        				y = {
+        					order = 420,
+        					name = L["Y Offset"],
+        					desc = L["YOffset_Desc"],	
+        					type = "range",
+        					softMin = -floor(GetScreenHeight()/2),
+        					softMax = floor(GetScreenHeight()/2),
+        					bigStep = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["ShieldBar"].y = val
+								self.shieldbar.bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars["ShieldBar"].x, 
+									self.db.profile.bars["ShieldBar"].y)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["ShieldBar"].y
+        					end,
+        				},
+
+                        colors = {
+                            order = 500,
                             type = "header",
                             name = L["Colors"],
                         },
         				textcolor = {
-        					order = 410,
+        					order = 510,
         					name = L["Text Color"],
         					desc = L["BloodShieldBarTextColor_OptionDesc"],
         					type = "color",
@@ -1069,7 +1117,7 @@ function BloodShieldTracker:GetOptions()
         					end,					
         				},
         				color = {
-        					order = 420,
+        					order = 520,
         					name = L["Bar Color"],
         					desc = L["BloodShieldBarColor_OptionDesc"],
         					type = "color",
@@ -1085,7 +1133,7 @@ function BloodShieldTracker:GetOptions()
         					end,					
         				},
         				bgcolor = {
-        					order = 430,
+        					order = 530,
         					name = L["Bar Depleted Color"],
         					desc = L["BloodShieldDepletedBarColor_OptionDesc"],
         					type = "color",
@@ -1101,12 +1149,12 @@ function BloodShieldTracker:GetOptions()
         					end,					
         				},
                         appearance = {
-                            order = 500,
+                            order = 600,
                             type = "header",
                             name = L["Appearance"],
                         },
         				texture_opt = {
-        					order = 510,
+        					order = 610,
         					name = L["Texture"],
         					desc = L["BarTexture_OptionDesc"],
         					type = "select",
@@ -1124,7 +1172,7 @@ function BloodShieldTracker:GetOptions()
         					end,
         				},
         				border_visible_opt = {
-        					order = 520,
+        					order = 620,
         					name = L["ShowBorder"],
         					desc = L["ShowBorderDesc"],
         					type = "toggle",
@@ -1137,7 +1185,7 @@ function BloodShieldTracker:GetOptions()
         					end,
         				},
         				visible_opt = {
-        					order = 530,
+        					order = 630,
         					name = L["ShowBar"],
         					desc = L["ShowBarDesc"],
         					type = "toggle",
@@ -2131,14 +2179,15 @@ function BloodShieldTracker:GetOptions()
         					name = L["Low Health Threshold"],
         					desc = L["LowHealthThreshold_OptionDesc"],	
         					type = "range",
-        					min = 5,
-        					max = 95,
-        					step = 5,
+							isPercent = true,
+        					min = 0.05,
+        					max = 0.95,
+        					bigStep = 0.05,
         					set = function(info, val)
-        					    self.db.profile.bars["HealthBar"].low_percent = val / 100
+        					    self.db.profile.bars["HealthBar"].low_percent = val
         					end,
         					get = function(info, val)
-        					    return self.db.profile.bars["HealthBar"].low_percent * 100
+        					    return self.db.profile.bars["HealthBar"].low_percent
         					end,
         				},
         				text_format = {
@@ -2601,36 +2650,6 @@ function BloodShieldTracker:OnInitialize()
 	self.db.RegisterCallback(self, "OnProfileChanged", "Reset")
 	self.db.RegisterCallback(self, "OnProfileCopied", "Reset")
 	self.db.RegisterCallback(self, "OnProfileReset", "Reset")
-	-- Register Options
-    local displayName = GetAddOnMetadata(ADDON_NAME, "Title")
-	local options = self:GetOptions()
-    LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(displayName, options)
-
-    self.optionsFrame = {}
-    local ACD = LibStub("AceConfigDialog-3.0")
-	self.optionsFrame.Main = ACD:AddToBlizOptions(
-	    displayName, displayName, nil, "core")
-	self.optionsFrame.ShieldBar = ACD:AddToBlizOptions(
-	    displayName, L["Blood Shield Bar"], displayName, "shieldBarOpts")
-	self.optionsFrame.EstHealBar = ACD:AddToBlizOptions(
-	    displayName, L["Estimated Healing Bar"], displayName, "estimateBarOpts")
-	self.optionsFrame.PriestBar = ACD:AddToBlizOptions(
-	    displayName, L["PW:S Bar"], displayName, "pwsBarOpts")
-	self.optionsFrame.IllumBar = ACD:AddToBlizOptions(
-	    displayName, L["Illuminated Healing Bar"], displayName, "illumBarOpts")
-	self.optionsFrame.AbsorbsBar = ACD:AddToBlizOptions(
-	    displayName, L["Total Absorbs Bar"], displayName, "absorbsBarOpts")
-	self.optionsFrame.HealthBar = ACD:AddToBlizOptions(
-	    displayName, L["Health Bar"], displayName, "healthBarOpts")
-	self.optionsFrame.Skinning = ACD:AddToBlizOptions(
-	    displayName, L["Skinning"], displayName, "skinningOpts")
-
-	ACD:AddToBlizOptions(
-	    displayName, options.args.profile.name, displayName, "profile")
-
-    -- Register the chat command
-    self:RegisterChatCommand("bst", "ChatCommand")
-    self:RegisterChatCommand("bloodshield", "ChatCommand")
 
     -- Set the LDB options
     DataFeed.display = self.db.profile.ldb_data_feed
@@ -2828,6 +2847,38 @@ function BloodShieldTracker:UpdateHealingDebuffs()
 end
 
 function BloodShieldTracker:OnEnable()
+	if not self.optionsFrame then
+		-- Register Options
+	    local displayName = GetAddOnMetadata(ADDON_NAME, "Title")
+		local options = self:GetOptions()
+	    LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(displayName, options)
+
+	    self.optionsFrame = {}
+	    local ACD = LibStub("AceConfigDialog-3.0")
+		self.optionsFrame.Main = ACD:AddToBlizOptions(
+		    displayName, displayName, nil, "core")
+		self.optionsFrame.ShieldBar = ACD:AddToBlizOptions(
+		    displayName, L["Blood Shield Bar"], displayName, "shieldBarOpts")
+		self.optionsFrame.EstHealBar = ACD:AddToBlizOptions(
+		    displayName, L["Estimated Healing Bar"], displayName, "estimateBarOpts")
+		self.optionsFrame.PriestBar = ACD:AddToBlizOptions(
+		    displayName, L["PW:S Bar"], displayName, "pwsBarOpts")
+		self.optionsFrame.IllumBar = ACD:AddToBlizOptions(
+		    displayName, L["Illuminated Healing Bar"], displayName, "illumBarOpts")
+		self.optionsFrame.AbsorbsBar = ACD:AddToBlizOptions(
+		    displayName, L["Total Absorbs Bar"], displayName, "absorbsBarOpts")
+		self.optionsFrame.HealthBar = ACD:AddToBlizOptions(
+		    displayName, L["Health Bar"], displayName, "healthBarOpts")
+		self.optionsFrame.Skinning = ACD:AddToBlizOptions(
+		    displayName, L["Skinning"], displayName, "skinningOpts")
+		ACD:AddToBlizOptions(
+		    displayName, options.args.profile.name, displayName, "profile")
+
+	    -- Register the chat command
+	    self:RegisterChatCommand("bst", "ChatCommand")
+	    self:RegisterChatCommand("bloodshield", "ChatCommand")
+	end
+
     self:UpdateHealingDebuffs()
     self:CheckClass()
 	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
@@ -3633,7 +3684,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                 end
             end
 
-            if self.shieldbar.db.useAuraForShield == false then
+            if self.db.profile.useAuraForShield == false then
                 self:NewBloodShield(timestamp, spellAbsorb)
             end
         elseif param10 == VB_BUFF then
@@ -3657,7 +3708,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                     self:Print("Blood Shield refresh.  New value = "..spellAbsorb)
                 end
 
-                if self.shieldbar.db.useAuraForShield == false then
+                if self.db.profile.useAuraForShield == false then
                     self:BloodShieldUpdated("refreshed", timestamp, spellAbsorb or 0)
                 end
             end
@@ -3669,7 +3720,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if param13 then spellAbsorb = param13 end
 
         if param10 == BS_SPELL then
-            if self.shieldbar.db.useAuraForShield == false then
+            if self.db.profile.useAuraForShield == false then
                 self:BloodShieldUpdated("removed", timestamp, spellAbsorb or 0)
             end
 
@@ -4220,7 +4271,6 @@ function Bar:Initialize()
 			y = y - GetScreenHeight()/2
 			x = x / self:GetScale()
 			y = y / self:GetScale()
-			-- These need to be per bar but cannot use self
 			self.object.db.x, self.object.db.y = x, y
 			self:SetUserPlaced(false);
         end)
@@ -4728,9 +4778,6 @@ function BloodShieldTracker:MigrateShieldBarSettings()
 		if self.db.profile.status_bar_scale ~= nil then
 			settings.scale = self.db.profile.status_bar_scale
 		end
-		if self.db.profile.useAuraForShield ~= nil then
-			settings.useAuraForShield = self.db.profile.useAuraForShield
-		end
 
 		self.db.profile.status_bar_enabled = nil
 		self.db.profile.lock_status_bar = nil
@@ -4752,6 +4799,5 @@ function BloodShieldTracker:MigrateShieldBarSettings()
 		self.db.profile.shield_bar_x = nil
 		self.db.profile.shield_bar_y = nil
 		self.db.profile.status_bar_scale = nil
-		self.db.profile.useAuraForShield = nil
 	end
 end
