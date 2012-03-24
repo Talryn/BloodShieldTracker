@@ -1094,7 +1094,6 @@ function BloodShieldTracker:GetOptions()
         					    return self.db.profile.bars["ShieldBar"].y
         					end,
         				},
-
                         colors = {
                             order = 500,
                             type = "header",
@@ -1344,6 +1343,49 @@ function BloodShieldTracker:GetOptions()
         					    self.db.profile.bars["EstimateBar"].scale = val
         					    self.estimatebar.bar:SetScale(val)
         					end
+        				},
+                        position = {
+                            order = 85,
+                            type = "header",
+                            name = L["Position"],
+                        },
+        				x = {
+        					order = 86,
+        					name = L["X Offset"],
+        					desc = L["XOffset_Desc"],	
+        					type = "range",
+        					softMin = -floor(GetScreenWidth()/2),
+        					softMax = floor(GetScreenWidth()/2),
+        					bigStep = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["EstimateBar"].x = val
+								self.estimatebar.bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars["EstimateBar"].x, 
+									self.db.profile.bars["EstimateBar"].y)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["EstimateBar"].x
+        					end,
+        				},
+        				y = {
+        					order = 87,
+        					name = L["Y Offset"],
+        					desc = L["YOffset_Desc"],	
+        					type = "range",
+        					softMin = -floor(GetScreenHeight()/2),
+        					softMax = floor(GetScreenHeight()/2),
+        					bigStep = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["EstimateBar"].y = val
+								self.estimatebar.bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars["EstimateBar"].x, 
+									self.db.profile.bars["EstimateBar"].y)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["EstimateBar"].y
+        					end,
         				},
                         colorsMinimum = {
                             order = 90,
@@ -1636,6 +1678,49 @@ function BloodShieldTracker:GetOptions()
         					    self.bars["PWSBar"].bar:SetScale(val)
         					end
         				},
+                        position = {
+                            order = 390,
+                            type = "header",
+                            name = L["Position"],
+                        },
+        				x = {
+        					order = 391,
+        					name = L["X Offset"],
+        					desc = L["XOffset_Desc"],	
+        					type = "range",
+        					softMin = -floor(GetScreenWidth()/2),
+        					softMax = floor(GetScreenWidth()/2),
+        					bigStep = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["PWSBar"].x = val
+								self.pwsbar.bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars["PWSBar"].x, 
+									self.db.profile.bars["PWSBar"].y)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["PWSBar"].x
+        					end,
+        				},
+        				y = {
+        					order = 392,
+        					name = L["Y Offset"],
+        					desc = L["YOffset_Desc"],	
+        					type = "range",
+        					softMin = -floor(GetScreenHeight()/2),
+        					softMax = floor(GetScreenHeight()/2),
+        					bigStep = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["PWSBar"].y = val
+								self.pwsbar.bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars["PWSBar"].x, 
+									self.db.profile.bars["PWSBar"].y)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["PWSBar"].y
+        					end,
+        				},
                         colors = {
                             order = 400,
                             type = "header",
@@ -1823,6 +1908,49 @@ function BloodShieldTracker:GetOptions()
         					    self.db.profile.bars["IllumBar"].scale = val
         					    self.bars["IllumBar"].bar:SetScale(val)
         					end
+        				},
+                        position = {
+                            order = 390,
+                            type = "header",
+                            name = L["Position"],
+                        },
+        				x = {
+        					order = 391,
+        					name = L["X Offset"],
+        					desc = L["XOffset_Desc"],	
+        					type = "range",
+        					softMin = -floor(GetScreenWidth()/2),
+        					softMax = floor(GetScreenWidth()/2),
+        					bigStep = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["IllumBar"].x = val
+								self.illumbar.bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars["IllumBar"].x, 
+									self.db.profile.bars["IllumBar"].y)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["IllumBar"].x
+        					end,
+        				},
+        				y = {
+        					order = 392,
+        					name = L["Y Offset"],
+        					desc = L["YOffset_Desc"],	
+        					type = "range",
+        					softMin = -floor(GetScreenHeight()/2),
+        					softMax = floor(GetScreenHeight()/2),
+        					bigStep = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["IllumBar"].y = val
+								self.illumbar.bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars["IllumBar"].x, 
+									self.db.profile.bars["IllumBar"].y)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["IllumBar"].y
+        					end,
         				},
                         colors = {
                             order = 400,
@@ -2023,6 +2151,49 @@ function BloodShieldTracker:GetOptions()
         					    self.db.profile.bars["TotalAbsorbsBar"].scale = val
         					    self.bars["TotalAbsorbsBar"].bar:SetScale(val)
         					end
+        				},
+                        position = {
+                            order = 390,
+                            type = "header",
+                            name = L["Position"],
+                        },
+        				x = {
+        					order = 391,
+        					name = L["X Offset"],
+        					desc = L["XOffset_Desc"],	
+        					type = "range",
+        					softMin = -floor(GetScreenWidth()/2),
+        					softMax = floor(GetScreenWidth()/2),
+        					bigStep = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["TotalAbsorbsBar"].x = val
+								self.absorbsbar.bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars["TotalAbsorbsBar"].x, 
+									self.db.profile.bars["TotalAbsorbsBar"].y)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["TotalAbsorbsBar"].x
+        					end,
+        				},
+        				y = {
+        					order = 392,
+        					name = L["Y Offset"],
+        					desc = L["YOffset_Desc"],	
+        					type = "range",
+        					softMin = -floor(GetScreenHeight()/2),
+        					softMax = floor(GetScreenHeight()/2),
+        					bigStep = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["TotalAbsorbsBar"].y = val
+								self.absorbsbar.bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars["TotalAbsorbsBar"].x, 
+									self.db.profile.bars["TotalAbsorbsBar"].y)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["TotalAbsorbsBar"].y
+        					end,
         				},
                         colors = {
                             order = 400,
