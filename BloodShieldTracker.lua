@@ -2435,6 +2435,49 @@ function BloodShieldTracker:GetOptions()
         					    self.healthbar.bar:SetScale(val)
         					end
         				},
+                        position = {
+                            order = 190,
+                            type = "header",
+                            name = L["Position"],
+                        },
+        				x = {
+        					order = 191,
+        					name = L["X Offset"],
+        					desc = L["XOffset_Desc"],	
+        					type = "range",
+        					softMin = -floor(GetScreenWidth()/2),
+        					softMax = floor(GetScreenWidth()/2),
+        					bigStep = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["HealthBar"].x = val
+								self.healthbar.bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars["HealthBar"].x, 
+									self.db.profile.bars["HealthBar"].y)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["HealthBar"].x
+        					end,
+        				},
+        				y = {
+        					order = 192,
+        					name = L["Y Offset"],
+        					desc = L["YOffset_Desc"],	
+        					type = "range",
+        					softMin = -floor(GetScreenHeight()/2),
+        					softMax = floor(GetScreenHeight()/2),
+        					bigStep = 1,
+        					set = function(info, val)
+        					    self.db.profile.bars["HealthBar"].y = val
+								self.healthbar.bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars["HealthBar"].x, 
+									self.db.profile.bars["HealthBar"].y)
+        					end,
+        					get = function(info, val)
+        					    return self.db.profile.bars["HealthBar"].y
+        					end,
+        				},
                         colors = {
                             order = 200,
                             type = "header",
