@@ -530,6 +530,7 @@ local defaults = {
 		        sound_applied = "None",
 		        sound_removed = "None",
 		        text_format = "OnlyCurrent",
+				width = 100,
 			},
 			["EstimateBar"] = {
 				enabled = true,
@@ -543,6 +544,9 @@ local defaults = {
 				alt_color = {r = 0.0, g = 1.0, b = 0.0, a = 1},
 				alt_bgcolor = {r = 0.0, g = 0.65, b = 0.0, a = 0.8},
 				alt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+				width = 90,
+				x = 0, 
+				y = -30,
 			},
 			["HealthBar"] = {
 				hide_ooc = false,
@@ -553,20 +557,28 @@ local defaults = {
 				alt_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
 				alt_bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
 				alt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+				x = 0, 
+				y = -60,
 			},
 			["PWSBar"] = {
 				color = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
-				includeda = true
+				includeda = true,
+				x = 100, 
+				y = -30,
 			},
 			["IllumBar"] = {
 				color = {r = 0.96, g = 0.55, b = 0.73, a = 1},
 				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
+				x = 190, 
+				y = -30,
 			},
 			["TotalAbsorbsBar"] = {
 				color = {r = 0.58, g = 0.51, b = 0.79, a = 1},
 				bgcolor = {r = 0.58, g = 0.51, b = 0.79, a = 0.7},
-				includebs = false
+				includebs = false,
+				x = 100, 
+				y = 0,
 			},
 		}
     }
@@ -3515,6 +3527,8 @@ function BloodShieldTracker:ToggleHealthBar(enable)
 	end
     if enable then
         self:RegisterEvent("UNIT_HEALTH")
+		self:UNIT_HEALTH("ToggleHealthBar", "player")
+		self:UpdateHealthBar(true)
         if self.healthbar.db.hide_ooc and (not InCombatLockdown() or idle) then
             if self.healthbar.bar:IsVisible() then
                 self.healthbar.bar:Hide()
@@ -3538,7 +3552,7 @@ function BloodShieldTracker:UpdateHealthBar(maxChanged)
         local low = (percentHealth <= self.healthbar.db.low_percent)
 		local changed = (low ~= self.healthbar.altcolor)
         self.healthbar.altcolor = low
-        if changed then
+        if changed or maxChanged then
             self.healthbar:UpdateGraphics()
         end
 
