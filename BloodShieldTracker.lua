@@ -564,8 +564,8 @@ local defaults = {
 				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
 			},
 			["TotalAbsorbsBar"] = {
-				color = {r = 0.5, g = 0.5, b = 0.5, a = 1},
-				bgcolor = {r = 0.5, g = 0.5, b = 0.5, a = 0.7},
+				color = {r = 0.58, g = 0.51, b = 0.79, a = 1},
+				bgcolor = {r = 0.58, g = 0.51, b = 0.79, a = 0.7},
 				includebs = false
 			},
 		}
