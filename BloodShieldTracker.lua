@@ -4219,44 +4219,35 @@ function BloodShieldTracker:CheckAuras()
             BSAuraPresent = true
 
         elseif spellId == PWS_SPELL_ID then
-            -- Check for a Power Word: Shield
-            if self.pwsbar.db.enabled and IsBloodTank then
-                pwsFound = true
-                if value then
-                    OtherShields["PWS"] = value
-                else
-                    if self.db.profile.verbose == true then
-                        self:Print("Error reading the Power Word: Shield value.")
-                    end
+            pwsFound = true
+            if value then
+                OtherShields["PWS"] = value
+            else
+                if self.db.profile.verbose == true then
+                    self:Print("Error reading the Power Word: Shield value.")
                 end
             end
         elseif spellId == ILLUMINATED_HEALING_BUFF_ID then
-            if self.illumbar.db.enabled and IsBloodTank then
-                illumHealFound = true
-                if value then
-                    OtherShields["IlluminatedHealing"] = 
-                        OtherShields["IlluminatedHealing"] + value
-                else
-                    if self.db.profile.verbose == true then
-                        self:Print("Error reading the Illuminated Healing value.")
-                    end
+            illumHealFound = true
+            if value then
+                OtherShields["IlluminatedHealing"] = 
+                    OtherShields["IlluminatedHealing"] + value
+            else
+                if self.db.profile.verbose == true then
+                    self:Print("Error reading the Illuminated Healing value.")
                 end
             end
 
-	        elseif spellId == DIVINE_AEGIS_BUFF_ID then
-	            if self.pwsbar.db.includeda and 
-					self.pwsbar.db.enabled and IsBloodTank then
-
-	                divineAegisFound = true
-	                if value then
-	                    OtherShields["DivineAegis"] = 
-	                        OtherShields["DivineAegis"] + value
-	                else
-	                    if self.db.profile.verbose == true then
-	                        self:Print("Error reading the Divine Aegis value.")
-	                    end
-	                end
-	            end
+        elseif spellId == DIVINE_AEGIS_BUFF_ID then
+            divineAegisFound = true
+            if value then
+                OtherShields["DivineAegis"] = 
+                    OtherShields["DivineAegis"] + value
+            else
+                if self.db.profile.verbose == true then
+                    self:Print("Error reading the Divine Aegis value.")
+                end
+            end
 
         elseif spellId == FROST_PRESENCE_BUFF_ID then
             CurrentPresence = "Frost"
