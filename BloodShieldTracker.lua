@@ -168,9 +168,15 @@ local CURRENT_BUILD, CURRENT_INTERNAL,
 local ItemIds = {
 	["IndomitablePride"] = 77211,
 }
-local ItemNames ={
-	["IndomitablePride"] = (GetItemInfo(ItemIds["IndomitablePride"])),
-}
+local ItemNames = {}
+local function LoadItemNames()
+	for k,v in pairs(ItemIds) do
+		if not ItemNames[k] then
+			ItemNames[k] = (GetItemInfo(ItemIds[k]))
+		end
+	end
+end
+LoadItemNames()
 
 local SpellIds = {
 	["PWS"] = 17,
@@ -179,9 +185,14 @@ local SpellIds = {
 	["IndomitablePride"] = 108008,
 }
 local SpellNames = {}
-for k,v in pairs(SpellIds) do
-	SpellNames[k] = (GetSpellInfo(SpellIds[k]))
+local function LoadSpellNames()
+	for k,v in pairs(SpellIds) do
+		if not SpellNames[k] then
+			SpellNames[k] = (GetSpellInfo(SpellIds[k]))
+		end
+	end
 end
+LoadSpellNames()
 
 local DS_SPELL_DMG = (GetSpellInfo(49998))
 local DS_SPELL_HEAL = (GetSpellInfo(45470))
@@ -2174,7 +2185,7 @@ function BloodShieldTracker:GetOptions()
 							end,
         				},
         				includeindompride = {
-        					name = ItemNames["IndomitablePride"],
+        					name = ItemNames["IndomitablePride"] or "IndomitablePride",
         					desc = L["IncludeGeneric_Desc"],
         					type = "toggle",
         					order = 125,
@@ -3145,6 +3156,9 @@ function BloodShieldTracker:UpdateHealingDebuffs()
 end
 
 function BloodShieldTracker:OnEnable()
+	-- Try to load the spell and item names one more time.
+	LoadItemNames()
+	LoadSpellNames()
 	if not self.optionsFrame then
 		-- Register Options
 	    local displayName = GetAddOnMetadata(ADDON_NAME, "Title")
