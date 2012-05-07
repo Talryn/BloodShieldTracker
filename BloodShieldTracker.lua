@@ -2942,6 +2942,18 @@ function BloodShieldTracker:OnInitialize()
     -- Load the settings
     self.db = LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", defaults, "Default")
 
+	-- Migrate the settings
+	self:MigrateSettings()
+
+    -- Set the precision
+    if self.db.profile.precision == "One" then
+        millFmt = millFmtOne
+        thousandFmt = thousandFmtOne
+    else
+        millFmt = millFmtZero
+        thousandFmt = thousandFmtZero
+    end
+
 	-- Create the bars
 	self.shieldbar = Bar:Create("ShieldBar")
 	self:UpdateShieldBarMode()
@@ -2951,9 +2963,6 @@ function BloodShieldTracker:OnInitialize()
 	self.illumbar = Bar:Create("IllumBar")
 	self.healthbar = Bar:Create("HealthBar")
 	self.absorbsbar = Bar:Create("TotalAbsorbsBar")
-
-	-- Migrate the settings
-	self:MigrateSettings()
 
 	-- Register for profile callbacks
 	self.db.RegisterCallback(self, "OnProfileChanged", "Reset")
@@ -2970,15 +2979,6 @@ function BloodShieldTracker:OnInitialize()
 	icon:Register("BloodShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
 	LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
 
-    -- Set the precision
-    if self.db.profile.precision == "One" then
-        millFmt = millFmtOne
-        thousandFmt = thousandFmtOne
-    else
-        millFmt = millFmtZero
-        thousandFmt = thousandFmtZero
-    end
-    
     self:Skin()
 end
 
