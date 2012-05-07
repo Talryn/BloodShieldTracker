@@ -4455,7 +4455,7 @@ function BloodShieldTracker:CheckAuras()
     if self.illumbar.db.enabled and IsBloodTank then
         local illumValue = OtherShields["IlluminatedHealing"]
         if AurasFound["IlluminatedHealing"] then
-            if illumValue and illumValue ~= OtherShields["IlluminatedHealing"] then
+            if illumValue and illumValue ~= PreviousShields["IlluminatedHealing"] then
                 self.illumbar:SetValue(illumValue)
             end
             self.illumbar.bar:Show()
