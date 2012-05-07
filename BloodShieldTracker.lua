@@ -4770,6 +4770,9 @@ function BloodShieldTracker:MigrateIllumBarSettings2()
 	if self.db.profile.illumbar_shown ~= nil then
 		settings.shown = self.db.profile.illumbar_shown
 	end
+	if self.db.profile.lock_illumbar ~= nil then
+		settings.locked = self.db.profile.lock_illumbar
+	end
 	if self.db.profile.lock_illum ~= nil then
 		settings.locked = self.db.profile.lock_illum
 	end
