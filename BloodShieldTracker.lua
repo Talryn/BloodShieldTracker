@@ -4810,6 +4810,7 @@ function BloodShieldTracker:MigrateIllumBarSettings2()
 	self.db.profile.illumbar_enabled = nil
 	self.db.profile.illumbar_shown = nil
 	self.db.profile.lock_illum = nil
+	self.db.profile.lock_illumbar = nil
 	self.db.profile.illumbar_texture = nil
 	self.db.profile.illumbar_border = nil
 	self.db.profile.illumbar_color = nil
