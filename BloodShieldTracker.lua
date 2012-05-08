@@ -344,40 +344,56 @@ local BillionDelimFmt = '%s%d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. 
 local MillionDelimFmt = '%s%d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d'
 local ThousandDelimFmt = '%s%d' .. ThousandsDelim..'%03d'
 
-local function FormatThousandsDelimited(val)
-	local sign = ""
-	if val < 0 then
-		sign = "-"
-		val = abs(val)
-	end
-
-    if val >= 1000000000 then
-      return BillionDelimFmt:format(sign, val / 1000000000, (val / 1000000) % 1000, (val / 1000) % 1000, val % 1000)
-    elseif val >= 1000000 then
-      return MillionDelimFmt:format(sign, val / 1000000, (val / 1000) % 1000, val % 1000)
-    elseif val >= 1000 then
-      return ThousandDelimFmt:format(sign, val / 1000, val % 1000)
-    else
-      return tostring(val)
-    end
-end
-
-local function FormatNumber(number)
+local function FormatNumberDelimited(number)
     if tonumber(number) == nil then
         return number
     end
 
-	if BloodShieldTracker.db.profile.numberFormat == "Abbreviated" then
-	    if number > 1000000 then
-	        return millFmt:format(number / 1000000)
-	    elseif number > 1000 then
-	        return thousandFmt:format(number / 1000)
-	    end
-	elseif BloodShieldTracker.db.profile.numberFormat == "Delimited" then
-		return FormatThousandsDelimited(number)
+	local sign = ""
+	if number < 0 then
+		sign = "-"
+		number = abs(number)
 	end
 
+    if number >= 1000000000 then
+      return BillionDelimFmt:format(sign, number / 1000000000, (number / 1000000) % 1000, (number / 1000) % 1000, number % 1000)
+    elseif number >= 1000000 then
+      return MillionDelimFmt:format(sign, number / 1000000, (number / 1000) % 1000, number % 1000)
+    elseif number >= 1000 then
+      return ThousandDelimFmt:format(sign, number / 1000, number % 1000)
+    else
+      return tostring(number)
+    end
+end
+
+local function FormatNumberAbbreviated(number)
+    if tonumber(number) == nil then
+        return number
+    end
+
+    if number > 1000000 then
+        return millFmt:format(number / 1000000)
+    elseif number > 1000 then
+        return thousandFmt:format(number / 1000)
+    end
+
     return number
+end
+
+local function FormatNumberRaw(number)
+	return tostring(number)
+end
+
+local FormatNumber = FormatNumberAbbreviated
+
+function BloodShieldTracker:SetNumberFormat(format)
+	if format == "Delimited" then
+		FormatNumber = FormatNumberDelimited
+	elseif format == "Raw" then
+		FormatNumber = FormatNumberRaw
+	else
+		FormatNumber = FormatNumberAbbreviated
+	end
 end
 
 local Broker = CreateFrame("Frame")
@@ -677,6 +693,7 @@ function BloodShieldTracker:GetOptions()
 end
 
 function BloodShieldTracker:GetGeneralOptions()
+	local testNumber = 12000
 	local core = {
 	    order = 1,
 		name = L["General Options"],
@@ -737,13 +754,17 @@ function BloodShieldTracker:GetGeneralOptions()
 				desc = L["NumberFormat_OptionDesc"],
 				type = "select",
 				values = {
-				    ["Raw"] = L["Raw"],
-				    ["Delimited"] = L["Delimited"],
-				    ["Abbreviated"] = L["Abbreviated"]
+				    ["Raw"] = L["Raw"] .. 
+						" (" .. FormatNumberRaw(testNumber) .. ")",
+				    ["Delimited"] = L["Delimited"] .. 
+						" (" .. FormatNumberDelimited(testNumber) .. ")",
+				    ["Abbreviated"] = L["Abbreviated"] .. 
+						" (" .. FormatNumberAbbreviated(testNumber) .. ")"
 				},
 				order = 34,
 				set = function(info, val)
 				    self.db.profile.numberFormat = val
+					self:SetNumberFormat(val)
 				end,
                 get = function(info)
                     return self.db.profile.numberFormat
@@ -3039,6 +3060,9 @@ function BloodShieldTracker:OnInitialize()
 
 	-- Migrate the settings
 	self:MigrateSettings()
+
+	-- Set the number format
+	self:SetNumberFormat(self.db.profile.numberFormat)
 
     -- Set the precision
     if self.db.profile.precision == "One" then
