@@ -631,7 +631,6 @@ function BloodShieldTracker:GetOptions()
         options = {
             type = "group",
             name = GetAddOnMetadata(ADDON_NAME, "Title"),
---			childGroups = "tree",
             args = {
 				core = self:GetGeneralOptions(),
 				shieldBarOpts = self:GetShieldBarOptions(),
