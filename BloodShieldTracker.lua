@@ -36,7 +36,7 @@ local AGU = LibStub("AceGUI-3.0")
 -- Local versions for performance
 local tinsert, tremove, tgetn = table.insert, table.remove, table.getn
 local tconcat = table.concat
-local floor, ceil = math.floor, math.ceil
+local floor, ceil, abs = math.floor, math.ceil, math.abs
 
 BloodShieldTracker.playerName = UnitName("player")
 BloodShieldTracker.bars = {}
@@ -339,17 +339,44 @@ local function round(number)
     return ceil(number-0.5)
 end
 
+local ThousandsDelim = ('%.1f'):format(1/5):match('([^0-9])') == '.' and ',' or '.'
+local BillionDelimFmt = '%s%d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d'
+local MillionDelimFmt = '%s%d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d'
+local ThousandDelimFmt = '%s%d' .. ThousandsDelim..'%03d'
+
+local function FormatThousandsDelimited(val)
+	local sign = ""
+	if val < 0 then
+		sign = "-"
+		val = abs(val)
+	end
+
+    if val >= 1000000000 then
+      return BillionDelimFmt:format(sign, val / 1000000000, (val / 1000000) % 1000, (val / 1000) % 1000, val % 1000)
+    elseif val >= 1000000 then
+      return MillionDelimFmt:format(sign, val / 1000000, (val / 1000) % 1000, val % 1000)
+    elseif val >= 1000 then
+      return ThousandDelimFmt:format(sign, val / 1000, val % 1000)
+    else
+      return tostring(val)
+    end
+end
+
 local function FormatNumber(number)
     if tonumber(number) == nil then
         return number
     end
-    
-    if number > 1000000 then
-        return millFmt:format(number / 1000000)
-    elseif number > 1000 then
-        return thousandFmt:format(number / 1000)
-    end
-    
+
+	if BloodShieldTracker.db.profile.numberFormat == "Abbreviated" then
+	    if number > 1000000 then
+	        return millFmt:format(number / 1000000)
+	    elseif number > 1000 then
+	        return thousandFmt:format(number / 1000)
+	    end
+	elseif BloodShieldTracker.db.profile.numberFormat == "Delimited" then
+		return FormatThousandsDelimited(number)
+	end
+
     return number
 end
 
@@ -509,6 +536,7 @@ local defaults = {
         verbose = false,
         enable_only_for_blood = true,
         precision = "Zero",
+		numberFormat = "Abbreviated",
 		useAuraForShield = true,
 		-- Font Settings
 		font_size = 12,
@@ -559,6 +587,7 @@ local defaults = {
 		        sound_removed = "None",
 		        text_format = "OnlyCurrent",
 				width = 100,
+				y = -60,
 			},
 			["EstimateBar"] = {
 				enabled = true,
@@ -575,7 +604,7 @@ local defaults = {
 				alt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 				width = 90,
 				x = 0, 
-				y = -30,
+				y = -90,
 			},
 			["HealthBar"] = {
 				hide_ooc = false,
@@ -587,20 +616,20 @@ local defaults = {
 				alt_bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
 				alt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 				x = 0, 
-				y = -60,
+				y = -120,
 			},
 			["PWSBar"] = {
 				color = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
 				includeda = true,
 				x = 100, 
-				y = -30,
+				y = -90,
 			},
 			["IllumBar"] = {
 				color = {r = 0.96, g = 0.55, b = 0.73, a = 1},
 				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
 				x = 190, 
-				y = -30,
+				y = -90,
 			},
 			["TotalAbsorbsBar"] = {
 				color = {r = 0.58, g = 0.51, b = 0.79, a = 1},
@@ -613,7 +642,7 @@ local defaults = {
 					["IndomitablePride"] = true,
 				},
 				x = 100, 
-				y = 0,
+				y = -60,
 			},
 		}
     }
@@ -703,6 +732,23 @@ function BloodShieldTracker:GetGeneralOptions()
                 set = function(info, val) self.db.profile.verbose = val end,
                 get = function(info) return self.db.profile.verbose end,
             },
+			numberFormat = {
+				name = L["Number Format"],
+				desc = L["NumberFormat_OptionDesc"],
+				type = "select",
+				values = {
+				    ["Raw"] = L["Raw"],
+				    ["Delimited"] = L["Delimited"],
+				    ["Abbreviated"] = L["Abbreviated"]
+				},
+				order = 34,
+				set = function(info, val)
+				    self.db.profile.numberFormat = val
+				end,
+                get = function(info)
+                    return self.db.profile.numberFormat
+                end,
+			},
 			precision = {
 				name = L["Precision"],
 				desc = L["Precision_OptionDesc"],
