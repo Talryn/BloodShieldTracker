@@ -565,6 +565,7 @@ local defaults = {
 				hide_ooc = false,
 				show_text = true,
 				bar_mode = "DS",
+				alternateMinimum = 0,
 				latencyMethod = "None",
 				latencyFixed = 0,
 				color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
@@ -632,2262 +633,2310 @@ function BloodShieldTracker:GetOptions()
             name = GetAddOnMetadata(ADDON_NAME, "Title"),
 --			childGroups = "tree",
             args = {
-				core = {
-				    order = 1,
-					name = L["General Options"],
-					type = "group",
-					args = {
-					    description = {
-					        order = 1,
-					        type = "description",
-					        name = L["BloodShieldTracker_Desc"],
-					    },
-					    generalOptions = {
-					        order = 2,
-					        type = "header",
-					        name = L["General Options"],
-					    },
-                        enable_only_for_blood = {
-                            name = L["Only for Blood DK"],
-        					order = 10,
-                            desc = L["OnlyForBlood_OptionDesc"],
-                            type = "toggle",
-                            set = function(info, val)
-                                self.db.profile.enable_only_for_blood = val
-                                self:CheckImpDeathStrike()
-                            end,
-                            get = function(info)
-                                return self.db.profile.enable_only_for_blood
-                            end,
-                        },
-                	    minimap = {
-                			order = 20,
-                            name = L["Minimap Button"],
-                            desc = L["Toggle the minimap button"],
-                            type = "toggle",
-                            set = function(info,val)
-                                	-- Reverse the value since the stored value is to hide it
-                                    self.db.profile.minimap.hide = not val
-                                	if self.db.profile.minimap.hide then
-                                		icon:Hide("BloodShieldTrackerLDB")
-                                	else
-                                		icon:Show("BloodShieldTrackerLDB")
-                                	end
-                                  end,
-                            get = function(info)
-                        	        -- Reverse the value since the stored value is to hide it
-                                    return not self.db.profile.minimap.hide
-                                  end,
-                        },
-                        verbose = {
-                            name = L["Verbose"],
-        					order = 30,
-                            desc = L["Toggles the display of informational messages"],
-                            type = "toggle",
-                            set = function(info, val) self.db.profile.verbose = val end,
-                            get = function(info) return self.db.profile.verbose end,
-                        },
-        				precision = {
-        					name = L["Precision"],
-        					desc = L["Precision_OptionDesc"],
-        					type = "select",
-        					values = {
-        					    ["Zero"] = L["Zero"],
-        					    ["One"] = L["One"]
-        					},
-        					order = 35,
-        					set = function(info, val)
-        					    self.db.profile.precision = val
-        					    if val == "One" then
-                                    millFmt = millFmtOne
-                                    thousandFmt = thousandFmtOne
-    					        else
-                                    millFmt = millFmtZero
-                                    thousandFmt = thousandFmtZero
-                                end
-        					end,
-                            get = function(info)
-                                return self.db.profile.precision
-                            end,
-        				},
-                        useAuraForShield = {
-                            name = L["Use Aura"],
-        					order = 40,
-                            desc = L["UseAura_OptionDesc"],
-                            type = "toggle",
-                            set = function(info, val)
-								self.db.profile.useAuraForShield = val
-							end,
-                            get = function(info)
-								return self.db.profile.useAuraForShield
-							end,
-                        },
-        				config_mode = {
-        					name = L["Config Mode"],
-        					desc = L["Toggle config mode"],
-        					type = "execute",
-        					order = 50,
-        					func = function()
-        					    configMode = not configMode
-        						if configMode then
-									for name, bar in pairs(self.bars) do
-										bar.bar:Show()
-									end
-        						else
-        							self.shieldbar.bar:Hide()
-        							if self.estimatebar.db.hide_ooc and not InCombatLockdown() then
-        							    self.estimatebar.bar:Hide()
-                                    end
-									self.pwsbar.bar:Hide()
-									self.illumbar.bar:Hide()
-									self.absorbsbar.bar:Hide()
-        							if self.healthbar.db.hide_ooc and 
-										not InCombatLockdown() then
-        							    self.healthbar.bar:Hide()
-                                    end
-        						end
-        					end,
-        				},
-					    fonts = {
-					        order = 60,
-					        type = "header",
-					        name = L["Font"],
-					    },
-        				bar_font_size = {
-        					order = 70,
-        					name = L["Font size"],
-        					desc = L["Font size for the bars."],
-        					type = "range",
-        					min = 8,
-        					max = 30,
-        					step = 1,
-        					set = function(info, val) 
-        						self.db.profile.font_size = val 
-        						BloodShieldTracker:ResetFonts()
-        					end,
-        					get = function(info,val) return self.db.profile.font_size end,
-        				},
-        				bar_font = {
-        					order = 80,
-        					type = "select",
-        					name = L["Font"],
-        					desc = L["Font to use."],
-        					values = LSM:HashTable("font"),
-        					dialogControl = 'LSM30_Font',
-        					get = function() return self.db.profile.font_face end,
-        					set = function(info, val) 
-        					    self.db.profile.font_face = val
-        					    self:ResetFonts()
-        					end
-        				},
-        				bar_font_outline = {
-        					name = L["Outline"],
-        					desc = L["FontOutline_OptionDesc"],
-        					type = "toggle",
-        					order = 90,
-        					set = function(info, val)
-        					    self.db.profile.font_outline = val
-        					    self:ResetFonts()
-        					end,
-                            get = function(info)
-                                return self.db.profile.font_outline
-                            end,
-        				},
-        				bar_font_monochrome = {
-        					name = L["Monochrome"],
-        					desc = L["FontMonochrome_OptionDesc"],
-        					type = "toggle",
-        					order = 100,
-        					set = function(info, val)
-        					    self.db.profile.font_monochrome = val
-        					    self:ResetFonts()
-        					end,
-                            get = function(info)
-                                return self.db.profile.font_monochrome
-                            end,
-        				},
-        				bar_font_thickoutline = {
-        					name = L["Thick Outline"],
-        					desc = L["FontThickOutline_OptionDesc"],
-        					type = "toggle",
-        					order = 110,
-        					set = function(info, val)
-        					    self.db.profile.font_thickoutline = val
-        					    self:ResetFonts()
-        					end,
-                            get = function(info)
-                                return self.db.profile.font_thickoutline
-                            end,
-        				},
-					    ldb = {
-					        order = 300,
-					        type = "header",
-					        name = L["LDB"],
-					    },
-        				ldb_short_label = {
-        					name = L["Short Label"],
-        					desc = L["ShortLabel_OptionDesc"],
-        					type = "toggle",
-        					order = 310,
-        					set = function(info, val)
-        					    self.db.profile.ldb_short_label = val
-        					    SetBrokerLabel()
-        					end,
-                            get = function(info)
-                                return self.db.profile.ldb_short_label
-                            end,
-        				},
-        				ldb_data_feed = {
-        					name = L["Data Feed"],
-        					desc = L["DataFeed_OptionDesc"],
-        					type = "select",
-        					values = {
-        					    ["None"] = L["None"],
-        					    ["LastDS"] = L["Last Death Strike Heal"],
-        					    ["LastBS"] = L["Last Blood Shield Value"],
-        					    ["EstimateBar"] = L["Estimate Bar Value"],
-        					},
-        					order = 320,
-        					set = function(info, val)
-        					    self.db.profile.ldb_data_feed = val
-        					    DataFeed.display = val
-        					    if val == "None" then
-        					        LDBDataFeed = false
-    					        else
-    					            LDBDataFeed = true
-					            end
-        					    UpdateLDBData()
-        					end,
-                            get = function(info)
-                                return self.db.profile.ldb_data_feed
-                            end,
-        				},
-
-        			},
-        		},
-        		shieldBarOpts = {
-        			order = 2,
-        			type = "group",
-        			name = L["Blood Shield Bar"],
-        			desc = L["Blood Shield Bar"],
-        			args = {
-					    description = {
-					        order = 1,
-					        type = "description",
-					        name = L["BloodShieldBar_Desc"],
-					    },
-                        generalOptions = {
-                            order = 2,
-                            type = "header",
-                            name = L["General Options"],
-                        },
-                		status_bar_enabled = {
-        					name = L["Enabled"],
-        					desc = L["Enable the Blood Shield Bar."],
-        					type = "toggle",
-        					order = 10,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].enabled = val
-        					    if not val then
-        						    self.shieldbar.bar:Hide()
-        						end
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["ShieldBar"].enabled
-							end,
-        				},
-        				lock_bar = {
-        					name = L["Lock bar"],
-        					desc = L["LockBarDesc"],
-        					type = "toggle",
-        					order = 20,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].locked = val 
-        						self.shieldbar:Lock()
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["ShieldBar"].locked
-							end,
-        				},
-        				text_format = {
-        					name = L["Text Format"],
-        					desc = L["ShieldTextFormat_OptionDesc"],
-        					type = "select",
-        					values = {
-        					    ["Full"] = L["Full"],
-        					    ["OnlyPerc"] = L["Only Percent"],
-        					    ["OnlyCurrent"] = L["Only Current"],
-        					    ["OnlyMax"] = L["Only Maximum"],
-        					    ["CurrMax"] = L["Current and Maximum"]
-        					},
-        					order = 30,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].text_format = val
-        					end,
-                            get = function(info)
-                                return self.db.profile.bars["ShieldBar"].text_format
-                            end,
-        				},
-        				progress = {
-        					name = L["Progress Bar"],
-        					desc = L["ShieldProgress_OptionDesc"],
-        					type = "select",
-        					values = {
-        					    ["None"] = L["None"],
-        					    ["Time"] = L["Time Remaining"],
-        					    ["Current"] = L["Current Value"]
-        					},
-        					order = 40,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].progress = val
-        					    if val == "Time" or val == "None" then
-        					        self:UpdateShieldBarMode()
-    					        end
-        					end,
-                            get = function(info)
-                                return self.db.profile.bars["ShieldBar"].progress
-                            end,
-        				},
-                        timeRemaining = {
-                            order = 100,
-                            type = "header",
-                            name = L["Time Remaining"],
-                        },
-        				show_time = {
-        					name = L["Show Time"],
-        					desc = L["ShowTime_OptionDesc"],
-        					type = "toggle",
-        					order = 110,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].show_time = val
-        					    if val then
-        					        self.shieldbar.bar.time:Show()
-    					        else
-    					            self.shieldbar.bar.time:Hide()
-					            end
-        					end,
-                            get = function(info)
-                                return self.db.profile.bars["ShieldBar"].show_time
-                            end,
-        				},
-        				time_pos = {
-        					name = L["Position"],
-        					desc = L["TimePosition_OptionDesc"],
-        					type = "select",
-        					values = {
-        					    ["RIGHT"] = L["Right"],
-        					    ["LEFT"] = L["Left"],
-        					},
-        					order = 120,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].time_pos = val
-    					        self.shieldbar.bar.time:SetPoint(val or "RIGHT")
-    					        self.shieldbar.bar.time:SetJustifyH(val or "RIGHT")
-        					end,
-                            get = function(info)
-                                return self.db.profile.bars["ShieldBar"].time_pos
-                            end,
-                            disabled = function()
-                                return not self.db.profile.bars["ShieldBar"].show_time
-                            end,
-        				},
-                        sound = {
-                            order = 200,
-                            type = "header",
-                            name = L["Sound"],
-                        },
-        				sound_enabled = {
-        					name = L["Enabled"],
-        					desc = L["ShieldSoundEnabledDesc"],
-        					type = "toggle",
-        					order = 210,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].sound_enabled = val
-        					end,
-                            get = function(info)
-                                return self.db.profile.bars["ShieldBar"].sound_enabled
-                            end,
-        				},
-        				applied_sound = {
-        					order = 220,
-        					name = L["Applied Sound"],
-        					desc = L["AppliedSoundDesc"],
-        					type = "select",
-        					values = LSM:HashTable("sound"),
-        					dialogControl = 'LSM30_Sound',
-        					get = function()
-        					    return self.db.profile.bars["ShieldBar"].sound_applied
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].sound_applied = val
-        					end,
-        					disabled = function()
-        					    return not self.db.profile.bars["ShieldBar"].sound_enabled
-        					end,
-        				},
-        				removed_sound = {
-        					order = 230,
-        					name = L["Removed Sound"],
-        					desc = L["RemovedSoundDesc"],
-        					type = "select",
-        					values = LSM:HashTable("sound"),
-        					dialogControl = 'LSM30_Sound',
-        					get = function()
-        					    return self.db.profile.bars["ShieldBar"].sound_removed
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].sound_removed = val
-        					end,
-        					disabled = function()
-        					    return not self.db.profile.bars["ShieldBar"].sound_enabled
-        					end,
-        				},
-                        dimensions = {
-                            order = 300,
-                            type = "header",
-                            name = L["Dimensions"],
-                        },
-        				width = {
-        					order = 310,
-        					name = L["Width"],
-        					desc = L["BarWidth_Desc"],	
-        					type = "range",
-        					min = 50,
-        					max = 300,
-        					step = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].width = val 
-        						self.shieldbar.bar:SetWidth(val)
-        						self.shieldbar.bar.border:SetWidth(val+9)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["ShieldBar"].width
-        					end,
-        				},
-        				height = {
-        					order = 320,
-        					name = L["Height"],
-        					desc = L["BarHeight_Desc"],
-        					type = "range",
-        					min = 10,
-        					max = 30,
-        					step = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].height = val 
-        						self.shieldbar.bar:SetHeight(val)
-        						self.shieldbar.bar.border:SetHeight(val + 8)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["ShieldBar"].height
-        					end,					
-        				},
-        				scale = {
-        					order = 330,
-        					name = L["Scale"],
-        					desc = L["ScaleDesc"],
-        					type = "range",
-        					min = 0.1,
-        					max = 3,
-        					step = 0.1,
-        					get = function()
-								return self.db.profile.bars["ShieldBar"].scale
-							end,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].scale = val
-        					    self.shieldbar.bar:SetScale(val)
-        					end
-        				},
-                        position = {
-                            order = 400,
-                            type = "header",
-                            name = L["Position"],
-                        },
-        				x = {
-        					order = 410,
-        					name = L["X Offset"],
-        					desc = L["XOffset_Desc"],	
-        					type = "range",
-        					softMin = -floor(GetScreenWidth()/2),
-        					softMax = floor(GetScreenWidth()/2),
-        					bigStep = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].x = val
-								self.shieldbar.bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
-									self.db.profile.bars["ShieldBar"].x, 
-									self.db.profile.bars["ShieldBar"].y)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["ShieldBar"].x
-        					end,
-        				},
-        				y = {
-        					order = 420,
-        					name = L["Y Offset"],
-        					desc = L["YOffset_Desc"],	
-        					type = "range",
-        					softMin = -floor(GetScreenHeight()/2),
-        					softMax = floor(GetScreenHeight()/2),
-        					bigStep = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].y = val
-								self.shieldbar.bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
-									self.db.profile.bars["ShieldBar"].x, 
-									self.db.profile.bars["ShieldBar"].y)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["ShieldBar"].y
-        					end,
-        				},
-                        colors = {
-                            order = 500,
-                            type = "header",
-                            name = L["Colors"],
-                        },
-        				textcolor = {
-        					order = 510,
-        					name = L["Text Color"],
-        					desc = L["BloodShieldBarTextColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["ShieldBar"].textcolor
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self.shieldbar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["ShieldBar"].textcolor
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-        				color = {
-        					order = 520,
-        					name = L["Bar Color"],
-        					desc = L["BloodShieldBarColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["ShieldBar"].color
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self.shieldbar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["ShieldBar"].color
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-        				bgcolor = {
-        					order = 530,
-        					name = L["Bar Depleted Color"],
-        					desc = L["BloodShieldDepletedBarColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["ShieldBar"].bgcolor
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self.shieldbar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["ShieldBar"].bgcolor
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-                        appearance = {
-                            order = 600,
-                            type = "header",
-                            name = L["Appearance"],
-                        },
-        				texture_opt = {
-        					order = 610,
-        					name = L["Texture"],
-        					desc = L["BarTexture_OptionDesc"],
-        					type = "select",
-        					values = LSM:HashTable("statusbar"),
-        					dialogControl = 'LSM30_Statusbar',
-        					get = function()
-        					    return self.db.profile.bars["ShieldBar"].texture
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].texture = val
-        					    self.shieldbar:UpdateTexture()
-        					end,
-        					disabled = function()
-        					    return not self.db.profile.bars["ShieldBar"].shown
-        					end,
-        				},
-        				border_visible_opt = {
-        					order = 620,
-        					name = L["ShowBorder"],
-        					desc = L["ShowBorderDesc"],
-        					type = "toggle",
-        					get = function()
-        					    return self.db.profile.bars["ShieldBar"].border
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["ShieldBar"].border = val
-        					    self.shieldbar:UpdateBorder()
-        					end,
-        				},
-        				visible_opt = {
-        					order = 630,
-        					name = L["ShowBar"],
-        					desc = L["ShowBarDesc"],
-        					type = "toggle",
-        					get = function()
-								return self.db.profile.bars["ShieldBar"].shown
-							end,
-        					set = function(info,val) 
-        				        self.db.profile.bars["ShieldBar"].shown = val
-        				        self.shieldbar:UpdateVisibility()
-        				    end,
-        				},
-        			},
-    			},
-    			estimateBarOpts = {
-    			    order = 3,
-    			    type = "group",
-    			    name = L["Estimated Healing Bar"],
-    			    desc = L["Estimated Healing Bar"],
-    			    args = {
-					    description = {
-					        order = 1,
-					        type = "description",
-					        name = L["EstimatedHealingBar_Desc"],
-					    },
-                        generalOptions = {
-                            order = 2,
-                            type = "header",
-                            name = L["General Options"],
-                        },
-                		enabled = {
-        					name = L["Enabled"],
-        					desc = L["Enable the Estimated Healing Bar."],
-        					type = "toggle",
-        					order = 10,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].enabled = val
-        					    if not val then
-        						    self.estimatebar.bar:Hide()
-        						end
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["EstimateBar"].enabled 
-							end,
-        				},
-        				lock_bar = {
-        					name = L["Lock bar"],
-        					desc = L["LockBarDesc"],
-        					type = "toggle",
-        					order = 20,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].locked = val 
-        						self.estimatebar:Lock()
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["EstimateBar"].locked
-							end,
-        				},
-        				hide_ooc = {
-        					name = L["Hide out of combat"],
-        					desc = L["HideOOC_OptionDesc"],
-        					type = "toggle",
-        					order = 30,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].hide_ooc = val
-    							if not InCombatLockdown() then
-    							    if val then
-    							        self.estimatebar.bar:Hide()
-    						        elseif self:IsTrackerEnabled() then
-    						            self.estimatebar.bar:Show()
-    					            end
-    					        end
-        					end,
-                            get = function(info)
-                                return self.db.profile.bars["EstimateBar"].hide_ooc
-                            end,
-        				},
-        				bar_mode = {
-        					name = L["Mode"],
-        					desc = L["Mode"],
-        					type = "select",
-        					values = {
-        					    ["DS"] = L["Death Strike Heal"],
-        					    ["BS"] = L["Blood Shield"],
-        					},
-        					order = 40,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].bar_mode = val
-        					end,
-                            get = function(info)
-                                return self.db.profile.bars["EstimateBar"].bar_mode
-                            end,
-        				},
-        				show_text = {
-        					name = L["Show Text"],
-        					desc = L["EstHealBarShowText_OptDesc"],
-        					type = "toggle",
-        					order = 35,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].show_text = val
-        					    self:UpdateMinHeal("UpdateShowText", "player")
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["EstimateBar"].show_text
-							end,
-        				},
-                        dimensions = {
-                            order = 50,
-                            type = "header",
-                            name = L["Dimensions"],
-                        },
-        				bar_width = {
-        					order = 60,
-        					name = L["Width"],
-        					desc = L["Change the width of the estimated healing bar."],	
-        					type = "range",
-        					min = 10,
-        					max = 200,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].width = val 
-        						self.estimatebar.bar:SetWidth(val)
-        						self.estimatebar.bar.border:SetWidth(val+9)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["EstimateBar"].width
-        					end,
-        				},
-        				bar_height = {
-        					order = 70,
-        					name = L["Height"],
-        					desc = L["Change the height of the estimated healing bar."],	
-        					type = "range",
-        					min = 8,
-        					max = 30,
-        					step = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].height = val 
-        						self.estimatebar.bar:SetHeight(val)
-        						self.estimatebar.bar.border:SetHeight(val + 8)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["EstimateBar"].height
-        					end,
-        				},
-        				bar_scaling = {
-        					order = 80,
-        					name = L["Scale"],
-        					desc = L["ScaleDesc"],
-        					type = "range",
-        					min = 0.1,
-        					max = 3,
-        					step = 0.1,
-        					get = function()
-        					    return self.db.profile.bars["EstimateBar"].scale
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].scale = val
-        					    self.estimatebar.bar:SetScale(val)
-        					end
-        				},
-                        position = {
-                            order = 85,
-                            type = "header",
-                            name = L["Position"],
-                        },
-        				x = {
-        					order = 86,
-        					name = L["X Offset"],
-        					desc = L["XOffset_Desc"],	
-        					type = "range",
-        					softMin = -floor(GetScreenWidth()/2),
-        					softMax = floor(GetScreenWidth()/2),
-        					bigStep = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].x = val
-								self.estimatebar.bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
-									self.db.profile.bars["EstimateBar"].x, 
-									self.db.profile.bars["EstimateBar"].y)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["EstimateBar"].x
-        					end,
-        				},
-        				y = {
-        					order = 87,
-        					name = L["Y Offset"],
-        					desc = L["YOffset_Desc"],	
-        					type = "range",
-        					softMin = -floor(GetScreenHeight()/2),
-        					softMax = floor(GetScreenHeight()/2),
-        					bigStep = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].y = val
-								self.estimatebar.bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
-									self.db.profile.bars["EstimateBar"].x, 
-									self.db.profile.bars["EstimateBar"].y)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["EstimateBar"].y
-        					end,
-        				},
-                        colorsMinimum = {
-                            order = 90,
-                            type = "header",
-                            name = L["Colors for Minimum Heal"],
-                        },
-        				min_textcolor = {
-        					order = 100,
-        					name = L["Minimum Text Color"],
-        					desc = L["EstHealBarMinTextColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["EstimateBar"].textcolor
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-								self.estimatebar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["EstimateBar"].textcolor
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-        				min_color = {
-        					order = 110,
-        					name = L["Minimum Bar Color"],
-        					desc = L["EstHealBarMinColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["EstimateBar"].color
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-       					        self.estimatebar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["EstimateBar"].color
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-        				min_bgcolor = {
-        					order = 120,
-        					name = L["Minimum Bar Background Color"],
-        					desc = L["EstHealBarMinBackgroundColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["EstimateBar"].bgcolor
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-       					        self.estimatebar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["EstimateBar"].bgcolor
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-                        colorsOptimal = {
-                            order = 130,
-                            type = "header",
-                            name = L["Colors for Optimal Heal"],
-                        },
-        				opt_textcolor = {
-        					order = 140,
-        					name = L["Optimal Text Color"],
-        					desc = L["EstHealBarOptTextColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["EstimateBar"].alt_textcolor
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-       					        self.estimatebar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["EstimateBar"].alt_textcolor
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-        				opt_color = {
-        					order = 150,
-        					name = L["Optimal Bar Color"],
-        					desc = L["EstHealBarOptColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["EstimateBar"].alt_color
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-       					        self.estimatebar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["EstimateBar"].alt_color
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-                        appearance = {
-                            order = 160,
-                            type = "header",
-                            name = L["Appearance"],
-                        },
-        				texture_opt = {
-        					order = 170,
-        					name = L["Texture"],
-        					desc = L["BarTexture_OptionDesc"],
-        					type = "select",
-        					values = LSM:HashTable("statusbar"),
-        					dialogControl = 'LSM30_Statusbar',
-        					get = function()
-        					    return self.db.profile.bars["EstimateBar"].texture
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].texture = val
-        					    self.estimatebar:UpdateTexture()
-        					end,
-        					disabled = function()
-        					    return not self.db.profile.bars["EstimateBar"].shown
-        					end,
-        				},
-        				border_visible_opt = {
-        					order = 180,
-        					name = L["ShowBorder"],
-        					desc = L["ShowBorderDesc"],
-        					type = "toggle",
-        					get = function()
-        					    return self.db.profile.bars["EstimateBar"].border
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].border = val
-        					    self.estimatebar:UpdateBorder()
-        					end,
-        				},
-        				visible_opt = {
-        					order = 190,
-        					name = L["ShowBar"],
-        					desc = L["ShowBarDesc"],
-        					type = "toggle",
-        					get = function()
-        					    return self.db.profile.bars["EstimateBar"].shown
-        					end,
-        					set = function(info,val)
-        					    self.db.profile.bars["EstimateBar"].shown = val
-        					    self.estimatebar:UpdateVisibility()
-        					end,
-        				},
-                        latencyOptions = {
-                            order = 500,
-                            type = "header",
-                            name = L["Latency"],
-                        },
-        				latencyMode = {
-        					name = L["Mode"],
-        					desc = L["Mode"],
-        					type = "select",
-        					values = {
-        					    ["None"] = L["None"],
-        					    ["DS"] = L["Death Strike"],
-        					    ["Fixed"] = L["Fixed"],
-        					},
-        					order = 510,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].latencyMethod = val
-        					end,
-                            get = function(info)
-                                return self.db.profile.bars["EstimateBar"].latencyMethod
-                            end,
-        				},
-        				latencyFixed = {
-        					order = 520,
-        					name = L["Fixed"],
-        					desc = L["Fixed"],
-        					type = "range",
-        					min = 0,
-        					max = 2000,
-        					step = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["EstimateBar"].latencyFixed = val 
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["EstimateBar"].latencyFixed
-        					end,					
-        				},
-
-        			}
-        		},
-
-        		pwsBarOpts = {
-        			order = 4,
-        			type = "group",
-        			name = L["PW:S Bar"],
-        			desc = L["PW:S Bar"],
-        			args = {
-					    description = {
-					        order = 1,
-					        type = "description",
-					        name = L["PWSBar_Desc"],
-					    },
-                        generalOptions = {
-                            order = 2,
-                            type = "header",
-                            name = L["General Options"],
-                        },
-                		enabled = {
-        					name = L["Enabled"],
-        					desc = L["EnableBarDesc"],
-        					type = "toggle",
-        					order = 10,
-        					set = function(info, val)
-        					    self.db.profile.bars["PWSBar"].enabled = val
-        					    if not val then
-        						    self.bars["PWSBar"].bar:Hide()
-        						end
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["PWSBar"].enabled
-							end,
-        				},
-        				locked = {
-        					name = L["Lock bar"],
-        					desc = L["LockBarDesc"],
-        					type = "toggle",
-        					order = 20,
-        					set = function(info, val)
-        					    self.db.profile.bars["PWSBar"].locked = val 
-        						self.bars["PWSBar"]:Lock(val)
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["PWSBar"].locked
-							end,
-        				},
-        				includeda = {
-        					name = L["Include Divine Aegis"],
-        					desc = L["IncludeDivineAegisDesc"],
-        					type = "toggle",
-        					order = 30,
-        					set = function(info, val)
-        					    self.db.profile.bars["PWSBar"].includeda = val
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["PWSBar"].includeda
-							end,
-        				},
-                        dimensions = {
-                            order = 300,
-                            type = "header",
-                            name = L["Dimensions"],
-                        },
-        				width = {
-        					order = 310,
-        					name = L["Width"],
-        					desc = L["BarWidth_Desc"],	
-        					type = "range",
-        					min = 50,
-        					max = 300,
-        					step = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["PWSBar"].width = val 
-        						self.bars["PWSBar"].bar:SetWidth(val)
-        						self.bars["PWSBar"].bar.border:SetWidth(val+9)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["PWSBar"].width
-        					end,
-        				},
-        				height = {
-        					order = 320,
-        					name = L["Height"],
-        					desc = L["BarHeight_Desc"],
-        					type = "range",
-        					min = 10,
-        					max = 30,
-        					step = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["PWSBar"].height = val 
-        						self.bars["PWSBar"].bar:SetHeight(val)
-        						self.bars["PWSBar"].bar.border:SetHeight(val + 8)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["PWSBar"].height
-        					end,					
-        				},
-        				scaling = {
-        					order = 330,
-        					name = L["Scale"],
-        					desc = L["ScaleDesc"],
-        					type = "range",
-        					min = 0.1,
-        					max = 3,
-        					step = 0.1,
-        					get = function()
-								return self.db.profile.bars["PWSBar"].scale
-							end,
-        					set = function(info, val)
-        					    self.db.profile.bars["PWSBar"].scale = val
-        					    self.bars["PWSBar"].bar:SetScale(val)
-        					end
-        				},
-                        position = {
-                            order = 390,
-                            type = "header",
-                            name = L["Position"],
-                        },
-        				x = {
-        					order = 391,
-        					name = L["X Offset"],
-        					desc = L["XOffset_Desc"],	
-        					type = "range",
-        					softMin = -floor(GetScreenWidth()/2),
-        					softMax = floor(GetScreenWidth()/2),
-        					bigStep = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["PWSBar"].x = val
-								self.pwsbar.bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
-									self.db.profile.bars["PWSBar"].x, 
-									self.db.profile.bars["PWSBar"].y)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["PWSBar"].x
-        					end,
-        				},
-        				y = {
-        					order = 392,
-        					name = L["Y Offset"],
-        					desc = L["YOffset_Desc"],	
-        					type = "range",
-        					softMin = -floor(GetScreenHeight()/2),
-        					softMax = floor(GetScreenHeight()/2),
-        					bigStep = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["PWSBar"].y = val
-								self.pwsbar.bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
-									self.db.profile.bars["PWSBar"].x, 
-									self.db.profile.bars["PWSBar"].y)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["PWSBar"].y
-        					end,
-        				},
-                        colors = {
-                            order = 400,
-                            type = "header",
-                            name = L["Colors"],
-                        },
-        				textcolor = {
-        					order = 410,
-        					name = L["Text Color"],
-        					desc = L["BarTextColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["PWSBar"].textcolor
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self.bars["PWSBar"]:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["PWSBar"].textcolor
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-        				color = {
-        					order = 420,
-        					name = L["Bar Color"],
-        					desc = L["BarColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["PWSBar"].color
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self.bars["PWSBar"]:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["PWSBar"].color
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-                        appearance = {
-                            order = 500,
-                            type = "header",
-                            name = L["Appearance"],
-                        },
-        				texture_opt = {
-        					order = 510,
-        					name = L["Texture"],
-        					desc = L["BarTexture_OptionDesc"],
-        					type = "select",
-        					values = LSM:HashTable("statusbar"),
-        					dialogControl = 'LSM30_Statusbar',
-        					get = function()
-        					    return self.db.profile.bars["PWSBar"].texture
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["PWSBar"].texture = val
-        					    self.bars["PWSBar"]:UpdateTexture()
-        					end,
-        					disabled = function()
-        					    return not self.db.profile.bars["PWSBar"].shown
-        					end,
-        				},
-        				border_visible_opt = {
-        					order = 520,
-        					name = L["ShowBorder"],
-        					desc = L["ShowBorderDesc"],
-        					type = "toggle",
-        					get = function()
-        					    return self.db.profile.bars["PWSBar"].border
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["PWSBar"].border = val
-        					    self.bars["PWSBar"]:UpdateBorder()
-        					end,
-        				},
-        				visible_opt = {
-        					order = 530,
-        					name = L["ShowBar"],
-        					desc = L["ShowBarDesc"],
-        					type = "toggle",
-        					get = function()
-								return self.db.profile.bars["PWSBar"].shown
-							end,
-        					set = function(info,val) 
-        				        self.db.profile.bars["PWSBar"].shown = val
-        				        self.bars["PWSBar"]:UpdateVisibility()
-        				    end,
-        				},
-        			},
-        		},
-
-        		illumBarOpts = {
-        			order = 5,
-        			type = "group",
-        			name = L["Illuminated Healing Bar"],
-        			desc = L["Illuminated Healing Bar"],
-        			args = {
-					    description = {
-					        order = 1,
-					        type = "description",
-					        name = L["IllumBar_Desc"],
-					    },
-                        generalOptions = {
-                            order = 2,
-                            type = "header",
-                            name = L["General Options"],
-                        },
-                		bar_enabled = {
-        					name = L["Enabled"],
-        					desc = L["EnableBarDesc"],
-        					type = "toggle",
-        					order = 10,
-        					set = function(info, val)
-        					    self.db.profile.bars["IllumBar"].enabled = val
-        					    if not val then
-        						    self.bars["IllumBar"].bar:Hide()
-        						end
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["IllumBar"].enabled
-							end,
-        				},
-        				lock_bar = {
-        					name = L["Lock bar"],
-        					desc = L["LockBarDesc"],
-        					type = "toggle",
-        					order = 20,
-        					set = function(info, val)
-        					    self.db.profile.bars["IllumBar"].locked = val 
-        						self.bars["IllumBar"]:Lock(val)
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["IllumBar"].locked
-							end,
-        				},
-                        dimensions = {
-                            order = 300,
-                            type = "header",
-                            name = L["Dimensions"],
-                        },
-        				bar_width = {
-        					order = 310,
-        					name = L["Width"],
-        					desc = L["BarWidth_Desc"],	
-        					type = "range",
-        					min = 50,
-        					max = 300,
-        					step = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["IllumBar"].width = val 
-        						self.bars["IllumBar"].bar:SetWidth(val)
-        						self.bars["IllumBar"].bar.border:SetWidth(val+9)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["IllumBar"].width
-        					end,
-        				},
-        				bar_height = {
-        					order = 320,
-        					name = L["Height"],
-        					desc = L["BarHeight_Desc"],
-        					type = "range",
-        					min = 10,
-        					max = 30,
-        					step = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["IllumBar"].height = val 
-        						self.bars["IllumBar"].bar:SetHeight(val)
-        						self.bars["IllumBar"].bar.border:SetHeight(val + 8)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["IllumBar"].height
-        					end,					
-        				},
-        				bar_scaling = {
-        					order = 330,
-        					name = L["Scale"],
-        					desc = L["ScaleDesc"],
-        					type = "range",
-        					min = 0.1,
-        					max = 3,
-        					step = 0.1,
-        					get = function()
-								return self.db.profile.bars["IllumBar"].scale
-							end,
-        					set = function(info, val)
-        					    self.db.profile.bars["IllumBar"].scale = val
-        					    self.bars["IllumBar"].bar:SetScale(val)
-        					end
-        				},
-                        position = {
-                            order = 390,
-                            type = "header",
-                            name = L["Position"],
-                        },
-        				x = {
-        					order = 391,
-        					name = L["X Offset"],
-        					desc = L["XOffset_Desc"],	
-        					type = "range",
-        					softMin = -floor(GetScreenWidth()/2),
-        					softMax = floor(GetScreenWidth()/2),
-        					bigStep = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["IllumBar"].x = val
-								self.illumbar.bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
-									self.db.profile.bars["IllumBar"].x, 
-									self.db.profile.bars["IllumBar"].y)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["IllumBar"].x
-        					end,
-        				},
-        				y = {
-        					order = 392,
-        					name = L["Y Offset"],
-        					desc = L["YOffset_Desc"],	
-        					type = "range",
-        					softMin = -floor(GetScreenHeight()/2),
-        					softMax = floor(GetScreenHeight()/2),
-        					bigStep = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["IllumBar"].y = val
-								self.illumbar.bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
-									self.db.profile.bars["IllumBar"].x, 
-									self.db.profile.bars["IllumBar"].y)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["IllumBar"].y
-        					end,
-        				},
-                        colors = {
-                            order = 400,
-                            type = "header",
-                            name = L["Colors"],
-                        },
-        				bar_textcolor = {
-        					order = 410,
-        					name = L["Text Color"],
-        					desc = L["BarTextColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["IllumBar"].textcolor
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self.bars["IllumBar"]:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["IllumBar"].textcolor
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-        				bar_color = {
-        					order = 420,
-        					name = L["Bar Color"],
-        					desc = L["BarColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["IllumBar"].color
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self.bars["IllumBar"]:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["IllumBar"].color
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-                        appearance = {
-                            order = 500,
-                            type = "header",
-                            name = L["Appearance"],
-                        },
-        				bar_texture_opt = {
-        					order = 510,
-        					name = L["Texture"],
-        					desc = L["BarTexture_OptionDesc"],
-        					type = "select",
-        					values = LSM:HashTable("statusbar"),
-        					dialogControl = 'LSM30_Statusbar',
-        					get = function()
-        					    return self.db.profile.bars["IllumBar"].texture
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["IllumBar"].texture = val
-        					    self.bars["IllumBar"]:UpdateTexture()
-        					end,
-        					disabled = function()
-        					    return not self.db.profile.bars["IllumBar"].shown
-        					end,
-        				},
-        				bar_border_visible_opt = {
-        					order = 520,
-        					name = L["ShowBorder"],
-        					desc = L["ShowBorderDesc"],
-        					type = "toggle",
-        					get = function()
-        					    return self.db.profile.bars["IllumBar"].border
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["IllumBar"].border = val
-        					    self.bars["IllumBar"]:UpdateBorder()
-        					end,
-        				},
-        				bar_visible_opt = {
-        					order = 530,
-        					name = L["ShowBar"],
-        					desc = L["ShowBarDesc"],
-        					type = "toggle",
-        					get = function()
-								return self.db.profile.bars["IllumBar"].shown
-							end,
-        					set = function(info,val) 
-        				        self.db.profile.bars["IllumBar"].shown = val
-        				        self.bars["IllumBar"]:UpdateVisibility()
-        				    end,
-        				},
-        			},
-        		},
-
-        		absorbsBarOpts = {
-        			order = 6,
-        			type = "group",
-        			name = L["Total Absorbs Bar"],
-        			desc = L["Total Absorbs Bar"],
-        			args = {
-					    description = {
-					        order = 1,
-					        type = "description",
-					        name = L["TotalAbsorbsBar_Desc"],
-					    },
-                        generalOptions = {
-                            order = 2,
-                            type = "header",
-                            name = L["General Options"],
-                        },
-                		bar_enabled = {
-        					name = L["Enabled"],
-        					desc = L["EnableBarDesc"],
-        					type = "toggle",
-        					order = 10,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].enabled = val
-        					    if not val then
-        						    self.bars["TotalAbsorbsBar"].bar:Hide()
-        						end
-        					end,
-                            get = function(info) 
-								return self.db.profile.bars["TotalAbsorbsBar"].enabled
-							end,
-        				},
-        				lock_bar = {
-        					name = L["Lock bar"],
-        					desc = L["LockBarDesc"],
-        					type = "toggle",
-        					order = 20,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].locked = val 
-        						self.bars["TotalAbsorbsBar"]:Lock(val)
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["TotalAbsorbsBar"].locked
-							end,
-        				},
-                        includedOptions = {
-                            order = 100,
-                            type = "header",
-                            name = L["Included Absorbs"],
-                        },
-        				includebs = {
-        					name = L["Blood Shield"],
-        					desc = L["IncludeBS_Desc"],
-        					type = "toggle",
-        					order = 105,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].includebs = val
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["TotalAbsorbsBar"].includebs
-							end,
-        				},
-        				includepws = {
-        					name = SpellNames["PWS"],
-        					desc = L["IncludeGeneric_Desc"],
-        					type = "toggle",
-        					order = 110,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].included["PWS"] = val
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["TotalAbsorbsBar"].included["PWS"]
-							end,
-        				},
-        				includeillum = {
-        					name = SpellNames["IlluminatedHealing"],
-        					desc = L["IncludeGeneric_Desc"],
-        					type = "toggle",
-        					order = 115,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].included["IlluminatedHealing"] = val
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["TotalAbsorbsBar"].included["IlluminatedHealing"]
-							end,
-        				},
-        				includeda = {
-        					name = SpellNames["DivineAegis"],
-        					desc = L["IncludeGeneric_Desc"],
-        					type = "toggle",
-        					order = 120,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].included["DivineAegis"] = val
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["TotalAbsorbsBar"].included["DivineAegis"]
-							end,
-        				},
-        				includeindompride = {
-        					name = ItemNames["IndomitablePride"] or "IndomitablePride",
-        					desc = L["IncludeGeneric_Desc"],
-        					type = "toggle",
-        					order = 125,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].included["IndomitablePride"] = val
-        					end,
-                            get = function(info)
-								return self.db.profile.bars["TotalAbsorbsBar"].included["IndomitablePride"]
-							end,
-        				},
-                        dimensions = {
-                            order = 300,
-                            type = "header",
-                            name = L["Dimensions"],
-                        },
-        				bar_width = {
-        					order = 310,
-        					name = L["Width"],
-        					desc = L["BarWidth_Desc"],	
-        					type = "range",
-        					min = 50,
-        					max = 300,
-        					step = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].width = val 
-        						self.bars["TotalAbsorbsBar"].bar:SetWidth(val)
-        						self.bars["TotalAbsorbsBar"].bar.border:SetWidth(val+9)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["TotalAbsorbsBar"].width
-        					end,
-        				},
-        				bar_height = {
-        					order = 320,
-        					name = L["Height"],
-        					desc = L["BarHeight_Desc"],
-        					type = "range",
-        					min = 10,
-        					max = 30,
-        					step = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].height = val 
-        						self.bars["TotalAbsorbsBar"].bar:SetHeight(val)
-        						self.bars["TotalAbsorbsBar"].bar.border:SetHeight(val + 8)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["TotalAbsorbsBar"].height
-        					end,					
-        				},
-        				bar_scaling = {
-        					order = 330,
-        					name = L["Scale"],
-        					desc = L["ScaleDesc"],
-        					type = "range",
-        					min = 0.1,
-        					max = 3,
-        					step = 0.1,
-        					get = function()
-								return self.db.profile.bars["TotalAbsorbsBar"].scale
-							end,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].scale = val
-        					    self.bars["TotalAbsorbsBar"].bar:SetScale(val)
-        					end
-        				},
-                        position = {
-                            order = 390,
-                            type = "header",
-                            name = L["Position"],
-                        },
-        				x = {
-        					order = 391,
-        					name = L["X Offset"],
-        					desc = L["XOffset_Desc"],	
-        					type = "range",
-        					softMin = -floor(GetScreenWidth()/2),
-        					softMax = floor(GetScreenWidth()/2),
-        					bigStep = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].x = val
-								self.absorbsbar.bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
-									self.db.profile.bars["TotalAbsorbsBar"].x, 
-									self.db.profile.bars["TotalAbsorbsBar"].y)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["TotalAbsorbsBar"].x
-        					end,
-        				},
-        				y = {
-        					order = 392,
-        					name = L["Y Offset"],
-        					desc = L["YOffset_Desc"],	
-        					type = "range",
-        					softMin = -floor(GetScreenHeight()/2),
-        					softMax = floor(GetScreenHeight()/2),
-        					bigStep = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].y = val
-								self.absorbsbar.bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
-									self.db.profile.bars["TotalAbsorbsBar"].x, 
-									self.db.profile.bars["TotalAbsorbsBar"].y)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["TotalAbsorbsBar"].y
-        					end,
-        				},
-                        colors = {
-                            order = 400,
-                            type = "header",
-                            name = L["Colors"],
-                        },
-        				bar_textcolor = {
-        					order = 410,
-        					name = L["Text Color"],
-        					desc = L["BarTextColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["TotalAbsorbsBar"].textcolor
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self.bars["TotalAbsorbsBar"]:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["TotalAbsorbsBar"].textcolor
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-        				bar_color = {
-        					order = 420,
-        					name = L["Bar Color"],
-        					desc = L["BarColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["TotalAbsorbsBar"].color
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-        					    self.bars["TotalAbsorbsBar"]:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["TotalAbsorbsBar"].color
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-                        appearance = {
-                            order = 500,
-                            type = "header",
-                            name = L["Appearance"],
-                        },
-        				bar_texture_opt = {
-        					order = 510,
-        					name = L["Texture"],
-        					desc = L["BarTexture_OptionDesc"],
-        					type = "select",
-        					values = LSM:HashTable("statusbar"),
-        					dialogControl = 'LSM30_Statusbar',
-        					get = function()
-        					    return self.db.profile.bars["TotalAbsorbsBar"].texture
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].texture = val
-        					    self.bars["TotalAbsorbsBar"]:UpdateTexture()
-        					end,
-        					disabled = function()
-        					    return not self.db.profile.bars["TotalAbsorbsBar"].shown
-        					end,
-        				},
-        				bar_border_visible_opt = {
-        					order = 520,
-        					name = L["ShowBorder"],
-        					desc = L["ShowBorderDesc"],
-        					type = "toggle",
-        					get = function()
-        					    return self.db.profile.bars["TotalAbsorbsBar"].border
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["TotalAbsorbsBar"].border = val
-        					    self.bars["TotalAbsorbsBar"]:UpdateBorder()
-        					end,
-        				},
-        				bar_visible_opt = {
-        					order = 530,
-        					name = L["ShowBar"],
-        					desc = L["ShowBarDesc"],
-        					type = "toggle",
-        					get = function()
-								return self.db.profile.bars["TotalAbsorbsBar"].shown
-							end,
-        					set = function(info,val) 
-        				        self.db.profile.bars["TotalAbsorbsBar"].shown = val
-        				        self.bars["TotalAbsorbsBar"]:UpdateVisibility()
-        				    end,
-        				},
-        			},
-        		},
-        		
-    			healthBarOpts = {
-    			    order = 7,
-    			    type = "group",
-    			    name = L["Health Bar"],
-    			    desc = L["Health Bar"],
-    			    args = {
-					    description = {
-					        order = 1,
-					        type = "description",
-					        name = L["HealthBar_Desc"],
-					    },
-                        generalOptions = {
-                            order = 2,
-                            type = "header",
-                            name = L["General Options"],
-                        },
-                		bar_enabled = {
-        					name = L["Enabled"],
-        					desc = L["EnableBarDesc"],
-        					type = "toggle",
-        					order = 10,
-        					set = function(info, val)
-        					    self.db.profile.bars["HealthBar"].enabled = val
-    					        self:ToggleHealthBar(val)
-        					end,
-                            get = function(info)
-                                return self.db.profile.bars["HealthBar"].enabled
-                            end,
-        				},
-        				lock_bar = {
-        					name = L["Lock bar"],
-        					desc = L["LockBarDesc"],
-        					type = "toggle",
-        					order = 20,
-        					set = function(info, val)
-        					    self.db.profile.bars["HealthBar"].locked = val 
-        						self.bars["HealthBar"]:Lock(val)
-        					end,
-                            get = function(info)
-                                return self.db.profile.bars["HealthBar"].locked
-                            end,
-        				},
-        				hide_bar_ooc = {
-        					name = L["Hide out of combat"],
-        					desc = L["HideOutOfCombat_OptionDesc"],
-        					type = "toggle",
-        					order = 30,
-        					set = function(info, val)
-        					    self.db.profile.bars["HealthBar"].hide_ooc = val
-    							if not InCombatLockdown() then
-    							    if val then
-    							        self.healthbar.bar:Hide()
-    						        elseif self:IsTrackerEnabled() then
-    						            self.healthbar.bar:Show()
-    					            end
-    					        end
-        					end,
-                            get = function(info)
-                                return self.db.profile.bars["HealthBar"].hide_ooc
-                            end,
-        				},
-        				low_percent = {
-        					order = 40,
-        					name = L["Low Health Threshold"],
-        					desc = L["LowHealthThreshold_OptionDesc"],	
-        					type = "range",
-							isPercent = true,
-        					min = 0.05,
-        					max = 0.95,
-        					bigStep = 0.05,
-        					set = function(info, val)
-        					    self.db.profile.bars["HealthBar"].low_percent = val
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["HealthBar"].low_percent
-        					end,
-        				},
-        				text_format = {
-        					name = L["Text Format"],
-        					desc = L["TextFormat_OptionDesc"],
-        					type = "select",
-        					values = {
-        					    ["Full"] = L["Full"],
-        					    ["OnlyPerc"] = L["Only Percent"],
-        					    ["OnlyCurrent"] = L["Only Current"],
-        					    ["CurrMax"] = L["Current and Maximum"],
-        					    ["CurrPerc"] = L["Current and Percent"]
-        					},
-        					order = 50,
-        					set = function(info, val)
-        					    self.db.profile.bars["HealthBar"].text_format = val
-       					        self:UpdateHealthBar(false)
-        					end,
-                            get = function(info)
-                                return self.db.profile.bars["HealthBar"].text_format
-                            end,
-        				},
-                        dimensions = {
-                            order = 100,
-                            type = "header",
-                            name = L["Dimensions"],
-                        },
-        				bar_width = {
-        					order = 110,
-        					name = L["Width"],
-        					desc = L["BarWidth_Desc"],	
-        					type = "range",
-        					min = 10,
-        					max = 200,
-        					set = function(info, val)
-        					    self.db.profile.bars["HealthBar"].width = val 
-        						self.healthbar.bar:SetWidth(val)
-        						self.healthbar.bar.border:SetWidth(val+9)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["HealthBar"].width
-        					end,
-        				},
-        				bar_height = {
-        					order = 120,
-        					name = L["Height"],
-        					desc = L["BarHeight_Desc"],	
-        					type = "range",
-        					min = 8,
-        					max = 30,
-        					step = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["HealthBar"].height = val 
-        						self.healthbar.bar:SetHeight(val)
-        						self.healthbar.bar.border:SetHeight(val + 8)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["HealthBar"].height
-        					end,
-        				},
-        				bar_scaling = {
-        					order = 130,
-        					name = L["Scale"],
-        					desc = L["ScaleDesc"],
-        					type = "range",
-        					min = 0.1,
-        					max = 3,
-        					step = 0.1,
-        					get = function()
-        					    return self.db.profile.bars["HealthBar"].scale
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["HealthBar"].scale = val
-        					    self.healthbar.bar:SetScale(val)
-        					end
-        				},
-                        position = {
-                            order = 190,
-                            type = "header",
-                            name = L["Position"],
-                        },
-        				x = {
-        					order = 191,
-        					name = L["X Offset"],
-        					desc = L["XOffset_Desc"],	
-        					type = "range",
-        					softMin = -floor(GetScreenWidth()/2),
-        					softMax = floor(GetScreenWidth()/2),
-        					bigStep = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["HealthBar"].x = val
-								self.healthbar.bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
-									self.db.profile.bars["HealthBar"].x, 
-									self.db.profile.bars["HealthBar"].y)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["HealthBar"].x
-        					end,
-        				},
-        				y = {
-        					order = 192,
-        					name = L["Y Offset"],
-        					desc = L["YOffset_Desc"],	
-        					type = "range",
-        					softMin = -floor(GetScreenHeight()/2),
-        					softMax = floor(GetScreenHeight()/2),
-        					bigStep = 1,
-        					set = function(info, val)
-        					    self.db.profile.bars["HealthBar"].y = val
-								self.healthbar.bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
-									self.db.profile.bars["HealthBar"].x, 
-									self.db.profile.bars["HealthBar"].y)
-        					end,
-        					get = function(info, val)
-        					    return self.db.profile.bars["HealthBar"].y
-        					end,
-        				},
-                        colors = {
-                            order = 200,
-                            type = "header",
-                            name = L["Colors for Normal Health"],
-                        },
-        				bar_textcolor = {
-        					order = 210,
-        					name = L["Text Color"],
-        					desc = L["BarTextColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["HealthBar"].textcolor
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-       					        self.healthbar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["HealthBar"].textcolor
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-        				bar_color = {
-        					order = 220,
-        					name = L["Bar Color"],
-        					desc = L["BarColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["HealthBar"].color
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-       					        self.healthbar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["HealthBar"].color
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-        				bar_bgcolor = {
-        					order = 230,
-        					name = L["Bar Background Color"],
-        					desc = L["BarBackgroundColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["HealthBar"].bgcolor
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-       					        self.healthbar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["HealthBar"].bgcolor
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-
-                        colorsLow = {
-                            order = 300,
-                            type = "header",
-                            name = L["Colors for Low Health"],
-                        },
-        				bar_low_textcolor = {
-        					order = 310,
-        					name = L["Low Health Text Color"],
-        					desc = L["BarTextColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["HealthBar"].alt_textcolor
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-       					        self.healthbar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["HealthBar"].alt_textcolor
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-        				bar_low_color = {
-        					order = 320,
-        					name = L["Low Health Bar Color"],
-        					desc = L["BarColor_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["HealthBar"].alt_color
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-       					        self.healthbar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["HealthBar"].alt_color
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-        				bar_low_bgcolor = {
-        					order = 330,
-        					name = L["Low Health Bar Background Color"],
-        					desc = L["BarBackgroundColor_LowHealth_OptionDesc"],
-        					type = "color",
-        					hasAlpha = true,
-        					set = function(info, r, g, b, a)
-        					    local c = self.db.profile.bars["HealthBar"].alt_bgcolor
-        					    c.r, c.g, c.b, c.a = r, g, b, a
-       					        self.healthbar:UpdateGraphics()
-        					end,
-        					get = function(info)
-        				        local c = self.db.profile.bars["HealthBar"].alt_bgcolor
-        					    return c.r, c.g, c.b, c.a
-        					end,					
-        				},
-
-                        appearance = {
-                            order = 400,
-                            type = "header",
-                            name = L["Appearance"],
-                        },
-        				bar_texture_opt = {
-        					order = 410,
-        					name = L["Texture"],
-        					desc = L["BarTexture_OptionDesc"],
-        					type = "select",
-        					values = LSM:HashTable("statusbar"),
-        					dialogControl = 'LSM30_Statusbar',
-        					get = function()
-        					    return self.db.profile.bars["HealthBar"].texture
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["HealthBar"].texture = val
-        					    self.healthbar:UpdateTexture()
-        					end,
-        					disabled = function()
-        					    return not self.db.profile.bars["HealthBar"].shown
-        					end,
-        				},
-        				bar_border_visible_opt = {
-        					order = 420,
-        					name = L["ShowBorder"],
-        					desc = L["ShowBorderDesc"],
-        					type = "toggle",
-        					get = function()
-        					    return self.db.profile.bars["HealthBar"].border
-        					end,
-        					set = function(info, val)
-        					    self.db.profile.bars["HealthBar"].border = val
-        					    self.healthbar:UpdateBorder()
-        					end,
-        				},
-        				bar_visible_opt = {
-        					order = 430,
-        					name = L["ShowBar"],
-        					desc = L["ShowBarDesc"],
-        					type = "toggle",
-        					get = function()
-        					    return self.db.profile.bars["HealthBar"].shown
-        					end,
-        					set = function(info,val)
-        					    self.db.profile.bars["HealthBar"].shown = val
-        					    self.healthbar:UpdateVisibility()
-        					end,
-        				},
-
-        			}
-        		},
-
-				skinningOpts = {
-				    order = 8,
-					name = L["Skinning"],
-					type = "group",
-					args = {
-					    description = {
-					        order = 1,
-					        type = "description",
-					        name = L["Skinning_Desc"],
-					    },
-					    elvuiOptions = {
-					        order = 10,
-					        type = "header",
-					        name = L["ElvUI"],
-					    },
-                        elvui_enabled = {
-                            name = L["Enabled"],
-        					order = 20,
-                            desc = L["ElvUIEnabled_OptionDesc"],
-                            type = "toggle",
-                            set = function(info, val)
-                                self.db.profile.elvui_enabled = val
-                            end,
-                            get = function(info)
-                                return self.db.profile.elvui_enabled
-                            end,
-                        },
-                        elvui_borders = {
-                            name = L["Borders"],
-        					order = 30,
-                            desc = L["ElvUIBorders_OptionDesc"],
-                            type = "toggle",
-                            set = function(info, val)
-                                self.db.profile.elvui_borders = val
-                            end,
-                            get = function(info)
-                                return self.db.profile.elvui_borders
-                            end,
-                        },
-                        elvui_texture = {
-                            name = L["Texture"],
-        					order = 40,
-                            desc = L["ElvUITexture_OptionDesc"],
-                            type = "toggle",
-                            set = function(info, val)
-                                self.db.profile.elvui_texture = val
-                            end,
-                            get = function(info)
-                                return self.db.profile.elvui_texture
-                            end,
-                        },
-                        elvui_font = {
-                            name = L["Font"],
-        					order = 50,
-                            desc = L["ElvUIFont_OptionDesc"],
-                            type = "toggle",
-                            set = function(info, val)
-                                self.db.profile.elvui_font = val
-                            end,
-                            get = function(info)
-                                return self.db.profile.elvui_font
-                            end,
-                        },
-                        elvui_font_flags = {
-                            name = L["Font Flags"],
-        					order = 60,
-                            desc = L["ElvUIFontFlags_OptionDesc"],
-                            type = "toggle",
-                            set = function(info, val)
-                                self.db.profile.elvui_font_flags = val
-                            end,
-                            get = function(info)
-                                return self.db.profile.elvui_font_flags
-                            end,
-                        },
-
-					    tukuiOptions = {
-					        order = 100,
-					        type = "header",
-					        name = L["Tukui"],
-					    },
-                        tukui_enabled = {
-                            name = L["Enabled"],
-        					order = 110,
-                            desc = L["TukuiEnabled_OptionDesc"],
-                            type = "toggle",
-                            set = function(info, val)
-                                self.db.profile.tukui_enabled = val
-                            end,
-                            get = function(info)
-                                return self.db.profile.tukui_enabled
-                            end,
-                        },
-                        tukui_borders = {
-                            name = L["Borders"],
-        					order = 120,
-                            desc = L["TukuiBorders_OptionDesc"],
-                            type = "toggle",
-                            set = function(info, val)
-                                self.db.profile.tukui_borders = val
-                            end,
-                            get = function(info)
-                                return self.db.profile.tukui_borders
-                            end,
-                        },
-                        tukui_texture = {
-                            name = L["Texture"],
-        					order = 130,
-                            desc = L["TukuiTexture_OptionDesc"],
-                            type = "toggle",
-                            set = function(info, val)
-                                self.db.profile.tukui_texture = val
-                            end,
-                            get = function(info)
-                                return self.db.profile.tukui_texture
-                            end,
-                        },
-                        tukui_font = {
-                            name = L["Font"],
-        					order = 140,
-                            desc = L["TukuiFont_OptionDesc"],
-                            type = "toggle",
-                            set = function(info, val)
-                                self.db.profile.tukui_font = val
-                            end,
-                            get = function(info)
-                                return self.db.profile.tukui_font
-                            end,
-                        },
-                        tukui_font_flags = {
-                            name = L["Font Flags"],
-        					order = 150,
-                            desc = L["TukuiFontFlags_OptionDesc"],
-                            type = "toggle",
-                            set = function(info, val)
-                                self.db.profile.tukui_font_flags = val
-                            end,
-                            get = function(info)
-                                return self.db.profile.tukui_font_flags
-                            end,
-                        },
-
-                    }
-                },
-
+				core = self:GetGeneralOptions(),
+				shieldBarOpts = self:GetShieldBarOptions(),
+				estimateBarOpts = self:GetEstimateBarOptions(),
+				pwsBarOpts = self:GetPWSBarOptions(),
+				illumBarOpts = self:GetIllumBarOptions(),
+				absorbsBarOpts = self:GetAbsorbsBarOptions(),
+				healthBarOpts = self:GetHealthBarOptions(),
+				skinningOpts = self:GetSkinningOptions(),
             }
         }
-	options.args.profile = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
+		options.args.profile = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
     end
     return options
+end
+
+function BloodShieldTracker:GetGeneralOptions()
+	local core = {
+	    order = 1,
+		name = L["General Options"],
+		type = "group",
+		args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["BloodShieldTracker_Desc"],
+		    },
+		    generalOptions = {
+		        order = 2,
+		        type = "header",
+		        name = L["General Options"],
+		    },
+            enable_only_for_blood = {
+                name = L["Only for Blood DK"],
+				order = 10,
+                desc = L["OnlyForBlood_OptionDesc"],
+                type = "toggle",
+                set = function(info, val)
+                    self.db.profile.enable_only_for_blood = val
+                    self:CheckImpDeathStrike()
+                end,
+                get = function(info)
+                    return self.db.profile.enable_only_for_blood
+                end,
+            },
+    	    minimap = {
+    			order = 20,
+                name = L["Minimap Button"],
+                desc = L["Toggle the minimap button"],
+                type = "toggle",
+                set = function(info,val)
+                    	-- Reverse the value since the stored value is to hide it
+                        self.db.profile.minimap.hide = not val
+                    	if self.db.profile.minimap.hide then
+                    		icon:Hide("BloodShieldTrackerLDB")
+                    	else
+                    		icon:Show("BloodShieldTrackerLDB")
+                    	end
+                      end,
+                get = function(info)
+            	        -- Reverse the value since the stored value is to hide it
+                        return not self.db.profile.minimap.hide
+                      end,
+            },
+            verbose = {
+                name = L["Verbose"],
+				order = 30,
+                desc = L["Toggles the display of informational messages"],
+                type = "toggle",
+                set = function(info, val) self.db.profile.verbose = val end,
+                get = function(info) return self.db.profile.verbose end,
+            },
+			precision = {
+				name = L["Precision"],
+				desc = L["Precision_OptionDesc"],
+				type = "select",
+				values = {
+				    ["Zero"] = L["Zero"],
+				    ["One"] = L["One"]
+				},
+				order = 35,
+				set = function(info, val)
+				    self.db.profile.precision = val
+				    if val == "One" then
+                        millFmt = millFmtOne
+                        thousandFmt = thousandFmtOne
+			        else
+                        millFmt = millFmtZero
+                        thousandFmt = thousandFmtZero
+                    end
+				end,
+                get = function(info)
+                    return self.db.profile.precision
+                end,
+			},
+            useAuraForShield = {
+                name = L["Use Aura"],
+				order = 40,
+                desc = L["UseAura_OptionDesc"],
+                type = "toggle",
+                set = function(info, val)
+					self.db.profile.useAuraForShield = val
+				end,
+                get = function(info)
+					return self.db.profile.useAuraForShield
+				end,
+            },
+			config_mode = {
+				name = L["Config Mode"],
+				desc = L["Toggle config mode"],
+				type = "execute",
+				order = 50,
+				func = function()
+				    configMode = not configMode
+					if configMode then
+						for name, bar in pairs(self.bars) do
+							bar.bar:Show()
+						end
+					else
+						self.shieldbar.bar:Hide()
+						if self.estimatebar.db.hide_ooc and not InCombatLockdown() then
+						    self.estimatebar.bar:Hide()
+                        end
+						self.pwsbar.bar:Hide()
+						self.illumbar.bar:Hide()
+						self.absorbsbar.bar:Hide()
+						if self.healthbar.db.hide_ooc and 
+							not InCombatLockdown() then
+						    self.healthbar.bar:Hide()
+                        end
+					end
+				end,
+			},
+		    fonts = {
+		        order = 60,
+		        type = "header",
+		        name = L["Font"],
+		    },
+			bar_font_size = {
+				order = 70,
+				name = L["Font size"],
+				desc = L["Font size for the bars."],
+				type = "range",
+				min = 8,
+				max = 30,
+				step = 1,
+				set = function(info, val) 
+					self.db.profile.font_size = val 
+					BloodShieldTracker:ResetFonts()
+				end,
+				get = function(info,val) return self.db.profile.font_size end,
+			},
+			bar_font = {
+				order = 80,
+				type = "select",
+				name = L["Font"],
+				desc = L["Font to use."],
+				values = LSM:HashTable("font"),
+				dialogControl = 'LSM30_Font',
+				get = function() return self.db.profile.font_face end,
+				set = function(info, val) 
+				    self.db.profile.font_face = val
+				    self:ResetFonts()
+				end
+			},
+			bar_font_outline = {
+				name = L["Outline"],
+				desc = L["FontOutline_OptionDesc"],
+				type = "toggle",
+				order = 90,
+				set = function(info, val)
+				    self.db.profile.font_outline = val
+				    self:ResetFonts()
+				end,
+                get = function(info)
+                    return self.db.profile.font_outline
+                end,
+			},
+			bar_font_monochrome = {
+				name = L["Monochrome"],
+				desc = L["FontMonochrome_OptionDesc"],
+				type = "toggle",
+				order = 100,
+				set = function(info, val)
+				    self.db.profile.font_monochrome = val
+				    self:ResetFonts()
+				end,
+                get = function(info)
+                    return self.db.profile.font_monochrome
+                end,
+			},
+			bar_font_thickoutline = {
+				name = L["Thick Outline"],
+				desc = L["FontThickOutline_OptionDesc"],
+				type = "toggle",
+				order = 110,
+				set = function(info, val)
+				    self.db.profile.font_thickoutline = val
+				    self:ResetFonts()
+				end,
+                get = function(info)
+                    return self.db.profile.font_thickoutline
+                end,
+			},
+		    ldb = {
+		        order = 300,
+		        type = "header",
+		        name = L["LDB"],
+		    },
+			ldb_short_label = {
+				name = L["Short Label"],
+				desc = L["ShortLabel_OptionDesc"],
+				type = "toggle",
+				order = 310,
+				set = function(info, val)
+				    self.db.profile.ldb_short_label = val
+				    SetBrokerLabel()
+				end,
+                get = function(info)
+                    return self.db.profile.ldb_short_label
+                end,
+			},
+			ldb_data_feed = {
+				name = L["Data Feed"],
+				desc = L["DataFeed_OptionDesc"],
+				type = "select",
+				values = {
+				    ["None"] = L["None"],
+				    ["LastDS"] = L["Last Death Strike Heal"],
+				    ["LastBS"] = L["Last Blood Shield Value"],
+				    ["EstimateBar"] = L["Estimate Bar Value"],
+				},
+				order = 320,
+				set = function(info, val)
+				    self.db.profile.ldb_data_feed = val
+				    DataFeed.display = val
+				    if val == "None" then
+				        LDBDataFeed = false
+			        else
+			            LDBDataFeed = true
+		            end
+				    UpdateLDBData()
+				end,
+                get = function(info)
+                    return self.db.profile.ldb_data_feed
+                end,
+			},
+		},
+	}
+	return core
+end
+
+function BloodShieldTracker:GetShieldBarOptions()
+	local shieldBarOpts = {
+		order = 2,
+		type = "group",
+		name = L["Blood Shield Bar"],
+		desc = L["Blood Shield Bar"],
+		args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["BloodShieldBar_Desc"],
+		    },
+            generalOptions = {
+                order = 2,
+                type = "header",
+                name = L["General Options"],
+            },
+    		status_bar_enabled = {
+				name = L["Enabled"],
+				desc = L["Enable the Blood Shield Bar."],
+				type = "toggle",
+				order = 10,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].enabled = val
+				    if not val then
+					    self.shieldbar.bar:Hide()
+					end
+				end,
+                get = function(info)
+					return self.db.profile.bars["ShieldBar"].enabled
+				end,
+			},
+			lock_bar = {
+				name = L["Lock bar"],
+				desc = L["LockBarDesc"],
+				type = "toggle",
+				order = 20,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].locked = val 
+					self.shieldbar:Lock()
+				end,
+                get = function(info)
+					return self.db.profile.bars["ShieldBar"].locked
+				end,
+			},
+			text_format = {
+				name = L["Text Format"],
+				desc = L["ShieldTextFormat_OptionDesc"],
+				type = "select",
+				values = {
+				    ["Full"] = L["Full"],
+				    ["OnlyPerc"] = L["Only Percent"],
+				    ["OnlyCurrent"] = L["Only Current"],
+				    ["OnlyMax"] = L["Only Maximum"],
+				    ["CurrMax"] = L["Current and Maximum"]
+				},
+				order = 30,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].text_format = val
+				end,
+                get = function(info)
+                    return self.db.profile.bars["ShieldBar"].text_format
+                end,
+			},
+			progress = {
+				name = L["Progress Bar"],
+				desc = L["ShieldProgress_OptionDesc"],
+				type = "select",
+				values = {
+				    ["None"] = L["None"],
+				    ["Time"] = L["Time Remaining"],
+				    ["Current"] = L["Current Value"]
+				},
+				order = 40,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].progress = val
+				    if val == "Time" or val == "None" then
+				        self:UpdateShieldBarMode()
+			        end
+				end,
+                get = function(info)
+                    return self.db.profile.bars["ShieldBar"].progress
+                end,
+			},
+            timeRemaining = {
+                order = 100,
+                type = "header",
+                name = L["Time Remaining"],
+            },
+			show_time = {
+				name = L["Show Time"],
+				desc = L["ShowTime_OptionDesc"],
+				type = "toggle",
+				order = 110,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].show_time = val
+				    if val then
+				        self.shieldbar.bar.time:Show()
+			        else
+			            self.shieldbar.bar.time:Hide()
+		            end
+				end,
+                get = function(info)
+                    return self.db.profile.bars["ShieldBar"].show_time
+                end,
+			},
+			time_pos = {
+				name = L["Position"],
+				desc = L["TimePosition_OptionDesc"],
+				type = "select",
+				values = {
+				    ["RIGHT"] = L["Right"],
+				    ["LEFT"] = L["Left"],
+				},
+				order = 120,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].time_pos = val
+			        self.shieldbar.bar.time:SetPoint(val or "RIGHT")
+			        self.shieldbar.bar.time:SetJustifyH(val or "RIGHT")
+				end,
+                get = function(info)
+                    return self.db.profile.bars["ShieldBar"].time_pos
+                end,
+                disabled = function()
+                    return not self.db.profile.bars["ShieldBar"].show_time
+                end,
+			},
+            sound = {
+                order = 200,
+                type = "header",
+                name = L["Sound"],
+            },
+			sound_enabled = {
+				name = L["Enabled"],
+				desc = L["ShieldSoundEnabledDesc"],
+				type = "toggle",
+				order = 210,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].sound_enabled = val
+				end,
+                get = function(info)
+                    return self.db.profile.bars["ShieldBar"].sound_enabled
+                end,
+			},
+			applied_sound = {
+				order = 220,
+				name = L["Applied Sound"],
+				desc = L["AppliedSoundDesc"],
+				type = "select",
+				values = LSM:HashTable("sound"),
+				dialogControl = 'LSM30_Sound',
+				get = function()
+				    return self.db.profile.bars["ShieldBar"].sound_applied
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].sound_applied = val
+				end,
+				disabled = function()
+				    return not self.db.profile.bars["ShieldBar"].sound_enabled
+				end,
+			},
+			removed_sound = {
+				order = 230,
+				name = L["Removed Sound"],
+				desc = L["RemovedSoundDesc"],
+				type = "select",
+				values = LSM:HashTable("sound"),
+				dialogControl = 'LSM30_Sound',
+				get = function()
+				    return self.db.profile.bars["ShieldBar"].sound_removed
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].sound_removed = val
+				end,
+				disabled = function()
+				    return not self.db.profile.bars["ShieldBar"].sound_enabled
+				end,
+			},
+            dimensions = {
+                order = 300,
+                type = "header",
+                name = L["Dimensions"],
+            },
+			width = {
+				order = 310,
+				name = L["Width"],
+				desc = L["BarWidth_Desc"],	
+				type = "range",
+				min = 50,
+				max = 300,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].width = val 
+					self.shieldbar.bar:SetWidth(val)
+					self.shieldbar.bar.border:SetWidth(val+9)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["ShieldBar"].width
+				end,
+			},
+			height = {
+				order = 320,
+				name = L["Height"],
+				desc = L["BarHeight_Desc"],
+				type = "range",
+				min = 10,
+				max = 30,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].height = val 
+					self.shieldbar.bar:SetHeight(val)
+					self.shieldbar.bar.border:SetHeight(val + 8)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["ShieldBar"].height
+				end,					
+			},
+			scale = {
+				order = 330,
+				name = L["Scale"],
+				desc = L["ScaleDesc"],
+				type = "range",
+				min = 0.1,
+				max = 3,
+				step = 0.1,
+				get = function()
+					return self.db.profile.bars["ShieldBar"].scale
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].scale = val
+				    self.shieldbar.bar:SetScale(val)
+				end
+			},
+            position = {
+                order = 400,
+                type = "header",
+                name = L["Position"],
+            },
+			x = {
+				order = 410,
+				name = L["X Offset"],
+				desc = L["XOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenWidth()/2),
+				softMax = floor(GetScreenWidth()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].x = val
+					self.shieldbar.bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["ShieldBar"].x, 
+						self.db.profile.bars["ShieldBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["ShieldBar"].x
+				end,
+			},
+			y = {
+				order = 420,
+				name = L["Y Offset"],
+				desc = L["YOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenHeight()/2),
+				softMax = floor(GetScreenHeight()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].y = val
+					self.shieldbar.bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["ShieldBar"].x, 
+						self.db.profile.bars["ShieldBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["ShieldBar"].y
+				end,
+			},
+            colors = {
+                order = 500,
+                type = "header",
+                name = L["Colors"],
+            },
+			textcolor = {
+				order = 510,
+				name = L["Text Color"],
+				desc = L["BloodShieldBarTextColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["ShieldBar"].textcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.shieldbar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["ShieldBar"].textcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			color = {
+				order = 520,
+				name = L["Bar Color"],
+				desc = L["BloodShieldBarColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["ShieldBar"].color
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.shieldbar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["ShieldBar"].color
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			bgcolor = {
+				order = 530,
+				name = L["Bar Depleted Color"],
+				desc = L["BloodShieldDepletedBarColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["ShieldBar"].bgcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.shieldbar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["ShieldBar"].bgcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+            appearance = {
+                order = 600,
+                type = "header",
+                name = L["Appearance"],
+            },
+			texture_opt = {
+				order = 610,
+				name = L["Texture"],
+				desc = L["BarTexture_OptionDesc"],
+				type = "select",
+				values = LSM:HashTable("statusbar"),
+				dialogControl = 'LSM30_Statusbar',
+				get = function()
+				    return self.db.profile.bars["ShieldBar"].texture
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].texture = val
+				    self.shieldbar:UpdateTexture()
+				end,
+				disabled = function()
+				    return not self.db.profile.bars["ShieldBar"].shown
+				end,
+			},
+			border_visible_opt = {
+				order = 620,
+				name = L["ShowBorder"],
+				desc = L["ShowBorderDesc"],
+				type = "toggle",
+				get = function()
+				    return self.db.profile.bars["ShieldBar"].border
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["ShieldBar"].border = val
+				    self.shieldbar:UpdateBorder()
+				end,
+			},
+			visible_opt = {
+				order = 630,
+				name = L["ShowBar"],
+				desc = L["ShowBarDesc"],
+				type = "toggle",
+				get = function()
+					return self.db.profile.bars["ShieldBar"].shown
+				end,
+				set = function(info,val) 
+			        self.db.profile.bars["ShieldBar"].shown = val
+			        self.shieldbar:UpdateVisibility()
+			    end,
+			},
+		},
+	}
+	return shieldBarOpts
+end
+
+function BloodShieldTracker:GetEstimateBarOptions()
+	local estimateBarOpts = {
+	    order = 3,
+	    type = "group",
+	    name = L["Estimated Healing Bar"],
+	    desc = L["Estimated Healing Bar"],
+	    args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["EstimatedHealingBar_Desc"],
+		    },
+            generalOptions = {
+                order = 2,
+                type = "header",
+                name = L["General Options"],
+            },
+    		enabled = {
+				name = L["Enabled"],
+				desc = L["Enable the Estimated Healing Bar."],
+				type = "toggle",
+				order = 10,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].enabled = val
+				    if not val then
+					    self.estimatebar.bar:Hide()
+					end
+				end,
+                get = function(info)
+					return self.db.profile.bars["EstimateBar"].enabled 
+				end,
+			},
+			lock_bar = {
+				name = L["Lock bar"],
+				desc = L["LockBarDesc"],
+				type = "toggle",
+				order = 20,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].locked = val 
+					self.estimatebar:Lock()
+				end,
+                get = function(info)
+					return self.db.profile.bars["EstimateBar"].locked
+				end,
+			},
+			hide_ooc = {
+				name = L["Hide out of combat"],
+				desc = L["HideOOC_OptionDesc"],
+				type = "toggle",
+				order = 30,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].hide_ooc = val
+					if not InCombatLockdown() then
+					    if val then
+					        self.estimatebar.bar:Hide()
+				        elseif self:IsTrackerEnabled() then
+				            self.estimatebar.bar:Show()
+			            end
+			        end
+				end,
+                get = function(info)
+                    return self.db.profile.bars["EstimateBar"].hide_ooc
+                end,
+			},
+			show_text = {
+				name = L["Show Text"],
+				desc = L["EstHealBarShowText_OptDesc"],
+				type = "toggle",
+				order = 35,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].show_text = val
+				    self:UpdateMinHeal("UpdateShowText", "player")
+				end,
+                get = function(info)
+					return self.db.profile.bars["EstimateBar"].show_text
+				end,
+			},
+			bar_mode = {
+				name = L["Mode"],
+				desc = L["Mode"],
+				type = "select",
+				values = {
+				    ["DS"] = L["Death Strike Heal"],
+				    ["BS"] = L["Blood Shield"],
+				},
+				order = 40,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].bar_mode = val
+				end,
+                get = function(info)
+                    return self.db.profile.bars["EstimateBar"].bar_mode
+                end,
+			},
+    		alternateMinimum = {
+				order = 50,
+				name = L["Alternate Minimum"],
+				desc = L["AlternateMinimum_OptDesc"],
+				type = "range",
+				min = 0,
+				max = 1000000,
+				step = 1,
+				bigStep = 1000,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].alternateMinimum = val
+				end,
+                get = function(info)
+					return self.db.profile.bars["EstimateBar"].alternateMinimum 
+				end,
+			},
+            dimensions = {
+                order = 50,
+                type = "header",
+                name = L["Dimensions"],
+            },
+			bar_width = {
+				order = 60,
+				name = L["Width"],
+				desc = L["Change the width of the estimated healing bar."],	
+				type = "range",
+				min = 10,
+				max = 200,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].width = val 
+					self.estimatebar.bar:SetWidth(val)
+					self.estimatebar.bar.border:SetWidth(val+9)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["EstimateBar"].width
+				end,
+			},
+			bar_height = {
+				order = 70,
+				name = L["Height"],
+				desc = L["Change the height of the estimated healing bar."],	
+				type = "range",
+				min = 8,
+				max = 30,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].height = val 
+					self.estimatebar.bar:SetHeight(val)
+					self.estimatebar.bar.border:SetHeight(val + 8)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["EstimateBar"].height
+				end,
+			},
+			bar_scaling = {
+				order = 80,
+				name = L["Scale"],
+				desc = L["ScaleDesc"],
+				type = "range",
+				min = 0.1,
+				max = 3,
+				step = 0.1,
+				get = function()
+				    return self.db.profile.bars["EstimateBar"].scale
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].scale = val
+				    self.estimatebar.bar:SetScale(val)
+				end
+			},
+            position = {
+                order = 85,
+                type = "header",
+                name = L["Position"],
+            },
+			x = {
+				order = 86,
+				name = L["X Offset"],
+				desc = L["XOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenWidth()/2),
+				softMax = floor(GetScreenWidth()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].x = val
+					self.estimatebar.bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["EstimateBar"].x, 
+						self.db.profile.bars["EstimateBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["EstimateBar"].x
+				end,
+			},
+			y = {
+				order = 87,
+				name = L["Y Offset"],
+				desc = L["YOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenHeight()/2),
+				softMax = floor(GetScreenHeight()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].y = val
+					self.estimatebar.bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["EstimateBar"].x, 
+						self.db.profile.bars["EstimateBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["EstimateBar"].y
+				end,
+			},
+            colorsMinimum = {
+                order = 90,
+                type = "header",
+                name = L["Colors for Minimum Heal"],
+            },
+			min_textcolor = {
+				order = 100,
+				name = L["Minimum Text Color"],
+				desc = L["EstHealBarMinTextColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["EstimateBar"].textcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+					self.estimatebar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["EstimateBar"].textcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			min_color = {
+				order = 110,
+				name = L["Minimum Bar Color"],
+				desc = L["EstHealBarMinColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["EstimateBar"].color
+				    c.r, c.g, c.b, c.a = r, g, b, a
+			        self.estimatebar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["EstimateBar"].color
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			min_bgcolor = {
+				order = 120,
+				name = L["Minimum Bar Background Color"],
+				desc = L["EstHealBarMinBackgroundColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["EstimateBar"].bgcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+			        self.estimatebar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["EstimateBar"].bgcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+            colorsOptimal = {
+                order = 130,
+                type = "header",
+                name = L["Colors for Optimal Heal"],
+            },
+			opt_textcolor = {
+				order = 140,
+				name = L["Optimal Text Color"],
+				desc = L["EstHealBarOptTextColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["EstimateBar"].alt_textcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+			        self.estimatebar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["EstimateBar"].alt_textcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			opt_color = {
+				order = 150,
+				name = L["Optimal Bar Color"],
+				desc = L["EstHealBarOptColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["EstimateBar"].alt_color
+				    c.r, c.g, c.b, c.a = r, g, b, a
+			        self.estimatebar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["EstimateBar"].alt_color
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+            appearance = {
+                order = 160,
+                type = "header",
+                name = L["Appearance"],
+            },
+			texture_opt = {
+				order = 170,
+				name = L["Texture"],
+				desc = L["BarTexture_OptionDesc"],
+				type = "select",
+				values = LSM:HashTable("statusbar"),
+				dialogControl = 'LSM30_Statusbar',
+				get = function()
+				    return self.db.profile.bars["EstimateBar"].texture
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].texture = val
+				    self.estimatebar:UpdateTexture()
+				end,
+				disabled = function()
+				    return not self.db.profile.bars["EstimateBar"].shown
+				end,
+			},
+			border_visible_opt = {
+				order = 180,
+				name = L["ShowBorder"],
+				desc = L["ShowBorderDesc"],
+				type = "toggle",
+				get = function()
+				    return self.db.profile.bars["EstimateBar"].border
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].border = val
+				    self.estimatebar:UpdateBorder()
+				end,
+			},
+			visible_opt = {
+				order = 190,
+				name = L["ShowBar"],
+				desc = L["ShowBarDesc"],
+				type = "toggle",
+				get = function()
+				    return self.db.profile.bars["EstimateBar"].shown
+				end,
+				set = function(info,val)
+				    self.db.profile.bars["EstimateBar"].shown = val
+				    self.estimatebar:UpdateVisibility()
+				end,
+			},
+            latencyOptions = {
+                order = 500,
+                type = "header",
+                name = L["Latency"],
+            },
+			latencyMode = {
+				name = L["Mode"],
+				desc = L["Mode"],
+				type = "select",
+				values = {
+				    ["None"] = L["None"],
+				    ["DS"] = L["Death Strike"],
+				    ["Fixed"] = L["Fixed"],
+				},
+				order = 510,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].latencyMethod = val
+				end,
+                get = function(info)
+                    return self.db.profile.bars["EstimateBar"].latencyMethod
+                end,
+			},
+			latencyFixed = {
+				order = 520,
+				name = L["Fixed"],
+				desc = L["Fixed"],
+				type = "range",
+				min = 0,
+				max = 2000,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].latencyFixed = val 
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["EstimateBar"].latencyFixed
+				end,					
+			},
+
+		}
+	}
+	return estimateBarOpts
+end
+
+function BloodShieldTracker:GetPWSBarOptions()
+	local pwsBarOpts = {
+		order = 4,
+		type = "group",
+		name = L["PW:S Bar"],
+		desc = L["PW:S Bar"],
+		args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["PWSBar_Desc"],
+		    },
+            generalOptions = {
+                order = 2,
+                type = "header",
+                name = L["General Options"],
+            },
+    		enabled = {
+				name = L["Enabled"],
+				desc = L["EnableBarDesc"],
+				type = "toggle",
+				order = 10,
+				set = function(info, val)
+				    self.db.profile.bars["PWSBar"].enabled = val
+				    if not val then
+					    self.bars["PWSBar"].bar:Hide()
+					end
+				end,
+                get = function(info)
+					return self.db.profile.bars["PWSBar"].enabled
+				end,
+			},
+			locked = {
+				name = L["Lock bar"],
+				desc = L["LockBarDesc"],
+				type = "toggle",
+				order = 20,
+				set = function(info, val)
+				    self.db.profile.bars["PWSBar"].locked = val 
+					self.bars["PWSBar"]:Lock(val)
+				end,
+                get = function(info)
+					return self.db.profile.bars["PWSBar"].locked
+				end,
+			},
+			includeda = {
+				name = L["Include Divine Aegis"],
+				desc = L["IncludeDivineAegisDesc"],
+				type = "toggle",
+				order = 30,
+				set = function(info, val)
+				    self.db.profile.bars["PWSBar"].includeda = val
+				end,
+                get = function(info)
+					return self.db.profile.bars["PWSBar"].includeda
+				end,
+			},
+            dimensions = {
+                order = 300,
+                type = "header",
+                name = L["Dimensions"],
+            },
+			width = {
+				order = 310,
+				name = L["Width"],
+				desc = L["BarWidth_Desc"],	
+				type = "range",
+				min = 50,
+				max = 300,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["PWSBar"].width = val 
+					self.bars["PWSBar"].bar:SetWidth(val)
+					self.bars["PWSBar"].bar.border:SetWidth(val+9)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["PWSBar"].width
+				end,
+			},
+			height = {
+				order = 320,
+				name = L["Height"],
+				desc = L["BarHeight_Desc"],
+				type = "range",
+				min = 10,
+				max = 30,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["PWSBar"].height = val 
+					self.bars["PWSBar"].bar:SetHeight(val)
+					self.bars["PWSBar"].bar.border:SetHeight(val + 8)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["PWSBar"].height
+				end,					
+			},
+			scaling = {
+				order = 330,
+				name = L["Scale"],
+				desc = L["ScaleDesc"],
+				type = "range",
+				min = 0.1,
+				max = 3,
+				step = 0.1,
+				get = function()
+					return self.db.profile.bars["PWSBar"].scale
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["PWSBar"].scale = val
+				    self.bars["PWSBar"].bar:SetScale(val)
+				end
+			},
+            position = {
+                order = 390,
+                type = "header",
+                name = L["Position"],
+            },
+			x = {
+				order = 391,
+				name = L["X Offset"],
+				desc = L["XOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenWidth()/2),
+				softMax = floor(GetScreenWidth()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["PWSBar"].x = val
+					self.pwsbar.bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["PWSBar"].x, 
+						self.db.profile.bars["PWSBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["PWSBar"].x
+				end,
+			},
+			y = {
+				order = 392,
+				name = L["Y Offset"],
+				desc = L["YOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenHeight()/2),
+				softMax = floor(GetScreenHeight()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["PWSBar"].y = val
+					self.pwsbar.bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["PWSBar"].x, 
+						self.db.profile.bars["PWSBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["PWSBar"].y
+				end,
+			},
+            colors = {
+                order = 400,
+                type = "header",
+                name = L["Colors"],
+            },
+			textcolor = {
+				order = 410,
+				name = L["Text Color"],
+				desc = L["BarTextColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["PWSBar"].textcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["PWSBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["PWSBar"].textcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			color = {
+				order = 420,
+				name = L["Bar Color"],
+				desc = L["BarColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["PWSBar"].color
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["PWSBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["PWSBar"].color
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+            appearance = {
+                order = 500,
+                type = "header",
+                name = L["Appearance"],
+            },
+			texture_opt = {
+				order = 510,
+				name = L["Texture"],
+				desc = L["BarTexture_OptionDesc"],
+				type = "select",
+				values = LSM:HashTable("statusbar"),
+				dialogControl = 'LSM30_Statusbar',
+				get = function()
+				    return self.db.profile.bars["PWSBar"].texture
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["PWSBar"].texture = val
+				    self.bars["PWSBar"]:UpdateTexture()
+				end,
+				disabled = function()
+				    return not self.db.profile.bars["PWSBar"].shown
+				end,
+			},
+			border_visible_opt = {
+				order = 520,
+				name = L["ShowBorder"],
+				desc = L["ShowBorderDesc"],
+				type = "toggle",
+				get = function()
+				    return self.db.profile.bars["PWSBar"].border
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["PWSBar"].border = val
+				    self.bars["PWSBar"]:UpdateBorder()
+				end,
+			},
+			visible_opt = {
+				order = 530,
+				name = L["ShowBar"],
+				desc = L["ShowBarDesc"],
+				type = "toggle",
+				get = function()
+					return self.db.profile.bars["PWSBar"].shown
+				end,
+				set = function(info,val) 
+			        self.db.profile.bars["PWSBar"].shown = val
+			        self.bars["PWSBar"]:UpdateVisibility()
+			    end,
+			},
+		},
+	}
+	return pwsBarOpts
+end
+
+function BloodShieldTracker:GetIllumBarOptions()
+	local illumBarOpts = {
+		order = 5,
+		type = "group",
+		name = L["Illuminated Healing Bar"],
+		desc = L["Illuminated Healing Bar"],
+		args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["IllumBar_Desc"],
+		    },
+            generalOptions = {
+                order = 2,
+                type = "header",
+                name = L["General Options"],
+            },
+    		bar_enabled = {
+				name = L["Enabled"],
+				desc = L["EnableBarDesc"],
+				type = "toggle",
+				order = 10,
+				set = function(info, val)
+				    self.db.profile.bars["IllumBar"].enabled = val
+				    if not val then
+					    self.bars["IllumBar"].bar:Hide()
+					end
+				end,
+                get = function(info)
+					return self.db.profile.bars["IllumBar"].enabled
+				end,
+			},
+			lock_bar = {
+				name = L["Lock bar"],
+				desc = L["LockBarDesc"],
+				type = "toggle",
+				order = 20,
+				set = function(info, val)
+				    self.db.profile.bars["IllumBar"].locked = val 
+					self.bars["IllumBar"]:Lock(val)
+				end,
+                get = function(info)
+					return self.db.profile.bars["IllumBar"].locked
+				end,
+			},
+            dimensions = {
+                order = 300,
+                type = "header",
+                name = L["Dimensions"],
+            },
+			bar_width = {
+				order = 310,
+				name = L["Width"],
+				desc = L["BarWidth_Desc"],	
+				type = "range",
+				min = 50,
+				max = 300,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["IllumBar"].width = val 
+					self.bars["IllumBar"].bar:SetWidth(val)
+					self.bars["IllumBar"].bar.border:SetWidth(val+9)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["IllumBar"].width
+				end,
+			},
+			bar_height = {
+				order = 320,
+				name = L["Height"],
+				desc = L["BarHeight_Desc"],
+				type = "range",
+				min = 10,
+				max = 30,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["IllumBar"].height = val 
+					self.bars["IllumBar"].bar:SetHeight(val)
+					self.bars["IllumBar"].bar.border:SetHeight(val + 8)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["IllumBar"].height
+				end,					
+			},
+			bar_scaling = {
+				order = 330,
+				name = L["Scale"],
+				desc = L["ScaleDesc"],
+				type = "range",
+				min = 0.1,
+				max = 3,
+				step = 0.1,
+				get = function()
+					return self.db.profile.bars["IllumBar"].scale
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["IllumBar"].scale = val
+				    self.bars["IllumBar"].bar:SetScale(val)
+				end
+			},
+            position = {
+                order = 390,
+                type = "header",
+                name = L["Position"],
+            },
+			x = {
+				order = 391,
+				name = L["X Offset"],
+				desc = L["XOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenWidth()/2),
+				softMax = floor(GetScreenWidth()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["IllumBar"].x = val
+					self.illumbar.bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["IllumBar"].x, 
+						self.db.profile.bars["IllumBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["IllumBar"].x
+				end,
+			},
+			y = {
+				order = 392,
+				name = L["Y Offset"],
+				desc = L["YOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenHeight()/2),
+				softMax = floor(GetScreenHeight()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["IllumBar"].y = val
+					self.illumbar.bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["IllumBar"].x, 
+						self.db.profile.bars["IllumBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["IllumBar"].y
+				end,
+			},
+            colors = {
+                order = 400,
+                type = "header",
+                name = L["Colors"],
+            },
+			bar_textcolor = {
+				order = 410,
+				name = L["Text Color"],
+				desc = L["BarTextColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["IllumBar"].textcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["IllumBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["IllumBar"].textcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			bar_color = {
+				order = 420,
+				name = L["Bar Color"],
+				desc = L["BarColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["IllumBar"].color
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["IllumBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["IllumBar"].color
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+            appearance = {
+                order = 500,
+                type = "header",
+                name = L["Appearance"],
+            },
+			bar_texture_opt = {
+				order = 510,
+				name = L["Texture"],
+				desc = L["BarTexture_OptionDesc"],
+				type = "select",
+				values = LSM:HashTable("statusbar"),
+				dialogControl = 'LSM30_Statusbar',
+				get = function()
+				    return self.db.profile.bars["IllumBar"].texture
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["IllumBar"].texture = val
+				    self.bars["IllumBar"]:UpdateTexture()
+				end,
+				disabled = function()
+				    return not self.db.profile.bars["IllumBar"].shown
+				end,
+			},
+			bar_border_visible_opt = {
+				order = 520,
+				name = L["ShowBorder"],
+				desc = L["ShowBorderDesc"],
+				type = "toggle",
+				get = function()
+				    return self.db.profile.bars["IllumBar"].border
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["IllumBar"].border = val
+				    self.bars["IllumBar"]:UpdateBorder()
+				end,
+			},
+			bar_visible_opt = {
+				order = 530,
+				name = L["ShowBar"],
+				desc = L["ShowBarDesc"],
+				type = "toggle",
+				get = function()
+					return self.db.profile.bars["IllumBar"].shown
+				end,
+				set = function(info,val) 
+			        self.db.profile.bars["IllumBar"].shown = val
+			        self.bars["IllumBar"]:UpdateVisibility()
+			    end,
+			},
+		},
+	}
+	return illumBarOpts
+end
+
+function BloodShieldTracker:GetAbsorbsBarOptions()
+	local absorbsBarOpts = {
+		order = 6,
+		type = "group",
+		name = L["Total Absorbs Bar"],
+		desc = L["Total Absorbs Bar"],
+		args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["TotalAbsorbsBar_Desc"],
+		    },
+            generalOptions = {
+                order = 2,
+                type = "header",
+                name = L["General Options"],
+            },
+    		bar_enabled = {
+				name = L["Enabled"],
+				desc = L["EnableBarDesc"],
+				type = "toggle",
+				order = 10,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].enabled = val
+				    if not val then
+					    self.bars["TotalAbsorbsBar"].bar:Hide()
+					end
+				end,
+                get = function(info) 
+					return self.db.profile.bars["TotalAbsorbsBar"].enabled
+				end,
+			},
+			lock_bar = {
+				name = L["Lock bar"],
+				desc = L["LockBarDesc"],
+				type = "toggle",
+				order = 20,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].locked = val 
+					self.bars["TotalAbsorbsBar"]:Lock(val)
+				end,
+                get = function(info)
+					return self.db.profile.bars["TotalAbsorbsBar"].locked
+				end,
+			},
+            includedOptions = {
+                order = 100,
+                type = "header",
+                name = L["Included Absorbs"],
+            },
+			includebs = {
+				name = L["Blood Shield"],
+				desc = L["IncludeBS_Desc"],
+				type = "toggle",
+				order = 105,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].includebs = val
+				end,
+                get = function(info)
+					return self.db.profile.bars["TotalAbsorbsBar"].includebs
+				end,
+			},
+			includepws = {
+				name = SpellNames["PWS"],
+				desc = L["IncludeGeneric_Desc"],
+				type = "toggle",
+				order = 110,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].included["PWS"] = val
+				end,
+                get = function(info)
+					return self.db.profile.bars["TotalAbsorbsBar"].included["PWS"]
+				end,
+			},
+			includeillum = {
+				name = SpellNames["IlluminatedHealing"],
+				desc = L["IncludeGeneric_Desc"],
+				type = "toggle",
+				order = 115,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].included["IlluminatedHealing"] = val
+				end,
+                get = function(info)
+					return self.db.profile.bars["TotalAbsorbsBar"].included["IlluminatedHealing"]
+				end,
+			},
+			includeda = {
+				name = SpellNames["DivineAegis"],
+				desc = L["IncludeGeneric_Desc"],
+				type = "toggle",
+				order = 120,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].included["DivineAegis"] = val
+				end,
+                get = function(info)
+					return self.db.profile.bars["TotalAbsorbsBar"].included["DivineAegis"]
+				end,
+			},
+			includeindompride = {
+				name = ItemNames["IndomitablePride"] or "IndomitablePride",
+				desc = L["IncludeGeneric_Desc"],
+				type = "toggle",
+				order = 125,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].included["IndomitablePride"] = val
+				end,
+                get = function(info)
+					return self.db.profile.bars["TotalAbsorbsBar"].included["IndomitablePride"]
+				end,
+			},
+            dimensions = {
+                order = 300,
+                type = "header",
+                name = L["Dimensions"],
+            },
+			bar_width = {
+				order = 310,
+				name = L["Width"],
+				desc = L["BarWidth_Desc"],	
+				type = "range",
+				min = 50,
+				max = 300,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].width = val 
+					self.bars["TotalAbsorbsBar"].bar:SetWidth(val)
+					self.bars["TotalAbsorbsBar"].bar.border:SetWidth(val+9)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["TotalAbsorbsBar"].width
+				end,
+			},
+			bar_height = {
+				order = 320,
+				name = L["Height"],
+				desc = L["BarHeight_Desc"],
+				type = "range",
+				min = 10,
+				max = 30,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].height = val 
+					self.bars["TotalAbsorbsBar"].bar:SetHeight(val)
+					self.bars["TotalAbsorbsBar"].bar.border:SetHeight(val + 8)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["TotalAbsorbsBar"].height
+				end,					
+			},
+			bar_scaling = {
+				order = 330,
+				name = L["Scale"],
+				desc = L["ScaleDesc"],
+				type = "range",
+				min = 0.1,
+				max = 3,
+				step = 0.1,
+				get = function()
+					return self.db.profile.bars["TotalAbsorbsBar"].scale
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].scale = val
+				    self.bars["TotalAbsorbsBar"].bar:SetScale(val)
+				end
+			},
+            position = {
+                order = 390,
+                type = "header",
+                name = L["Position"],
+            },
+			x = {
+				order = 391,
+				name = L["X Offset"],
+				desc = L["XOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenWidth()/2),
+				softMax = floor(GetScreenWidth()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].x = val
+					self.absorbsbar.bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["TotalAbsorbsBar"].x, 
+						self.db.profile.bars["TotalAbsorbsBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["TotalAbsorbsBar"].x
+				end,
+			},
+			y = {
+				order = 392,
+				name = L["Y Offset"],
+				desc = L["YOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenHeight()/2),
+				softMax = floor(GetScreenHeight()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].y = val
+					self.absorbsbar.bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["TotalAbsorbsBar"].x, 
+						self.db.profile.bars["TotalAbsorbsBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["TotalAbsorbsBar"].y
+				end,
+			},
+            colors = {
+                order = 400,
+                type = "header",
+                name = L["Colors"],
+            },
+			bar_textcolor = {
+				order = 410,
+				name = L["Text Color"],
+				desc = L["BarTextColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["TotalAbsorbsBar"].textcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["TotalAbsorbsBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["TotalAbsorbsBar"].textcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			bar_color = {
+				order = 420,
+				name = L["Bar Color"],
+				desc = L["BarColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["TotalAbsorbsBar"].color
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["TotalAbsorbsBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["TotalAbsorbsBar"].color
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+            appearance = {
+                order = 500,
+                type = "header",
+                name = L["Appearance"],
+            },
+			bar_texture_opt = {
+				order = 510,
+				name = L["Texture"],
+				desc = L["BarTexture_OptionDesc"],
+				type = "select",
+				values = LSM:HashTable("statusbar"),
+				dialogControl = 'LSM30_Statusbar',
+				get = function()
+				    return self.db.profile.bars["TotalAbsorbsBar"].texture
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].texture = val
+				    self.bars["TotalAbsorbsBar"]:UpdateTexture()
+				end,
+				disabled = function()
+				    return not self.db.profile.bars["TotalAbsorbsBar"].shown
+				end,
+			},
+			bar_border_visible_opt = {
+				order = 520,
+				name = L["ShowBorder"],
+				desc = L["ShowBorderDesc"],
+				type = "toggle",
+				get = function()
+				    return self.db.profile.bars["TotalAbsorbsBar"].border
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].border = val
+				    self.bars["TotalAbsorbsBar"]:UpdateBorder()
+				end,
+			},
+			bar_visible_opt = {
+				order = 530,
+				name = L["ShowBar"],
+				desc = L["ShowBarDesc"],
+				type = "toggle",
+				get = function()
+					return self.db.profile.bars["TotalAbsorbsBar"].shown
+				end,
+				set = function(info,val) 
+			        self.db.profile.bars["TotalAbsorbsBar"].shown = val
+			        self.bars["TotalAbsorbsBar"]:UpdateVisibility()
+			    end,
+			},
+		},
+	}
+	return absorbsBarOpts
+end
+
+function BloodShieldTracker:GetHealthBarOptions()
+	local healthBarOpts = {
+	    order = 7,
+	    type = "group",
+	    name = L["Health Bar"],
+	    desc = L["Health Bar"],
+	    args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["HealthBar_Desc"],
+		    },
+            generalOptions = {
+                order = 2,
+                type = "header",
+                name = L["General Options"],
+            },
+    		bar_enabled = {
+				name = L["Enabled"],
+				desc = L["EnableBarDesc"],
+				type = "toggle",
+				order = 10,
+				set = function(info, val)
+				    self.db.profile.bars["HealthBar"].enabled = val
+			        self:ToggleHealthBar(val)
+				end,
+                get = function(info)
+                    return self.db.profile.bars["HealthBar"].enabled
+                end,
+			},
+			lock_bar = {
+				name = L["Lock bar"],
+				desc = L["LockBarDesc"],
+				type = "toggle",
+				order = 20,
+				set = function(info, val)
+				    self.db.profile.bars["HealthBar"].locked = val 
+					self.bars["HealthBar"]:Lock(val)
+				end,
+                get = function(info)
+                    return self.db.profile.bars["HealthBar"].locked
+                end,
+			},
+			hide_bar_ooc = {
+				name = L["Hide out of combat"],
+				desc = L["HideOutOfCombat_OptionDesc"],
+				type = "toggle",
+				order = 30,
+				set = function(info, val)
+				    self.db.profile.bars["HealthBar"].hide_ooc = val
+					if not InCombatLockdown() then
+					    if val then
+					        self.healthbar.bar:Hide()
+				        elseif self:IsTrackerEnabled() then
+				            self.healthbar.bar:Show()
+			            end
+			        end
+				end,
+                get = function(info)
+                    return self.db.profile.bars["HealthBar"].hide_ooc
+                end,
+			},
+			low_percent = {
+				order = 40,
+				name = L["Low Health Threshold"],
+				desc = L["LowHealthThreshold_OptionDesc"],	
+				type = "range",
+				isPercent = true,
+				min = 0.05,
+				max = 0.95,
+				bigStep = 0.05,
+				set = function(info, val)
+				    self.db.profile.bars["HealthBar"].low_percent = val
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["HealthBar"].low_percent
+				end,
+			},
+			text_format = {
+				name = L["Text Format"],
+				desc = L["TextFormat_OptionDesc"],
+				type = "select",
+				values = {
+				    ["Full"] = L["Full"],
+				    ["OnlyPerc"] = L["Only Percent"],
+				    ["OnlyCurrent"] = L["Only Current"],
+				    ["CurrMax"] = L["Current and Maximum"],
+				    ["CurrPerc"] = L["Current and Percent"]
+				},
+				order = 50,
+				set = function(info, val)
+				    self.db.profile.bars["HealthBar"].text_format = val
+			        self:UpdateHealthBar(false)
+				end,
+                get = function(info)
+                    return self.db.profile.bars["HealthBar"].text_format
+                end,
+			},
+            dimensions = {
+                order = 100,
+                type = "header",
+                name = L["Dimensions"],
+            },
+			bar_width = {
+				order = 110,
+				name = L["Width"],
+				desc = L["BarWidth_Desc"],	
+				type = "range",
+				min = 10,
+				max = 200,
+				set = function(info, val)
+				    self.db.profile.bars["HealthBar"].width = val 
+					self.healthbar.bar:SetWidth(val)
+					self.healthbar.bar.border:SetWidth(val+9)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["HealthBar"].width
+				end,
+			},
+			bar_height = {
+				order = 120,
+				name = L["Height"],
+				desc = L["BarHeight_Desc"],	
+				type = "range",
+				min = 8,
+				max = 30,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["HealthBar"].height = val 
+					self.healthbar.bar:SetHeight(val)
+					self.healthbar.bar.border:SetHeight(val + 8)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["HealthBar"].height
+				end,
+			},
+			bar_scaling = {
+				order = 130,
+				name = L["Scale"],
+				desc = L["ScaleDesc"],
+				type = "range",
+				min = 0.1,
+				max = 3,
+				step = 0.1,
+				get = function()
+				    return self.db.profile.bars["HealthBar"].scale
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["HealthBar"].scale = val
+				    self.healthbar.bar:SetScale(val)
+				end
+			},
+            position = {
+                order = 190,
+                type = "header",
+                name = L["Position"],
+            },
+			x = {
+				order = 191,
+				name = L["X Offset"],
+				desc = L["XOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenWidth()/2),
+				softMax = floor(GetScreenWidth()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["HealthBar"].x = val
+					self.healthbar.bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["HealthBar"].x, 
+						self.db.profile.bars["HealthBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["HealthBar"].x
+				end,
+			},
+			y = {
+				order = 192,
+				name = L["Y Offset"],
+				desc = L["YOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenHeight()/2),
+				softMax = floor(GetScreenHeight()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["HealthBar"].y = val
+					self.healthbar.bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["HealthBar"].x, 
+						self.db.profile.bars["HealthBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["HealthBar"].y
+				end,
+			},
+            colors = {
+                order = 200,
+                type = "header",
+                name = L["Colors for Normal Health"],
+            },
+			bar_textcolor = {
+				order = 210,
+				name = L["Text Color"],
+				desc = L["BarTextColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["HealthBar"].textcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+			        self.healthbar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["HealthBar"].textcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			bar_color = {
+				order = 220,
+				name = L["Bar Color"],
+				desc = L["BarColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["HealthBar"].color
+				    c.r, c.g, c.b, c.a = r, g, b, a
+			        self.healthbar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["HealthBar"].color
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			bar_bgcolor = {
+				order = 230,
+				name = L["Bar Background Color"],
+				desc = L["BarBackgroundColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["HealthBar"].bgcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+			        self.healthbar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["HealthBar"].bgcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+
+            colorsLow = {
+                order = 300,
+                type = "header",
+                name = L["Colors for Low Health"],
+            },
+			bar_low_textcolor = {
+				order = 310,
+				name = L["Low Health Text Color"],
+				desc = L["BarTextColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["HealthBar"].alt_textcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+			        self.healthbar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["HealthBar"].alt_textcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			bar_low_color = {
+				order = 320,
+				name = L["Low Health Bar Color"],
+				desc = L["BarColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["HealthBar"].alt_color
+				    c.r, c.g, c.b, c.a = r, g, b, a
+			        self.healthbar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["HealthBar"].alt_color
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			bar_low_bgcolor = {
+				order = 330,
+				name = L["Low Health Bar Background Color"],
+				desc = L["BarBackgroundColor_LowHealth_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["HealthBar"].alt_bgcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+			        self.healthbar:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["HealthBar"].alt_bgcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+
+            appearance = {
+                order = 400,
+                type = "header",
+                name = L["Appearance"],
+            },
+			bar_texture_opt = {
+				order = 410,
+				name = L["Texture"],
+				desc = L["BarTexture_OptionDesc"],
+				type = "select",
+				values = LSM:HashTable("statusbar"),
+				dialogControl = 'LSM30_Statusbar',
+				get = function()
+				    return self.db.profile.bars["HealthBar"].texture
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["HealthBar"].texture = val
+				    self.healthbar:UpdateTexture()
+				end,
+				disabled = function()
+				    return not self.db.profile.bars["HealthBar"].shown
+				end,
+			},
+			bar_border_visible_opt = {
+				order = 420,
+				name = L["ShowBorder"],
+				desc = L["ShowBorderDesc"],
+				type = "toggle",
+				get = function()
+				    return self.db.profile.bars["HealthBar"].border
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["HealthBar"].border = val
+				    self.healthbar:UpdateBorder()
+				end,
+			},
+			bar_visible_opt = {
+				order = 430,
+				name = L["ShowBar"],
+				desc = L["ShowBarDesc"],
+				type = "toggle",
+				get = function()
+				    return self.db.profile.bars["HealthBar"].shown
+				end,
+				set = function(info,val)
+				    self.db.profile.bars["HealthBar"].shown = val
+				    self.healthbar:UpdateVisibility()
+				end,
+			},
+
+		}
+	}
+	return healthBarOpts
+end
+
+function BloodShieldTracker:GetSkinningOptions()
+	local skinningOpts = {
+	    order = 8,
+		name = L["Skinning"],
+		type = "group",
+		args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["Skinning_Desc"],
+		    },
+		    elvuiOptions = {
+		        order = 10,
+		        type = "header",
+		        name = L["ElvUI"],
+		    },
+            elvui_enabled = {
+                name = L["Enabled"],
+				order = 20,
+                desc = L["ElvUIEnabled_OptionDesc"],
+                type = "toggle",
+                set = function(info, val)
+                    self.db.profile.elvui_enabled = val
+                end,
+                get = function(info)
+                    return self.db.profile.elvui_enabled
+                end,
+            },
+            elvui_borders = {
+                name = L["Borders"],
+				order = 30,
+                desc = L["ElvUIBorders_OptionDesc"],
+                type = "toggle",
+                set = function(info, val)
+                    self.db.profile.elvui_borders = val
+                end,
+                get = function(info)
+                    return self.db.profile.elvui_borders
+                end,
+            },
+            elvui_texture = {
+                name = L["Texture"],
+				order = 40,
+                desc = L["ElvUITexture_OptionDesc"],
+                type = "toggle",
+                set = function(info, val)
+                    self.db.profile.elvui_texture = val
+                end,
+                get = function(info)
+                    return self.db.profile.elvui_texture
+                end,
+            },
+            elvui_font = {
+                name = L["Font"],
+				order = 50,
+                desc = L["ElvUIFont_OptionDesc"],
+                type = "toggle",
+                set = function(info, val)
+                    self.db.profile.elvui_font = val
+                end,
+                get = function(info)
+                    return self.db.profile.elvui_font
+                end,
+            },
+            elvui_font_flags = {
+                name = L["Font Flags"],
+				order = 60,
+                desc = L["ElvUIFontFlags_OptionDesc"],
+                type = "toggle",
+                set = function(info, val)
+                    self.db.profile.elvui_font_flags = val
+                end,
+                get = function(info)
+                    return self.db.profile.elvui_font_flags
+                end,
+            },
+
+		    tukuiOptions = {
+		        order = 100,
+		        type = "header",
+		        name = L["Tukui"],
+		    },
+            tukui_enabled = {
+                name = L["Enabled"],
+				order = 110,
+                desc = L["TukuiEnabled_OptionDesc"],
+                type = "toggle",
+                set = function(info, val)
+                    self.db.profile.tukui_enabled = val
+                end,
+                get = function(info)
+                    return self.db.profile.tukui_enabled
+                end,
+            },
+            tukui_borders = {
+                name = L["Borders"],
+				order = 120,
+                desc = L["TukuiBorders_OptionDesc"],
+                type = "toggle",
+                set = function(info, val)
+                    self.db.profile.tukui_borders = val
+                end,
+                get = function(info)
+                    return self.db.profile.tukui_borders
+                end,
+            },
+            tukui_texture = {
+                name = L["Texture"],
+				order = 130,
+                desc = L["TukuiTexture_OptionDesc"],
+                type = "toggle",
+                set = function(info, val)
+                    self.db.profile.tukui_texture = val
+                end,
+                get = function(info)
+                    return self.db.profile.tukui_texture
+                end,
+            },
+            tukui_font = {
+                name = L["Font"],
+				order = 140,
+                desc = L["TukuiFont_OptionDesc"],
+                type = "toggle",
+                set = function(info, val)
+                    self.db.profile.tukui_font = val
+                end,
+                get = function(info)
+                    return self.db.profile.tukui_font
+                end,
+            },
+            tukui_font_flags = {
+                name = L["Font Flags"],
+				order = 150,
+                desc = L["TukuiFontFlags_OptionDesc"],
+                type = "toggle",
+                set = function(info, val)
+                    self.db.profile.tukui_font_flags = val
+                end,
+                get = function(info)
+                    return self.db.profile.tukui_font_flags
+                end,
+            },
+        }
+    }
+	return skinningOpts
 end
 
 local DebugOutputFrame = nil
@@ -3525,13 +3574,17 @@ function BloodShieldTracker:UpdateEstimateBar(timestamp)
         self:UpdateEstimateBarText(estimate)
         self.estimatebar.bar:SetMinMaxValues(0, minimumValue)
 
-        if predictedValue > minimumValue then
+		local altMin = self.estimatebar.db.alternateMinimum or 0
+		if altMin > 0 and predictedValue >= altMin then
             self.estimatebar.altcolor = true
-            self.estimatebar.bar:SetValue(minimumValue)        
+            self.estimatebar.bar:SetValue(predictedValue)
+		elseif altMin == 0 and predictedValue > minimumValue then
+            self.estimatebar.altcolor = true
+            self.estimatebar.bar:SetValue(minimumValue)
         else
             self.estimatebar.altcolor = false
             self.estimatebar.bar:SetValue(predictedValue)
-        end
+		end
         self.estimatebar:UpdateGraphics()
 
         DataFeed.estimateBar = estimate
