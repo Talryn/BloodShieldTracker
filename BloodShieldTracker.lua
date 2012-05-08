@@ -803,8 +803,9 @@ function BloodShieldTracker:GetGeneralOptions()
 						self.pwsbar.bar:Hide()
 						self.illumbar.bar:Hide()
 						self.absorbsbar.bar:Hide()
-						if self.healthbar.db.hide_ooc and 
-							not InCombatLockdown() then
+						if not self.healthbar.db.enabled or 
+							(self.healthbar.db.hide_ooc and 
+							not InCombatLockdown()) then
 						    self.healthbar.bar:Hide()
                         end
 					end
