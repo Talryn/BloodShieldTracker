@@ -587,7 +587,7 @@ local defaults = {
 		        sound_removed = "None",
 		        text_format = "OnlyCurrent",
 				width = 100,
-				y = -60,
+				y = -90,
 			},
 			["EstimateBar"] = {
 				enabled = true,
@@ -604,7 +604,7 @@ local defaults = {
 				alt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 				width = 90,
 				x = 0, 
-				y = -90,
+				y = -120,
 			},
 			["HealthBar"] = {
 				hide_ooc = false,
@@ -616,20 +616,20 @@ local defaults = {
 				alt_bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
 				alt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 				x = 0, 
-				y = -120,
+				y = -150,
 			},
 			["PWSBar"] = {
 				color = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
 				includeda = true,
 				x = 100, 
-				y = -90,
+				y = -120,
 			},
 			["IllumBar"] = {
 				color = {r = 0.96, g = 0.55, b = 0.73, a = 1},
 				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
 				x = 190, 
-				y = -90,
+				y = -120,
 			},
 			["TotalAbsorbsBar"] = {
 				color = {r = 0.58, g = 0.51, b = 0.79, a = 1},
@@ -642,7 +642,7 @@ local defaults = {
 					["IndomitablePride"] = true,
 				},
 				x = 100, 
-				y = -60,
+				y = -90,
 			},
 		}
     }
