@@ -561,16 +561,22 @@ local defaults = {
 		font_monochrome = false,
 		font_thickoutline = false,
         -- Skinning options
-        tukui_enabled = true,
-        tukui_borders = true,
-        tukui_texture = true,
-        tukui_font = true,
-        tukui_font_flags = true,
-        elvui_enabled = true,
-        elvui_borders = true,
-        elvui_texture = true,
-        elvui_font = true,
-        elvui_font_flags = true,
+		skinning = {
+			elvui = {
+		        enabled = true,
+		        borders = true,
+		        texture = true,
+		        font = true,
+		        font_flags = true,
+			},
+			tukui = {
+		        enabled = true,
+		        borders = true,
+		        texture = true,
+		        font = true,
+		        font_flags = true,
+			},
+		},
         -- LDB Display
         ldb_data_feed = "None",
         ldb_short_label = false,
@@ -2881,10 +2887,10 @@ function BloodShieldTracker:GetSkinningOptions()
                 desc = L["ElvUIEnabled_OptionDesc"],
                 type = "toggle",
                 set = function(info, val)
-                    self.db.profile.elvui_enabled = val
+                    self.db.profile.skinning.elvui.enabled = val
                 end,
                 get = function(info)
-                    return self.db.profile.elvui_enabled
+                    return self.db.profile.skinning.elvui.enabled
                 end,
             },
             elvui_borders = {
@@ -2893,10 +2899,10 @@ function BloodShieldTracker:GetSkinningOptions()
                 desc = L["ElvUIBorders_OptionDesc"],
                 type = "toggle",
                 set = function(info, val)
-                    self.db.profile.elvui_borders = val
+                    self.db.profile.skinning.elvui.borders = val
                 end,
                 get = function(info)
-                    return self.db.profile.elvui_borders
+                    return self.db.profile.skinning.elvui.borders
                 end,
             },
             elvui_texture = {
@@ -2905,10 +2911,10 @@ function BloodShieldTracker:GetSkinningOptions()
                 desc = L["ElvUITexture_OptionDesc"],
                 type = "toggle",
                 set = function(info, val)
-                    self.db.profile.elvui_texture = val
+                    self.db.profile.skinning.elvui.texture = val
                 end,
                 get = function(info)
-                    return self.db.profile.elvui_texture
+                    return self.db.profile.skinning.elvui.texture
                 end,
             },
             elvui_font = {
@@ -2917,10 +2923,10 @@ function BloodShieldTracker:GetSkinningOptions()
                 desc = L["ElvUIFont_OptionDesc"],
                 type = "toggle",
                 set = function(info, val)
-                    self.db.profile.elvui_font = val
+                    self.db.profile.skinning.elvui.font = val
                 end,
                 get = function(info)
-                    return self.db.profile.elvui_font
+                    return self.db.profile.skinning.elvui.font
                 end,
             },
             elvui_font_flags = {
@@ -2929,10 +2935,10 @@ function BloodShieldTracker:GetSkinningOptions()
                 desc = L["ElvUIFontFlags_OptionDesc"],
                 type = "toggle",
                 set = function(info, val)
-                    self.db.profile.elvui_font_flags = val
+                    self.db.profile.skinning.elvui.font_flags = val
                 end,
                 get = function(info)
-                    return self.db.profile.elvui_font_flags
+                    return self.db.profile.skinning.elvui.font_flags
                 end,
             },
 
@@ -2947,10 +2953,10 @@ function BloodShieldTracker:GetSkinningOptions()
                 desc = L["TukuiEnabled_OptionDesc"],
                 type = "toggle",
                 set = function(info, val)
-                    self.db.profile.tukui_enabled = val
+                    self.db.profile.skinning.tukui.enabled = val
                 end,
                 get = function(info)
-                    return self.db.profile.tukui_enabled
+                    return self.db.profile.skinning.tukui.enabled
                 end,
             },
             tukui_borders = {
@@ -2959,10 +2965,10 @@ function BloodShieldTracker:GetSkinningOptions()
                 desc = L["TukuiBorders_OptionDesc"],
                 type = "toggle",
                 set = function(info, val)
-                    self.db.profile.tukui_borders = val
+                    self.db.profile.skinning.tukui.borders = val
                 end,
                 get = function(info)
-                    return self.db.profile.tukui_borders
+                    return self.db.profile.skinning.tukui.borders
                 end,
             },
             tukui_texture = {
@@ -2971,10 +2977,10 @@ function BloodShieldTracker:GetSkinningOptions()
                 desc = L["TukuiTexture_OptionDesc"],
                 type = "toggle",
                 set = function(info, val)
-                    self.db.profile.tukui_texture = val
+                    self.db.profile.skinning.tukui.texture = val
                 end,
                 get = function(info)
-                    return self.db.profile.tukui_texture
+                    return self.db.profile.skinning.tukui.texture
                 end,
             },
             tukui_font = {
@@ -2983,10 +2989,10 @@ function BloodShieldTracker:GetSkinningOptions()
                 desc = L["TukuiFont_OptionDesc"],
                 type = "toggle",
                 set = function(info, val)
-                    self.db.profile.tukui_font = val
+                    self.db.profile.skinning.tukui.font = val
                 end,
                 get = function(info)
-                    return self.db.profile.tukui_font
+                    return self.db.profile.skinning.tukui.font
                 end,
             },
             tukui_font_flags = {
@@ -2995,10 +3001,10 @@ function BloodShieldTracker:GetSkinningOptions()
                 desc = L["TukuiFontFlags_OptionDesc"],
                 type = "toggle",
                 set = function(info, val)
-                    self.db.profile.tukui_font_flags = val
+                    self.db.profile.skinning.tukui.font_flags = val
                 end,
                 get = function(info)
-                    return self.db.profile.tukui_font_flags
+                    return self.db.profile.skinning.tukui.font_flags
                 end,
             },
         }
@@ -3129,20 +3135,20 @@ function BloodShieldTracker:Skin()
     local Tukui = _G.Tukui
     local ElvUI = _G.ElvUI
 
-    if Tukui and self.db.profile.tukui_enabled then
+    if Tukui and self.db.profile.skinning.tukui.enabled then
         local T, C, L = unpack(Tukui)
         if C and C["media"] then
             local media = C["media"]
-            if media.normTex and self.db.profile.tukui_texture then
+            if media.normTex and self.db.profile.skinning.tukui.texture then
                 self:SetCustomTexture(media.normTex)
             end
-            if media.font and self.db.profile.tukui_font then
+            if media.font and self.db.profile.skinning.tukui.font then
                 self:SetCustomFont(media.font)
             end
-            if self.db.profile.tukui_font_flags then
+            if self.db.profile.skinning.tukui.font_flags then
                 self:SetCustomFontFlags("")
             end
-            if self.db.profile.tukui_borders then
+            if self.db.profile.skinning.tukui.borders then
                 self:SetCustomShowBorders(false)
 				for name, bar in pairs(self.bars) do
 					bar.bar:CreateBackdrop()
@@ -3153,20 +3159,20 @@ function BloodShieldTracker:Skin()
         end
     end
     
-    if ElvUI and self.db.profile.elvui_enabled then
+    if ElvUI and self.db.profile.skinning.elvui.enabled then
         local E, L, P, G = unpack(ElvUI)
         if E and E["media"] then
             local media = E["media"]
-            if media.normTex and self.db.profile.elvui_texture then
+            if media.normTex and self.db.profile.skinning.elvui.texture then
                 self:SetCustomTexture(media.normTex)
             end
-            if media.normFont and self.db.profile.elvui_font then
+            if media.normFont and self.db.profile.skinning.elvui.font then
                 self:SetCustomFont(media.normFont)
             end
-            if self.db.profile.elvui_font_flags then
+            if self.db.profile.skinning.elvui.font_flags then
                 self:SetCustomFontFlags("")
             end
-            if self.db.profile.elvui_borders then
+            if self.db.profile.skinning.elvui.borders then
                 self:SetCustomShowBorders(false)
 				for name, bar in pairs(self.bars) do
 					bar.bar:CreateBackdrop()
@@ -4873,8 +4879,13 @@ function Bar:UpdateGraphics()
 end
 
 function BloodShieldTracker:MigrateSettings()
-	if self.db.profile.profile_version == nil or
-		self.db.profile.profile_version < 2 then
+	local profile_version = self.db.profile.profile_version
+
+	if profile_version == nil or profile_version < 3 then
+		self:MigrateSkinningSettings3()
+	end
+
+	if profile_version == nil or profile_version < 2 then
 		self:MigrateShieldBarSettings2()
 		self:MigrateEstimateBarSettings2()
 		self:MigratePWSBarSettings2()
@@ -4882,7 +4893,7 @@ function BloodShieldTracker:MigrateSettings()
 		self:MigrateHealthBarSettings2()
 	end
 
-	self.db.profile.profile_version = 2
+	self.db.profile.profile_version = 3
 end
 
 function BloodShieldTracker:MigrateIllumBarSettings2()
@@ -5260,4 +5271,50 @@ function BloodShieldTracker:MigrateShieldBarSettings2()
 	self.db.profile.shield_bar_x = nil
 	self.db.profile.shield_bar_y = nil
 	self.db.profile.status_bar_scale = nil
+end
+
+function BloodShieldTracker:MigrateSkinningSettings3()
+	local elvui = self.db.profile.skinning.elvui
+	local tukui = self.db.profile.skinning.tukui
+	if self.db.profile.elvui_enabled ~= nil then
+		elvui.enabled = self.db.profile.elvui_enabled
+	end
+	if self.db.profile.elvui_borders ~= nil then
+		elvui.borders = self.db.profile.elvui_borders
+	end
+	if self.db.profile.elvui_texture ~= nil then
+		elvui.texture = self.db.profile.elvui_texture
+	end
+	if self.db.profile.elvui_font ~= nil then
+		elvui.font = self.db.profile.elvui_font
+	end
+	if self.db.profile.elvui_font_flags ~= nil then
+		elvui.font_flags = self.db.profile.elvui_font_flags
+	end
+	if self.db.profile.tukui_enabled ~= nil then
+		tukui.enabled = self.db.profile.tukui_enabled
+	end
+	if self.db.profile.tukui_borders ~= nil then
+		tukui.borders = self.db.profile.tukui_borders
+	end
+	if self.db.profile.tukui_texture ~= nil then
+		tukui.texture = self.db.profile.tukui_texture
+	end
+	if self.db.profile.tukui_font ~= nil then
+		tukui.font = self.db.profile.tukui_font
+	end
+	if self.db.profile.tukui_font_flags ~= nil then
+		tukui.font_flags = self.db.profile.tukui_font_flags
+	end
+
+    self.db.profile.tukui_enabled = nil
+    self.db.profile.tukui_borders = nil
+    self.db.profile.tukui_texture = nil
+    self.db.profile.tukui_font = nil
+    self.db.profile.tukui_font_flags = nil
+    self.db.profile.elvui_enabled = nil
+    self.db.profile.elvui_borders = nil
+    self.db.profile.elvui_texture = nil
+    self.db.profile.elvui_font = nil
+    self.db.profile.elvui_font_flags = nil
 end
