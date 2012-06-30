@@ -1455,6 +1455,9 @@ function BloodShieldTracker:GetEstimateBarOptions()
                 get = function(info)
                     return self.db.profile.bars["EstimateBar"].show_stacks
                 end,
+                disabled = function()
+                    return CURRENT_UI_VERSION < 50000
+                end,
 			},
 			stacks_pos = {
 				name = L["Position"],
@@ -1466,7 +1469,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				},
 				order = 120,
 				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].time_pos = val
+				    self.db.profile.bars["EstimateBar"].stacks_pos = val
 			        self.estimatebar.bar.stacks:SetPoint(val or "LEFT")
 			        self.estimatebar.bar.stacks:SetJustifyH(val or "LEFT")
 				end,
@@ -1474,7 +1477,8 @@ function BloodShieldTracker:GetEstimateBarOptions()
                     return self.db.profile.bars["EstimateBar"].stacks_pos
                 end,
                 disabled = function()
-                    return not self.db.profile.bars["EstimateBar"].show_stacks
+                    return CURRENT_UI_VERSION < 50000 or 
+						not self.db.profile.bars["EstimateBar"].show_stacks
                 end,
 			},
             dimensions = {
