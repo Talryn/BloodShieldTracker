@@ -46,9 +46,14 @@ BloodShieldTracker.pwsbar = nil
 BloodShieldTracker.illumbar = nil
 BloodShieldTracker.healthbar = nil
 
+-- Player class, talent, and spec info
 local isDK = nil
 local IsBloodTank = false
 local hasBloodShield = false
+local ImpDSModifier = 1
+local HasVampBlood = false
+local hasVBGlyphed = false
+local HasSuccorGlyphed = false
 
 -- Settings to allow custom fonts and textures which override the
 -- user set options.
@@ -134,17 +139,15 @@ TotalShieldStats = ShieldStats:new()
 -- Last fight stats
 LastFightStats = ShieldStats:new()
 
-local lastDSSuccess = nil
-local masteryRating = 0
-
+-- Color codes
 local GREEN = "|cff00ff00"
 local YELLOW = "|cffffff00"
 local BLUE = "|cff0198e1"
 local ORANGE = "|cffff9933"
+
 local shieldBarFormatFull = "%s/%s (%d%%)"
 local shieldBarFormatNoPer = "%s/%s"
 local shieldBarFormatCurrPerc = "%s (%d%%)"
-
 local healBarFormat = "%s: %s"
 local healBarNoTextFormat = "%s"
 
@@ -165,10 +168,13 @@ local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
 local CURRENT_BUILD, CURRENT_INTERNAL, 
     CURRENT_BUILD_DATE, CURRENT_UI_VERSION = GetBuildInfo()
 
+local LookupOrKeyMT = {__index = function (t,k) return k end}
+
 local ItemIds = {
 	["IndomitablePride"] = 77211,
 }
 local ItemNames = {}
+setmetatable(ItemNames, LookupOrKeyMT)
 local function LoadItemNames()
 	for k,v in pairs(ItemIds) do
 		if not ItemNames[k] then
@@ -183,8 +189,23 @@ local SpellIds = {
 	["DivineAegis"] = 47753,
 	["IlluminatedHealing"] = 86273,
 	["IndomitablePride"] = 108008,
+	["Scent of Blood"] = 50421,
+	["Dark Succor"] = 101568,
+	["Vampiric Blood"] = 55233,
+	["Blood Presence"] = 48263,
+	["Unholy Presence"] = 48265,
+	["Frost Presence"] = 48266,
+	["Blood Shield"] = 77535,
+	["Death Strike"] = 49998,
+	["Death Strike Heal"] = 45470,
+	["Luck of the Draw"] = 72221,
+	["Spirit Link"] = 98017,
+	["Spirit Link Totem"] = 98007,
+	["Guardian Spirit"] = 47788,
+	["Mastery: Blood Shield"] = 77513,
 }
 local SpellNames = {}
+setmetatable(SpellNames, LookupOrKeyMT)
 local function LoadSpellNames()
 	for k,v in pairs(SpellIds) do
 		if not SpellNames[k] then
@@ -194,61 +215,46 @@ local function LoadSpellNames()
 end
 LoadSpellNames()
 
-local DS_SPELL_DMG = (GetSpellInfo(49998))
-local DS_SPELL_HEAL = (GetSpellInfo(45470))
-local BS_SPELL_ID = 77535
-local BS_SPELL = (GetSpellInfo(BS_SPELL_ID))
-local IMP_DS_TALENT = (GetSpellInfo(81138))
-local DARK_SUCCOR_GLYPH_ID = 96279
--- New buff for 4.2
-local DARK_SUCCOR_BUFF_ID = 101568
-local DARK_SUCCOR_BUFF_NAME = (GetSpellInfo(DARK_SUCCOR_BUFF_ID))
-local DarkSuccorBuff = false
-local ImpDSModifier = 1
-local HasVampTalent = false
-local HasSuccorGlyphed = false
--- The duration of Blood Shield
-local BS_DURATION = 10
--- This should be the percent of the DS Heal from the tooltip.
-local dsHealModifier = 0.20
--- This should be the percent of max health a minimum DS heal will be.
+local GlyphIds = {
+	["Vampiric Blood"] = 58676,
+	["Dark Succor"] = 96279,
+}
+
+-- Constants
+local BS_DURATION = 10  -- The duration of Blood Shield
+local dsHealModifier = 0.20  -- Percent of the DS Heal from the tooltip.
 local dsMinHealPercent = 0.07
--- The minimum DS heal with the Dark Succor Glyph
 local dsMinHealPercentSuccor = 0.20
--- The minimum DS heal with the Dark Succor Glyph in 4.1
-local dsMinHealPercentSuccor41 = 0.15
--- The actual minimum DS heal percent. Determined based on spec, glyphs, and presence.
-local actualDsMinHeal = dsMinHealPercent
 local shieldPerMasteryPoint = 6.25
+local scentBloodStackBuff = 0.2
+local LUCK_OF_THE_DRAW_MOD = 0.05
+local vbGlyphedHealthInc = 0.0
+local vbGlyphedHealingInc = 0.4
+local vbUnglyphedHealthInc = 0.15
+local vbUnglyphedHealingInc = 0.25
+local guardianSpiritHealBuff = 0.40
+
+-- Curent state information
+local DarkSuccorBuff = false
+-- The actual minimum DS heal percent, based on spec, glyphs, and presence.
+local actualDsMinHeal = dsMinHealPercent
 local maxHealth = 0
 local currentHealth = 0
 local percentHealth = 0
 local dsHealMin = 0
-
--- Other Shields
-local PWS_SPELL_ID = 17
-local PWS_SPELL = (GetSpellInfo(PWS_SPELL_ID)) or "Power Word: Shield"
-local ILLUMINATED_HEALING_BUFF_ID = 86273
-local ILLUMINATED_HEALING_BUFF = (GetSpellInfo(ILLUMINATED_HEALING_BUFF_ID)) or "Illuminated Healing"
-local DIVINE_AEGIS_BUFF_ID = 47753
-local DIVINE_AEGIS_BUFF = (GetSpellInfo(DIVINE_AEGIS_BUFF_ID)) or "Divine Aegis"
-
+local scentBloodStacks = 0
 local CurrentPresence = nil
-local BLOOD_PRESENCE_BUFF_ID = 48263
-local UNHOLY_PRESENCE_BUFF_ID = 48265
-local FROST_PRESENCE_BUFF_ID = 48266
-local BLOOD_PRESENCE_BUFF = (GetSpellInfo(BLOOD_PRESENCE_BUFF_ID))
-local UNHOLY_PRESENCE_BUFF = (GetSpellInfo(UNHOLY_PRESENCE_BUFF_ID))
-local FROST_PRESENCE_BUFF = (GetSpellInfo(FROST_PRESENCE_BUFF_ID))
-
-local LUCK_OF_THE_DRAW_BUFF_ID = 72221
-local LUCK_OF_THE_DRAW_BUFF = (GetSpellInfo(LUCK_OF_THE_DRAW_BUFF_ID))
-local LUCK_OF_THE_DRAW_MOD = 0.05
 local luckOfTheDrawBuff = false
 local luckOfTheDrawAmt = 0
-
-local SPIRIT_LINK_SPELL = (GetSpellInfo(98017))
-local SPIRIT_LINK_TOTEM = (GetSpellInfo(98007))
+local iccBuff = false
+local iccBuffAmt = 0.0
+local vbBuff = false
+local vbHealthInc = 0.0
+local vbHealingInc = 0.0
+local gsHealModifier = 0.0
+local healingDebuffMultiplier = 1
+local lastDSSuccess = nil
+local masteryRating = 0
 
 local HELLSCREAM_BUFF_05 = 73816
 local HELLSCREAM_BUFF_10 = 73818
@@ -277,31 +283,11 @@ local wrynnBuffs = {
     [WRYNN_BUFF_15] = 0.15,
     [WRYNN_BUFF_20] = 0.20,
     [WRYNN_BUFF_25] = 0.25,
-    [WRYNN_BUFF_30] = 0.30,    
+    [WRYNN_BUFF_30] = 0.30,
 }
 local WRYNN_BUFF = (GetSpellInfo(WRYNN_BUFF_30))
-local VB_BUFF_ID = 55233
-local VB_BUFF = (GetSpellInfo(VB_BUFF_ID))
-local VB_GLYPH_ID = 58676
-local iccBuff = false
-local iccBuffAmt = 0.0
-local vbBuff = false
-local vbGlyphed = false
-local vbGlyphedHealthInc = 0.0
-local vbGlyphedHealingInc = 0.4
-local vbUnglyphedHealthInc = 0.15
-local vbUnglyphedHealingInc = 0.25
-local vbHealthInc = 0.0
-local vbHealingInc = 0.0
 
-local GUARDIAN_SPIRIT_BUFF_ID = 47788
-local GUARDIAN_SPIRIT_BUFF = (GetSpellInfo(GUARDIAN_SPIRIT_BUFF_ID))
-local guardianSpiritHealBuff = 0.40
-local gsHealModifier = 0.0
-
-local healingDebuffMultiplier = 1
-
-local HEALING_DEBUFFS = {
+local HealingDebuffs = {
     -- PvP healing debuffs
 	[56112] = 0.20, -- Furious Attacks (Warrior)
 	[54680] = 0.25, -- Monstrous Bite (Hunter: Devilsaur)
@@ -331,8 +317,6 @@ local HEALING_DEBUFFS = {
     [39171] = 0.06, -- Malevolent Strikes
     [83908] = 0.06, -- Malevolent Strikes
 }
-
-local healing_debuff_names = {}
 
 local function round(number)
     if not number then return 0 end
@@ -464,7 +448,6 @@ local percentFormat = "%.1f%%"
 local secondsFormat = "%.1f " .. L["seconds"]
 local durationLine = YELLOW..L["Fight Duration:"]
 local shieldFreqLine = YELLOW..L["Shield Frequency:"]
-
 local lastFightValueHdr = ORANGE..L["Last Fight Data"]
 
 function AddStats(tooltip, stats)
@@ -617,6 +600,8 @@ local defaults = {
 				show_text = true,
 				bar_mode = "DS",
 				alternateMinimum = 0,
+		        show_stacks = true,
+		        stacks_pos = "LEFT",
 				latencyMethod = "None",
 				latencyFixed = 0,
 				color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
@@ -722,7 +707,7 @@ function BloodShieldTracker:GetGeneralOptions()
                 type = "toggle",
                 set = function(info, val)
                     self.db.profile.enable_only_for_blood = val
-                    self:CheckImpDeathStrike()
+                    self:CheckTalents()
                 end,
                 get = function(info)
                     return self.db.profile.enable_only_for_blood
@@ -1353,7 +1338,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 		        name = L["EstimatedHealingBar_Desc"],
 		    },
             generalOptions = {
-                order = 2,
+                order = 10,
                 type = "header",
                 name = L["General Options"],
             },
@@ -1361,7 +1346,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				name = L["Enabled"],
 				desc = L["Enable the Estimated Healing Bar."],
 				type = "toggle",
-				order = 10,
+				order = 20,
 				set = function(info, val)
 				    self.db.profile.bars["EstimateBar"].enabled = val
 				    if not val then
@@ -1376,7 +1361,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				name = L["Lock bar"],
 				desc = L["LockBarDesc"],
 				type = "toggle",
-				order = 20,
+				order = 30,
 				set = function(info, val)
 				    self.db.profile.bars["EstimateBar"].locked = val 
 					self.estimatebar:Lock()
@@ -1389,7 +1374,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				name = L["Hide out of combat"],
 				desc = L["HideOOC_OptionDesc"],
 				type = "toggle",
-				order = 30,
+				order = 40,
 				set = function(info, val)
 				    self.db.profile.bars["EstimateBar"].hide_ooc = val
 					if not InCombatLockdown() then
@@ -1408,7 +1393,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				name = L["Show Text"],
 				desc = L["EstHealBarShowText_OptDesc"],
 				type = "toggle",
-				order = 35,
+				order = 50,
 				set = function(info, val)
 				    self.db.profile.bars["EstimateBar"].show_text = val
 				    self:UpdateMinHeal("UpdateShowText", "player")
@@ -1425,7 +1410,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				    ["DS"] = L["Death Strike Heal"],
 				    ["BS"] = L["Blood Shield"],
 				},
-				order = 40,
+				order = 60,
 				set = function(info, val)
 				    self.db.profile.bars["EstimateBar"].bar_mode = val
 				end,
@@ -1434,7 +1419,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
                 end,
 			},
     		alternateMinimum = {
-				order = 50,
+				order = 60,
 				name = L["Alternate Minimum"],
 				desc = L["AlternateMinimum_OptDesc"],
 				type = "range",
@@ -1449,13 +1434,56 @@ function BloodShieldTracker:GetEstimateBarOptions()
 					return self.db.profile.bars["EstimateBar"].alternateMinimum 
 				end,
 			},
+            sobStacks = {
+                order = 100,
+                type = "header",
+                name = SpellNames["Scent of Blood"],
+            },
+			show_stacks = {
+				name = L["Enable"],
+				desc = L["SoBStacks_OptionDesc"],
+				type = "toggle",
+				order = 110,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].show_stacks = val
+				    if val and CURRENT_UI_VERSION > 50000 then
+				        self.estimatebar.bar.stacks:Show()
+			        else
+			            self.estimatebar.bar.stacks:Hide()
+		            end
+				end,
+                get = function(info)
+                    return self.db.profile.bars["EstimateBar"].show_stacks
+                end,
+			},
+			stacks_pos = {
+				name = L["Position"],
+				desc = L["Position_OptionDesc"],
+				type = "select",
+				values = {
+				    ["RIGHT"] = L["Right"],
+				    ["LEFT"] = L["Left"],
+				},
+				order = 120,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].time_pos = val
+			        self.estimatebar.bar.stacks:SetPoint(val or "LEFT")
+			        self.estimatebar.bar.stacks:SetJustifyH(val or "LEFT")
+				end,
+                get = function(info)
+                    return self.db.profile.bars["EstimateBar"].stacks_pos
+                end,
+                disabled = function()
+                    return not self.db.profile.bars["EstimateBar"].show_stacks
+                end,
+			},
             dimensions = {
-                order = 50,
+                order = 200,
                 type = "header",
                 name = L["Dimensions"],
             },
 			bar_width = {
-				order = 60,
+				order = 210,
 				name = L["Width"],
 				desc = L["Change the width of the estimated healing bar."],	
 				type = "range",
@@ -1471,7 +1499,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end,
 			},
 			bar_height = {
-				order = 70,
+				order = 220,
 				name = L["Height"],
 				desc = L["Change the height of the estimated healing bar."],	
 				type = "range",
@@ -1488,7 +1516,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end,
 			},
 			bar_scaling = {
-				order = 80,
+				order = 230,
 				name = L["Scale"],
 				desc = L["ScaleDesc"],
 				type = "range",
@@ -1504,12 +1532,12 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end
 			},
             position = {
-                order = 85,
+                order = 300,
                 type = "header",
                 name = L["Position"],
             },
 			x = {
-				order = 86,
+				order = 310,
 				name = L["X Offset"],
 				desc = L["XOffset_Desc"],	
 				type = "range",
@@ -1528,7 +1556,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end,
 			},
 			y = {
-				order = 87,
+				order = 320,
 				name = L["Y Offset"],
 				desc = L["YOffset_Desc"],	
 				type = "range",
@@ -1547,12 +1575,12 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end,
 			},
             colorsMinimum = {
-                order = 90,
+                order = 400,
                 type = "header",
                 name = L["Colors for Minimum Heal"],
             },
 			min_textcolor = {
-				order = 100,
+				order = 410,
 				name = L["Minimum Text Color"],
 				desc = L["EstHealBarMinTextColor_OptionDesc"],
 				type = "color",
@@ -1568,7 +1596,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end,					
 			},
 			min_color = {
-				order = 110,
+				order = 420,
 				name = L["Minimum Bar Color"],
 				desc = L["EstHealBarMinColor_OptionDesc"],
 				type = "color",
@@ -1584,7 +1612,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end,					
 			},
 			min_bgcolor = {
-				order = 120,
+				order = 430,
 				name = L["Minimum Bar Background Color"],
 				desc = L["EstHealBarMinBackgroundColor_OptionDesc"],
 				type = "color",
@@ -1600,12 +1628,12 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end,					
 			},
             colorsOptimal = {
-                order = 130,
+                order = 500,
                 type = "header",
                 name = L["Colors for Optimal Heal"],
             },
 			opt_textcolor = {
-				order = 140,
+				order = 510,
 				name = L["Optimal Text Color"],
 				desc = L["EstHealBarOptTextColor_OptionDesc"],
 				type = "color",
@@ -1621,7 +1649,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end,					
 			},
 			opt_color = {
-				order = 150,
+				order = 520,
 				name = L["Optimal Bar Color"],
 				desc = L["EstHealBarOptColor_OptionDesc"],
 				type = "color",
@@ -1637,12 +1665,12 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end,					
 			},
             appearance = {
-                order = 160,
+                order = 600,
                 type = "header",
                 name = L["Appearance"],
             },
 			texture_opt = {
-				order = 170,
+				order = 610,
 				name = L["Texture"],
 				desc = L["BarTexture_OptionDesc"],
 				type = "select",
@@ -1660,7 +1688,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end,
 			},
 			border_visible_opt = {
-				order = 180,
+				order = 620,
 				name = L["ShowBorder"],
 				desc = L["ShowBorderDesc"],
 				type = "toggle",
@@ -1673,7 +1701,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end,
 			},
 			visible_opt = {
-				order = 190,
+				order = 630,
 				name = L["ShowBar"],
 				desc = L["ShowBarDesc"],
 				type = "toggle",
@@ -1686,7 +1714,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end,
 			},
             latencyOptions = {
-                order = 500,
+                order = 700,
                 type = "header",
                 name = L["Latency"],
             },
@@ -1699,7 +1727,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				    ["DS"] = L["Death Strike"],
 				    ["Fixed"] = L["Fixed"],
 				},
-				order = 510,
+				order = 710,
 				set = function(info, val)
 				    self.db.profile.bars["EstimateBar"].latencyMethod = val
 				end,
@@ -1708,7 +1736,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
                 end,
 			},
 			latencyFixed = {
-				order = 520,
+				order = 720,
 				name = L["Fixed"],
 				desc = L["Fixed"],
 				type = "range",
@@ -3271,15 +3299,6 @@ function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 	end
 end
 
-function BloodShieldTracker:UpdateHealingDebuffs()
-    for k,v in pairs(HEALING_DEBUFFS) do
-        local spellName = (GetSpellInfo(k))
-        if spellName and #spellName > 0 then
-    	    healing_debuff_names[spellName] = true
-        end
-    end
-end
-
 function BloodShieldTracker:OnEnable()
 	-- Try to load the spell and item names one more time.
 	LoadItemNames()
@@ -3316,14 +3335,17 @@ function BloodShieldTracker:OnEnable()
 	    self:RegisterChatCommand("bloodshield", "ChatCommand")
 	end
 
-    self:UpdateHealingDebuffs()
     self:CheckClass()
 	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 	self:UpdateMastery()
-	self:CheckImpDeathStrike()
-	self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED","CheckImpDeathStrike")
-	self:RegisterEvent("CHARACTER_POINTS_CHANGED","CheckImpDeathStrike")
-	self:RegisterEvent("PLAYER_TALENT_UPDATE","CheckImpDeathStrike")
+	self:CheckTalents()
+	self:RegisterEvent("PLAYER_TALENT_UPDATE","CheckTalents")
+	self:RegisterEvent("CHARACTER_POINTS_CHANGED","CheckTalents")
+	if CURRENT_UI_VERSION > 50000 then
+		self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED","CheckTalents")
+	else
+		self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED","CheckTalents")
+	end
 	self:RegisterEvent("GLYPH_ADDED", "CheckGlyphs")
 	self:RegisterEvent("GLYPH_REMOVED", "CheckGlyphs")
 	self:RegisterEvent("GLYPH_UPDATED", "CheckGlyphs")
@@ -3369,11 +3391,8 @@ function BloodShieldTracker:Unload()
 end
 
 function BloodShieldTracker:OnDisable()
-	-- We dont need to unregister events as OnDisable tells all the ace embed to disable and unregister
 end
 
--- Watch for combat rating updates so we can adjust mastery score as it changes,
--- i.e. trinket procs, buffs etc .. we only need to check this when it changes instead of every time we see damage
 local GetMastery = GetMastery
 local idle = true
 
@@ -3392,14 +3411,63 @@ function BloodShieldTracker:CheckClass()
     end
 end
 
-function BloodShieldTracker:CheckImpDeathStrike()
-    if isDK == nil then
-        self:CheckClass()
-    end
-
+function BloodShieldTracker:CheckTalents()
 	ImpDSModifier = 1
 	IsBloodTank = false
 	hasBloodShield = false
+	HasVampBlood = false
+
+	if CURRENT_UI_VERSION > 50000 then
+		self:CheckTalents5()
+	else
+		self:CheckTalents4()
+	end
+
+	if self.db.profile.verbose then
+		local trackerOutputFmt = "Check Talents [DK=%s,BT=%s,MA=%s,VB=%s]"
+		self:Print(trackerOutputFmt:format(tostring(isDK),
+			tostring(IsBloodTank),tostring(hasBloodShield),tostring(HasVampBlood)))
+		end
+	end
+
+-- New method to check talents for MoP
+function BloodShieldTracker:CheckTalents5()
+	if isDK == nil then
+		self:CheckClass()
+	end
+
+	if isDK then
+		-- Check spec: Blood, Frost, or Unholy spec?
+		local activeSpecNum = GetSpecialization()
+		if activeSpecNum and activeSpecNum > 0 then
+			local id, name, desc, texture = GetSpecializationInfo(activeSpecNum)
+	    	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
+	    		IsBloodTank = true
+				-- Check for Mastery so we know if BS is active
+		        if IsSpellKnown(SpellIds["Mastery: Blood Shield"]) then
+		            hasBloodShield = true
+		        end
+				-- Check for VB
+				if IsSpellKnown(SpellIds["Vampiric Blood"]) then
+					HasVampBlood = true
+				end
+			end
+		end
+       	self:CheckGlyphs()
+	end
+
+	if self:IsTrackerEnabled() then
+	    self:Load()
+    else
+        self:Unload()
+    end
+end
+
+local IMP_DS_TALENT = (GetSpellInfo(81138))
+function BloodShieldTracker:CheckTalents4()
+    if isDK == nil then
+        self:CheckClass()
+    end
 
 	if isDK then
     	for t = 1, GetNumTalentTabs() do
@@ -3407,9 +3475,6 @@ function BloodShieldTracker:CheckImpDeathStrike()
     			local talentName, _, _, _, currRank, maxRank = GetTalentInfo(t, i)
     			if talentName == IMP_DS_TALENT and currRank > 0 then
     				ImpDSModifier = 1 + (0.15 * currRank)
-    			end
-    			if talentName == VB_BUFF and currRank > 0 then
-    				HasVampTalent = true
     			end
     		end
     	end
@@ -3422,15 +3487,17 @@ function BloodShieldTracker:CheckImpDeathStrike()
                 if IsSpellKnown(86471) then
                     hasBloodShield = true
                 end
+				-- Check for VB
+				if IsSpellKnown(SpellIds["Vampiric Blood"]) then
+					HasVampBlood = true
+				end
         	end
         else
             if self.db.profile.verbose then
                 self:Print(L["Could not determine talents."])
             end
         end
-    	--if HasVampTalent then
-        	self:CheckGlyphs()
-    	--end
+       	self:CheckGlyphs()
 	end
 
 	if self:IsTrackerEnabled() then
@@ -3449,16 +3516,16 @@ function BloodShieldTracker:IsTrackerEnabled()
 end
 
 function BloodShieldTracker:CheckGlyphs()
-    vbGlyphed = false
+    hasVBGlyphed = false
     HasSuccorGlyphed = false
-	--if not HasVampTalent then return end -- Dont bother with glyph check if he doesnt have the talent
+	--if not HasVampBlood then return end -- Dont bother with glyph check if he doesnt have the talent
     for id = 1, GetNumGlyphSockets() do
         local enabled, glyphType, glyphTooltipIndex, 
             glyphSpell, iconFilename = GetGlyphSocketInfo(id, nil)
         if enabled then
-            if glyphSpell == VB_GLYPH_ID then
-                vbGlyphed = true
-            elseif glyphSpell == DARK_SUCCOR_GLYPH_ID then
+            if glyphSpell == GlyphIds["Vampiric Blood"] then
+                hasVBGlyphed = true
+            elseif glyphSpell == GlyphIds["Dark Succor"] then
                 HasSuccorGlyphed = true
             end
         end
@@ -3506,17 +3573,14 @@ function BloodShieldTracker:UpdateMinHeal(event, unit)
 	    actualDsMinHeal = dsMinHealPercent
 
         -- Check for Dark Succor
-        if CurrentPresence == "Unholy" or CurrentPresence == "Frost" then
-    	    if CURRENT_UI_VERSION < 40200 and HasSuccorGlyphed == true then
-    	        actualDsMinHeal = dsMinHealPercentSuccor41
-            end
-            if DarkSuccorBuff == true then
-    	        actualDsMinHeal = dsMinHealPercentSuccor
-            end
+        if DarkSuccorBuff == true and 
+			(CurrentPresence == "Unholy" or CurrentPresence == "Frost") then
+   	        actualDsMinHeal = dsMinHealPercentSuccor
         end
         
 		dsHealMin = round(
 		    maxHealth * actualDsMinHeal * 
+			(1 + scentBloodStacks * scentBloodStackBuff) *
 		    self:GetEffectiveHealingBuffModifiers() * 
 		    self:GetEffectiveHealingDebuffModifiers())
 		if idle then
@@ -3607,7 +3671,7 @@ function BloodShieldTracker:UpdateBars(timestamp)
         local current = GetTime()
         if expires > 0 then
             timeleft = expires - current
-            if timeleft < 0 or timeleft > 10 then
+            if timeleft < 0 or timeleft > BS_DURATION then
                 timeleft = 0
             end
         
@@ -3630,11 +3694,13 @@ function BloodShieldTracker:UpdateEstimateBar(timestamp)
         local shieldPercent = masteryRating*shieldPerMasteryPoint/100
 
         local predictedValue, minimumValue = 0, 0
-        local baseValue = recentDamage * dsHealModifier * ImpDSModifier
+        local baseValue = recentDamage * dsHealModifier * ImpDSModifier +
+			(1 + scentBloodStacks * scentBloodStackBuff)
 
         if self.estimatebar.db.bar_mode == "BS" then
             predictedValue = round(baseValue * shieldPercent)
-            minimumValue = maxHealth * dsMinHealPercent * shieldPercent
+            minimumValue = maxHealth * dsMinHealPercent * shieldPercent *
+				(1 + scentBloodStacks * scentBloodStackBuff)
         else
             predictedValue = round(baseValue *
                 self:GetEffectiveHealingBuffModifiers() * 
@@ -3901,13 +3967,13 @@ local DS_SentTime = nil
 local DS_Latency = nil
 
 function BloodShieldTracker:UNIT_SPELLCAST_SENT(event, unit, spellName)
-    if unit == "player" and spellName == DS_SPELL_DMG then
+    if unit == "player" and spellName == SpellNames["Death Strike"] then
         DS_SentTime = GetTime()
     end
 end
 
 function BloodShieldTracker:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName)
-    if unit == "player" and spellName == DS_SPELL_DMG then
+    if unit == "player" and spellName == SpellNames["Death Strike"] then
         local succeededTime = GetTime()
         if DS_SentTime then
             local diff = succeededTime - DS_SentTime
@@ -3983,7 +4049,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
 
             -- Do not count Spirit Link damage since it doesn't affect DS.
-            if spellName == SPIRIT_LINK_SPELL and srcName == SPIRIT_LINK_TOTEM then
+            if spellName == SpellIds["Spirit Link"] and 
+				srcName == SpellNames["Spirit Link Totem"] then
                 countDamage = false
                 if self.db.profile.verbose then
                     self:Print("Ignoring Spirit Link damage of "..(damage or 0))
@@ -4040,7 +4107,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     end
 
 	if eventtype == "SPELL_CAST_SUCCESS" and srcName == self.playerName and 
-	    param10 == DS_SPELL_DMG then
+	    param9 == SpellIds["Death Strike"] then
 
         if self.db.profile.verbose then
             local dsHealFormat = "Estimated damage of %d will be a heal for %d"
@@ -4049,6 +4116,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             if healingDebuffMultiplier ~= 1 then 
                 predictedHeal = round(
                     recentDmg * dsHealModifier * ImpDSModifier * 
+					(1 + scentBloodStacks * scentBloodStackBuff) *
                     self:GetEffectiveHealingBuffModifiers() * 
                     self:GetEffectiveHealingDebuffModifiers())
             end
@@ -4056,7 +4124,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         end
 	end
     if eventtype == "SPELL_HEAL" and destName == self.playerName 
-        and param10 == DS_SPELL_HEAL then
+        and param9 == SpellIds["Death Strike Heal"] then
         
         local shieldPercent = masteryRating*shieldPerMasteryPoint/100
         local totalHeal = param12 or 0
@@ -4080,14 +4148,15 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         local isMinimum = false
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local minimumHeal = dsHealMin
-        local minimumBS = round(maxHealth * actualDsMinHeal * shieldPercent)
+        local minimumBS = round(maxHealth * actualDsMinHeal * 
+			(1 + scentBloodStacks * scentBloodStackBuff) * shieldPercent)
         
         if healingDebuffMultiplier == 1 then
             shieldValue = minimumBS
             predictedHeal = 0
             isMinimum = true
         else
-            shieldValue = round(totalHeal*shieldPercent / 
+            shieldValue = round(totalHeal * shieldPercent / 
                 self:GetEffectiveHealingBuffModifiers() / 
                 self:GetEffectiveHealingDebuffModifiers())
             if shieldValue <= minimumBS then
@@ -4096,6 +4165,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
             predictedHeal = round(
                 recentDmg * dsHealModifier * ImpDSModifier * 
+					(1 + scentBloodStacks * scentBloodStackBuff) *
                     self:GetEffectiveHealingBuffModifiers() * 
                     self:GetEffectiveHealingDebuffModifiers())
         end
@@ -4118,7 +4188,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if param10 then spellName = param10 end
         if param13 then spellAbsorb = param13 end
 
-        if param10 == BS_SPELL then
+        if param9 == SpellIds["Blood Shield"] then
             if self.db.profile.verbose then
                 if spellAbsorb and spellAbsorb ~= "" then
                     self:Print("Blood Shield applied.  Value = "..spellAbsorb)
@@ -4130,11 +4200,11 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             if self.db.profile.useAuraForShield == false then
                 self:NewBloodShield(timestamp, spellAbsorb)
             end
-        elseif param10 == VB_BUFF then
+        elseif param9 == SpellIds["Vampiric Blood"] then
             if self.db.profile.verbose then
                 self:Print("Vampiric Blood applied.")
             end
-        elseif param10 == GUARDIAN_SPIRIT_BUFF then
+        elseif param9 == SpellIds["Guardian Spirit"] then
             if self.db.profile.verbose then
                 self:Print("Guardian Spirit applied.")
             end
@@ -4145,8 +4215,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if param10 then spellName = param10 end
         if param13 then spellAbsorb = param13 end
 
-        if param10 then
-            if param10 == BS_SPELL then
+        if param9 then
+            if param9 == SpellIds["Blood Shield"] then
                 if self.db.profile.verbose and spellAbsorb and spellAbsorb ~= "" then
                     self:Print("Blood Shield refresh.  New value = "..spellAbsorb)
                 end
@@ -4162,7 +4232,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if param10 then spellName = param10 end
         if param13 then spellAbsorb = param13 end
 
-        if param10 == BS_SPELL then
+        if param9 == SpellIds["Blood Shield"] then
             if self.db.profile.useAuraForShield == false then
                 self:BloodShieldUpdated("removed", timestamp, spellAbsorb or 0)
             end
@@ -4170,11 +4240,11 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             if self.db.profile.verbose and spellAbsorb and spellAbsorb ~= "" then
                 self:Print("Blood Shield removed.  Remaining = "..spellAbsorb)
             end
-        elseif param10 == VB_BUFF then
+        elseif param9 == SpellIds["Vampiric Blood"] then
             if self.db.profile.verbose then
                 self:Print("Vampiric Blood removed.")
             end
-        elseif param10 == GUARDIAN_SPIRIT_BUFF then
+        elseif param9 == SpellIds["Guardian Spirit"] then
             if self.db.profile.verbose then
                 self:Print("Guardian Spirit removed.")
             end
@@ -4186,13 +4256,14 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue)
     self.shieldbar.active = true
     self.shieldbar.shield_curr = 0
     self.shieldbar.shield_max = 0
-    self.shieldbar.expires = GetTime() + 10
+    self.shieldbar.expires = GetTime() + BS_DURATION
 
     if not IsBloodTank or not hasBloodShield then return end
 
     local isMinimum = false
     local shieldPercent = masteryRating*shieldPerMasteryPoint/100
-    local minimumBS = round(maxHealth * actualDsMinHeal * shieldPercent)
+    local minimumBS = round(maxHealth * actualDsMinHeal * 
+		(1 + scentBloodStacks * scentBloodStackBuff) * shieldPercent)
 
     if shieldValue <= minimumBS then
         isMinimum = true
@@ -4270,12 +4341,13 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
 
         -- Check if it is a minimum heal.
         local shieldPercent = masteryRating*shieldPerMasteryPoint/100
-        local minimumBS = round(maxHealth * actualDsMinHeal * shieldPercent)
+        local minimumBS = round(maxHealth * actualDsMinHeal * 
+			(1 + scentBloodStacks * scentBloodStackBuff) * shieldPercent)
         if added <= minimumBS then
             isMinimum = true
         end
         self:UpdateStatsNewShield(added, isMinimum, true)
-        self.shieldbar.expires = GetTime() + 10
+        self.shieldbar.expires = GetTime() + BS_DURATION
         self.shieldbar.shield_max = self.shieldbar.shield_max + added
 
         -- Update the LDB data feed
@@ -4300,7 +4372,7 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
     elseif current == curr and type == "refreshed" then
         -- No damage taken but refresh the time.
         -- This can happen if we hit the max shield value of maximum health.
-        self.shieldbar.expires = GetTime() + 10
+        self.shieldbar.expires = GetTime() + BS_DURATION
     else
         absorbed = curr - current
         self:UpdateStatsShieldAbsorb(absorbed)
@@ -4378,6 +4450,7 @@ local OtherShields = {
 }
 local PreviousShields = {}
 
+local errorReadingFmt = "Error reading the %s value."
 function BloodShieldTracker:CheckAuras()
     local name, rank, icon, count, dispelType, duration, expires,
         caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
@@ -4400,6 +4473,7 @@ function BloodShieldTracker:CheckAuras()
     local healingDebuff = 0
 
     CurrentPresence = nil
+	scentBloodStacks = 0
     DarkSuccorBuff = false
     luckOfTheDrawBuff = false
     luckOfTheDrawAmt = 0
@@ -4415,7 +4489,7 @@ function BloodShieldTracker:CheckAuras()
 			value, value2, value3 = UnitAura("player", i)
         if name == nil or spellId == nil then break end
 
-        if spellId == BS_SPELL_ID then
+        if spellId == SpellIds["Blood Shield"] then
             -- Blood Shield present.
             AurasFound["BS"] = true
             if value then
@@ -4448,34 +4522,34 @@ function BloodShieldTracker:CheckAuras()
             end
             BSAuraPresent = true
 
-        elseif spellId == PWS_SPELL_ID then
+        elseif spellId == SpellIds["PWS"] then
             AurasFound["PWS"] = true
             if value then
                 OtherShields["PWS"] = value
             else
                 if self.db.profile.verbose == true then
-                    self:Print("Error reading the Power Word: Shield value.")
+                    self:Print(errorReadingFmt:format(SpellNames["PWS"]))
                 end
             end
-        elseif spellId == ILLUMINATED_HEALING_BUFF_ID then
+        elseif spellId == SpellIds["IlluminatedHealing"] then
             AurasFound["IlluminatedHealing"] = true
             if value then
                 OtherShields["IlluminatedHealing"] = 
                     OtherShields["IlluminatedHealing"] + value
             else
                 if self.db.profile.verbose == true then
-                    self:Print("Error reading the Illuminated Healing value.")
+                    self:Print(errorReadingFmt:format(SpellNames["IlluminatedHealing"]))
                 end
             end
 
-        elseif spellId == DIVINE_AEGIS_BUFF_ID then
+        elseif spellId == SpellIds["DivineAegis"] then
             AurasFound["DivineAegis"] = true
             if value then
                 OtherShields["DivineAegis"] = 
                     OtherShields["DivineAegis"] + value
             else
                 if self.db.profile.verbose == true then
-                    self:Print("Error reading the Divine Aegis value.")
+                    self:Print(errorReadingFmt:format(SpellNames["DivineAegis"]))
                 end
             end
 
@@ -4489,20 +4563,24 @@ function BloodShieldTracker:CheckAuras()
                     self:Print("Error reading the Indomitable Pride value.")
                 end
             end
+		elseif spellId == SpellIds["Scent of Blood"] then
+			if CURRENT_UI_VERSION > 50000 then
+				scentBloodStacks = count
+			end
 
-        elseif spellId == FROST_PRESENCE_BUFF_ID then
+        elseif spellId == SpellIds["Frost Presence"] then
             CurrentPresence = "Frost"
 
-        elseif spellId == UNHOLY_PRESENCE_BUFF_ID then
+        elseif spellId == SpellIds["Unholy Presence"] then
             CurrentPresence = "Unholy"
 
-        elseif spellId == BLOOD_PRESENCE_BUFF_ID then
+        elseif spellId == SpellIds["Blood Presence"] then
             CurrentPresence = "Blood"
 
-        elseif spellId == DARK_SUCCOR_BUFF_ID then
+        elseif spellId == SpellIds["Dark Succor"] then
             DarkSuccorBuff = true
 
-        elseif spellId == LUCK_OF_THE_DRAW_BUFF_ID then
+        elseif spellId == SpellIds["Luck of the Draw"] then
             luckOfTheDrawBuff = true
     	    if not count or count == 0 then
     	        count = 1
@@ -4519,11 +4597,12 @@ function BloodShieldTracker:CheckAuras()
             iccBuff = true
             iccBuffAmt = wrynnBuffs[spellId] or wrynnBuffs[WRYNN_BUFF_30]
 
-        elseif spellId == VB_BUFF_ID then
+        elseif spellId == SpellIds["Vampiric Blood"] then
+			vampBloodFound = true
             vbBuff = true
     		-- No Need to check how much bonus health we get from VB since we listen
     		-- for Unit Max Health updates
-            if vbGlyphed then
+            if hasVBGlyphed then
                 vbHealthInc = vbGlyphedHealthInc
                 vbHealingInc = vbGlyphedHealingInc
             else
@@ -4531,13 +4610,13 @@ function BloodShieldTracker:CheckAuras()
                 vbHealingInc = vbUnglyphedHealingInc
             end
 
-        elseif spellId == GUARDIAN_SPIRIT_BUFF_ID then
+        elseif spellId == SpellIds["Guardian Spirit"] then
             gsBuff = true
             gsHealModifier = guardianSpiritHealBuff
 			
         else
             -- Check for various healing debuffs
-        	for k,v in pairs(HEALING_DEBUFFS) do
+        	for k,v in pairs(HealingDebuffs) do
         		if spellId == k then
         		    if not count or count == 0 then
         		        count = 1
@@ -4622,6 +4701,10 @@ function BloodShieldTracker:CheckAuras()
 		end
 
 		TotalAbsorbs = shields
+	end
+
+    if self.estimatebar.db.enabled and IsBloodTank then
+		self.estimatebar.bar.stacks:SetText(scentBloodStacks)
 	end
 
     -- If the ICC buff isn't present, reset the values
@@ -4716,6 +4799,23 @@ function Bar:Initialize()
 	    end
 	end
 
+	if self.name == "EstimateBar" then
+	    bar.stacks = bar:CreateFontString(nil, "OVERLAY")
+	    bar.stacks:SetPoint(self.db.stacks_pos or "LEFT")
+	    bar.stacks:SetFont(font, 
+			BloodShieldTracker.db.profile.font_size, 
+			BloodShieldTracker:GetFontFlags())
+	    bar.stacks:SetJustifyH(self.db.stacks_pos or "LEFT")
+	    bar.stacks:SetShadowOffset(1, -1)
+	    bar.stacks:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+	    bar.stacks:SetText("0")
+	    if self.db.show_stacks and CURRENT_UI_VERSION > 50000 then
+	        bar.stacks:Show()
+	    else
+	        bar.stacks:Hide()
+	    end
+	end
+
     bar:SetMovable()
     bar:RegisterForDrag("LeftButton")
     bar:SetScript("OnDragStart",
@@ -4799,6 +4899,10 @@ function Bar:ResetFonts()
 		self.bar.time:SetFont(ff, fh, fontFlags)
 		self.bar.time:SetText(self.bar.time:GetText())
 	end
+	if self.name == "EstimateBar" then
+		self.bar.stacks:SetFont(ff, fh, fontFlags)
+		self.bar.stacks:SetText(self.bar.stacks:GetText())
+	end
 end
 
 function Bar:UpdateVisibility()
@@ -4875,6 +4979,15 @@ function Bar:UpdateGraphics()
 	    end
 	    self.bar.time:SetPoint(self.db.time_pos or "RIGHT")
         self.bar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+	end
+	if self.name == "EstimateBar" then
+	    if self.db.show_stacks and CURRENT_UI_VERSION > 50000 then
+	        self.bar.stacks:Show()
+	    else
+	        self.bar.stacks:Hide()
+	    end
+	    self.bar.stacks:SetPoint(self.db.stacks_pos or "LEFT")
+        self.bar.stacks:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 	end
 end
 
