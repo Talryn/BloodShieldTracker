@@ -203,6 +203,8 @@ local SpellIds = {
 	["Spirit Link Totem"] = 98007,
 	["Guardian Spirit"] = 47788,
 	["Mastery: Blood Shield"] = 77513,
+	["Life Cocoon"] = 116849,
+	["Guard"] = 118604, -- via the Brewmaster's Black Ox Statue
 }
 local SpellNames = {}
 setmetatable(SpellNames, LookupOrKeyMT)
@@ -646,6 +648,8 @@ local defaults = {
 					["PWS"] = true,
 					["DivineAegis"] = true,
 					["IlluminatedHealing"] = true,
+					["Life Cocoon"] = true,
+					["Guard"] = true,
 					["IndomitablePride"] = true,
 				},
 				x = 100, 
@@ -2338,11 +2342,35 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
 					return self.db.profile.bars["TotalAbsorbsBar"].included["DivineAegis"]
 				end,
 			},
+			includelifecocoon = {
+				name = SpellNames["Life Cocoon"],
+				desc = L["IncludeGeneric_Desc"],
+				type = "toggle",
+				order = 130,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].included["Life Cocoon"] = val
+				end,
+                get = function(info)
+					return self.db.profile.bars["TotalAbsorbsBar"].included["Life Cocoon"]
+				end,
+			},
+			includeguard = {
+				name = SpellNames["Guard"],
+				desc = L["IncludeGeneric_Desc"],
+				type = "toggle",
+				order = 140,
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].included["Guard"] = val
+				end,
+                get = function(info)
+					return self.db.profile.bars["TotalAbsorbsBar"].included["Guard"]
+				end,
+			},
 			includeindompride = {
 				name = ItemNames["IndomitablePride"] or "IndomitablePride",
 				desc = L["IncludeGeneric_Desc"],
 				type = "toggle",
-				order = 125,
+				order = 150,
 				set = function(info, val)
 				    self.db.profile.bars["TotalAbsorbsBar"].included["IndomitablePride"] = val
 				end,
@@ -4567,6 +4595,29 @@ function BloodShieldTracker:CheckAuras()
                     self:Print("Error reading the Indomitable Pride value.")
                 end
             end
+
+        elseif spellId == SpellIds["Life Cocoon"] then
+            AurasFound["Life Cocoon"] = true
+            if value then
+                OtherShields["Life Cocoon"] = 
+                    OtherShields["Life Cocoon"] + value
+            else
+                if self.db.profile.verbose == true then
+                    self:Print(errorReadingFmt:format(SpellNames["Life Cocoon"]))
+                end
+            end
+
+        elseif spellId == SpellIds["Guard"] then
+            AurasFound["Guard"] = true
+            if value then
+                OtherShields["Guard"] = 
+                    OtherShields["Guard"] + value
+            else
+                if self.db.profile.verbose == true then
+                    self:Print(errorReadingFmt:format(SpellNames["Guard"]))
+                end
+            end
+
 		elseif spellId == SpellIds["Scent of Blood"] then
 			if CURRENT_UI_VERSION > 50000 then
 				scentBloodStacks = count
