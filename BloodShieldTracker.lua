@@ -2353,6 +2353,9 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
                 get = function(info)
 					return self.db.profile.bars["TotalAbsorbsBar"].included["Life Cocoon"]
 				end,
+                disabled = function()
+                    return CURRENT_UI_VERSION < 50000
+                end,
 			},
 			includeguard = {
 				name = SpellNames["Guard"],
@@ -2365,6 +2368,9 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
                 get = function(info)
 					return self.db.profile.bars["TotalAbsorbsBar"].included["Guard"]
 				end,
+                disabled = function()
+                    return CURRENT_UI_VERSION < 50000
+                end,
 			},
 			includeindompride = {
 				name = ItemNames["IndomitablePride"] or "IndomitablePride",
