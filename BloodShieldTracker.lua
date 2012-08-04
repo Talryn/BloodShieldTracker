@@ -245,6 +245,7 @@ local currentHealth = 0
 local percentHealth = 0
 local dsHealMin = 0
 local scentBloodStacks = 0
+local dsScentBloodStacks = 0 -- Have to track SoB stacks as of last DS
 local CurrentPresence = nil
 local luckOfTheDrawBuff = false
 local luckOfTheDrawAmt = 0
@@ -4169,6 +4170,10 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         local overheal = param13 or 0
         local actualHeal = param12-param13
 
+		-- The SoB stacks are lost once the aura processing occurs
+		-- so save the value here to use later.
+		dsScentBloodStacks = scentBloodStacks
+
         -- Update the LDB data feed
         DataFeed.lastDS = totalHeal
         if LDBDataFeed then
@@ -4209,16 +4214,18 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         end
 
         if self.db.profile.verbose then
-            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d]"
+            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d, Mast: %0.2f%%, SoB: %0.2f%%, MinBS: %d]"
+			local sobValue = scentBloodStacks * scentBloodStackBuff
             self:Print(dsHealFormat:format(
-                totalHeal,actualHeal,overheal,recentDmg,predictedHeal))
+                totalHeal,actualHeal,overheal,recentDmg,predictedHeal,shieldPercent*100,sobValue,minimumBS))
         end
         
         if DEBUG_OUTPUT == true then
-            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d]"
+            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d, Mast: %0.2f%%, SoB: %0.2f%%, MinBS: %d]"
+			local sobValue = scentBloodStacks * scentBloodStackBuff
             DEBUG_BUFFER = DEBUG_BUFFER .. timestamp .. "   " .. 
                 dsHealFormat:format(totalHeal,actualHeal,overheal,
-                recentDmg,predictedHeal) .. "\n"
+                recentDmg,predictedHeal,shieldPercent*100,sobValue,minimumBS) .. "\n"
         end
     end
 
@@ -4301,8 +4308,7 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue)
     local isMinimum = false
     local shieldPercent = masteryRating*shieldPerMasteryPoint/100
     local minimumBS = round(maxHealth * actualDsMinHeal * 
-		(1 + scentBloodStacks * scentBloodStackBuff) * shieldPercent)
-
+		(1 + dsScentBloodStacks * scentBloodStackBuff) * shieldPercent)
     if shieldValue <= minimumBS then
         isMinimum = true
     end
@@ -4380,7 +4386,7 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
         -- Check if it is a minimum heal.
         local shieldPercent = masteryRating*shieldPerMasteryPoint/100
         local minimumBS = round(maxHealth * actualDsMinHeal * 
-			(1 + scentBloodStacks * scentBloodStackBuff) * shieldPercent)
+			(1 + dsScentBloodStacks * scentBloodStackBuff) * shieldPercent)
         if added <= minimumBS then
             isMinimum = true
         end
@@ -4509,6 +4515,8 @@ function BloodShieldTracker:CheckAuras()
     local iccBuffFound = false
     local vampBloodFound = false
     local healingDebuff = 0
+	local BSValue = 0
+	local BSExpires = 0
 
     CurrentPresence = nil
 	scentBloodStacks = 0
@@ -4527,38 +4535,16 @@ function BloodShieldTracker:CheckAuras()
 			value, value2, value3 = UnitAura("player", i)
         if name == nil or spellId == nil then break end
 
-        if spellId == SpellIds["Blood Shield"] then
+		if spellId == SpellIds["Scent of Blood"] then
+			if CURRENT_UI_VERSION > 50000 then
+				scentBloodStacks = count
+			end
+
+        elseif spellId == SpellIds["Blood Shield"] then
             -- Blood Shield present.
             AurasFound["BS"] = true
-            if value then
-                if BSAuraPresent == false then
-                    -- Blood Shield applied
-                    if self.db.profile.verbose == true then
-                        self:Print("AURA: Blood Shield applied. "..value)
-                    end
-                    self:NewBloodShield(GetTime(), value)
-                else
-                    if value ~= BSAuraValue or 
-                        (expires ~= BSAuraExpires and value > 0) then
-                        -- Blood Shield refreshed
-                        if self.db.profile.verbose == true then
-                            self:Print("AURA: Blood Shield refreshed. "..value
-                                .." ["..(value - BSAuraValue).."]")
-                        end
-                        self:BloodShieldUpdated("refreshed", GetTime(), value)
-                    end
-                end
-
-                BSAuraValue = value
-                BSAuraExpires = expires
-            else
-                if self.db.profile.verbose == true then
-                    if self.db.profile.verbose == true then
-                        self:Print("Error reading the Blood Shield value.")
-                    end
-                end
-            end
-            BSAuraPresent = true
+			BSExpires = expires
+			BSValue = value
 
         elseif spellId == SpellIds["PWS"] then
             AurasFound["PWS"] = true
@@ -4624,11 +4610,6 @@ function BloodShieldTracker:CheckAuras()
                 end
             end
 
-		elseif spellId == SpellIds["Scent of Blood"] then
-			if CURRENT_UI_VERSION > 50000 then
-				scentBloodStacks = count
-			end
-
         elseif spellId == SpellIds["Frost Presence"] then
             CurrentPresence = "Frost"
 
@@ -4692,21 +4673,7 @@ function BloodShieldTracker:CheckAuras()
 
         i = i + 1
     until name == nil
-
-    if not AurasFound["BS"] then
-        if BSAuraPresent == true then
-            -- Blood Shield removed
-            if self.db.profile.verbose == true then
-                self:Print("AURA: Blood Shield removed. "..BSAuraValue)
-            end
-
-            self:BloodShieldUpdated("removed", GetTime(), BSAuraValue)
-        end
-            
-        BSAuraPresent = false
-        BSAuraValue = 0
-    end
-    
+   
     if self.pwsbar.db.enabled and IsBloodTank then
 		local pwsbarPrev = PreviousShields["PWS"] + PreviousShields["DivineAegis"]
 		local pwsbarTotal = OtherShields["PWS"] + OtherShields["DivineAegis"]
@@ -4786,6 +4753,48 @@ function BloodShieldTracker:CheckAuras()
     end
 
     self:UpdateMinHeal("CheckAura", "player")
+
+    if AurasFound["BS"] then
+		if BSValue then
+	        if BSAuraPresent == false then
+	            -- Blood Shield applied
+	            if self.db.profile.verbose == true then
+	                self:Print("AURA: Blood Shield applied. "..BSValue)
+	            end
+	            self:NewBloodShield(GetTime(), BSValue)
+	        else
+	            if BSValue ~= BSAuraValue or 
+	                (BSExpires ~= BSAuraExpires and BSValue > 0) then
+	                -- Blood Shield refreshed
+	                if self.db.profile.verbose == true then
+	                    self:Print("AURA: Blood Shield refreshed. "..BSValue
+	                        .." ["..(BSValue - BSAuraValue).."]")
+	                end
+	                self:BloodShieldUpdated("refreshed", GetTime(), BSValue)
+	            end
+	        end
+
+	        BSAuraValue = BSValue
+	        BSAuraExpires = BSExpires
+		else
+			if self.db.profile.verbose == true then
+				self:Print("Error reading the Blood Shield value.")
+			end
+		end
+        BSAuraPresent = true
+	else
+        if BSAuraPresent == true then
+            -- Blood Shield removed
+            if self.db.profile.verbose == true then
+                self:Print("AURA: Blood Shield removed. "..BSAuraValue)
+            end
+
+            self:BloodShieldUpdated("removed", GetTime(), BSAuraValue)
+        end
+            
+        BSAuraPresent = false
+        BSAuraValue = 0
+    end
 end
 
 -- Define a generic class for the bars
