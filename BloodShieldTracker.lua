@@ -4715,7 +4715,7 @@ function BloodShieldTracker:CheckAuras()
 			end
 		end
 
-		if self.absorbsbar.db.includebs and BSAuraPresent then
+		if self.absorbsbar.db.includebs and AurasFound["BS"] then
 			shields = shields + BSAuraValue
 		end
 
