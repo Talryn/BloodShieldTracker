@@ -528,6 +528,16 @@ function Broker.obj:OnLeave()
 	self.tooltip = nil
 end
 
+local function IsFrame(frame)
+	if frame and type(frame) == "string" then
+		local f = GetClickFrame(frame)
+		if f and type(f) == "table" and f.SetPoint and f.GetName then
+			return true
+		end
+	end
+	return false
+end
+
 local configMode = false
 
 local defaults = {
@@ -584,6 +594,12 @@ local defaults = {
 				width = 75,
 				height = 15,
 				scale = 1,
+				anchorFrame = "None",
+				anchorFrameCustom = "",
+				anchorFramePt = "BOTTOM",
+				anchorPt = "TOP",
+				anchorX = 0,
+				anchorY = -8,
 			},
 			["ShieldBar"] = {
 				enabled = true,
@@ -661,6 +677,150 @@ local defaults = {
 }
 
 local options
+
+function BloodShieldTracker:AddAdvancedPositioning(options, barName)
+    options.args.advPos = {
+        order = 1000,
+        type = "header",
+        name = L["Anchor"],
+    }
+
+    options.args.description = {
+        order = 1001,
+        type = "description",
+        name = L["Anchor_Desc"],
+    }
+
+	options.args.anchorFrame = {
+		name = L["Anchor"],
+		desc = L["Anchor_OptDesc"],
+		type = "select",
+		values = {
+		    ["None"] = L["None"],
+		    ["Custom"] = L["Custom"],
+		    --["Compact Runes"] = L["Compact Runes"],
+			["Shield Bar"] = L["Shield Bar"],
+			["Estimate Bar"] = L["Estimate Bar"],
+			["Health Bar"] = L["Health Bar"],
+			["PW:S Bar"] = L["PW:S Bar"],
+			["Illuminated Healing Bar"] = L["Illuminated Healing Bar"],
+			["Total Absorbs Bar"] = L["Total Absorbs Bar"],
+		},
+		order = 1010,
+		set = function(info, val)
+		    self.db.profile.bars[barName].anchorFrame = val
+			self.bars[barName]:UpdatePosition()
+		end,
+        get = function(info)
+            return self.db.profile.bars[barName].anchorFrame
+        end,
+	}
+	if select(6, GetAddOnInfo("CompactRunes")) ~= "MISSING" or 
+		self.db.profile.bars[barName].anchorFrame == "Compact Runes" then
+		options.args.anchorFrame.values["Compact Runes"] = 
+			L["Compact Runes"]
+	end
+
+	options.args.anchorFrameCustom = {
+		name = L["Frame"],
+		desc = L["Frame_OptDesc"],
+		type = "input",
+		width = "double",
+		order = 1020,
+		set = function(info, val)
+		    self.db.profile.bars[barName].anchorFrameCustom = val
+			self.bars[barName]:UpdatePosition()
+		end,
+        get = function(info)
+            return self.db.profile.bars[barName].anchorFrameCustom
+        end,
+		disabled = function()
+			return self.db.profile.bars[barName].anchorFrame ~= "Custom"
+		end,
+	}
+	options.args.anchorFramePt = {
+		name = L["Anchor Point"],
+		desc = L["AnchorPoint_OptDesc"],
+		type = "select",
+		values = {
+		    ["TOP"] = L["Top"],
+		    ["BOTTOM"] = L["Bottom"],
+		    ["LEFT"] = L["Left"],
+		    ["RIGHT"] = L["Right"],
+		},
+		order = 1030,
+		set = function(info, val)
+		    self.db.profile.bars[barName].anchorFramePt = val
+			self.bars[barName]:UpdatePosition()
+		end,
+        get = function(info)
+            return self.db.profile.bars[barName].anchorFramePt
+        end,
+		disabled = function()
+			return self.db.profile.bars[barName].anchorFrame == "None"
+		end,
+	}
+	options.args.anchorPt = {
+		name = L["Bar Point"],
+		desc = L["BarPoint_OptDesc"],
+		type = "select",
+		values = {
+		    ["TOP"] = L["Top"],
+		    ["BOTTOM"] = L["Bottom"],
+		    ["LEFT"] = L["Left"],
+		    ["RIGHT"] = L["Right"],
+		},
+		order = 1040,
+		set = function(info, val)
+		    self.db.profile.bars[barName].anchorPt = val
+			self.bars[barName]:UpdatePosition()
+		end,
+        get = function(info)
+            return self.db.profile.bars[barName].anchorPt
+        end,
+		disabled = function()
+			return self.db.profile.bars[barName].anchorFrame == "None"
+		end,
+	}
+	options.args.anchorX = {
+		order = 1050,
+		name = L["X Offset"],
+		desc = L["XOffsetAnchor_Desc"],	
+		type = "range",
+		softMin = -floor(GetScreenWidth()),
+		softMax = floor(GetScreenWidth()),
+		bigStep = 1,
+		set = function(info, val)
+		    self.db.profile.bars[barName].anchorX = val
+			self.bars[barName]:UpdatePosition()
+		end,
+		get = function(info, val)
+		    return self.db.profile.bars[barName].anchorX
+		end,
+		disabled = function()
+			return self.db.profile.bars[barName].anchorFrame == "None"
+		end,
+	}
+	options.args.anchorY = {
+		order = 1060,
+		name = L["Y Offset"],
+		desc = L["YOffsetAnchor_Desc"],	
+		type = "range",
+		softMin = -floor(GetScreenHeight()),
+		softMax = floor(GetScreenHeight()),
+		bigStep = 1,
+		set = function(info, val)
+		    self.db.profile.bars[barName].anchorY = val
+			self.bars[barName]:UpdatePosition()
+		end,
+		get = function(info, val)
+		    return self.db.profile.bars[barName].anchorY
+		end,
+		disabled = function()
+			return self.db.profile.bars[barName].anchorFrame == "None"
+		end,
+	}
+end
 
 function BloodShieldTracker:ShowOptions()
 	InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.ShieldBar)
@@ -789,18 +949,6 @@ function BloodShieldTracker:GetGeneralOptions()
                     return self.db.profile.precision
                 end,
 			},
-            useAuraForShield = {
-                name = L["Use Aura"],
-				order = 40,
-                desc = L["UseAura_OptionDesc"],
-                type = "toggle",
-                set = function(info, val)
-					self.db.profile.useAuraForShield = val
-				end,
-                get = function(info)
-					return self.db.profile.useAuraForShield
-				end,
-            },
 			config_mode = {
 				name = L["Config Mode"],
 				desc = L["Toggle config mode"],
@@ -1327,6 +1475,8 @@ function BloodShieldTracker:GetShieldBarOptions()
 			},
 		},
 	}
+
+	self:AddAdvancedPositioning(shieldBarOpts, "ShieldBar")
 	return shieldBarOpts
 end
 
@@ -1759,9 +1909,9 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				    return self.db.profile.bars["EstimateBar"].latencyFixed
 				end,					
 			},
-
 		}
 	}
+	self:AddAdvancedPositioning(estimateBarOpts, "EstimateBar")
 	return estimateBarOpts
 end
 
@@ -2008,6 +2158,7 @@ function BloodShieldTracker:GetPWSBarOptions()
 			},
 		},
 	}
+	self:AddAdvancedPositioning(pwsBarOpts, "PWSBar")
 	return pwsBarOpts
 end
 
@@ -2242,6 +2393,7 @@ function BloodShieldTracker:GetIllumBarOptions()
 			},
 		},
 	}
+	self:AddAdvancedPositioning(illumBarOpts, "IllumBar")
 	return illumBarOpts
 end
 
@@ -2571,6 +2723,7 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
 			},
 		},
 	}
+	self:AddAdvancedPositioning(absorbsBarOpts, "TotalAbsorbsBar")
 	return absorbsBarOpts
 end
 
@@ -2929,6 +3082,7 @@ function BloodShieldTracker:GetHealthBarOptions()
 
 		}
 	}
+	self:AddAdvancedPositioning(healthBarOpts, "HealthBar")
 	return healthBarOpts
 end
 
@@ -3108,10 +3262,18 @@ function BloodShieldTracker:ShowDebugOutput()
     multiline:SetText(DEBUG_BUFFER)
 end
 
+local function splitWords(str)
+  local w = {}
+  local function helper(word) table.insert(w, word) return nil end
+  str:gsub("(%w+)", helper)
+  return w
+end
+
 function BloodShieldTracker:ChatCommand(input)
     if not input or input:trim() == "" then
         self:ShowOptions()
     else
+		local cmds = splitWords(input)
         if input == "debug" then
             if DEBUG_OUTPUT == false then
                 DEBUG_OUTPUT = true
@@ -3122,6 +3284,16 @@ function BloodShieldTracker:ChatCommand(input)
             end
         elseif input == "showdebug" then
             self:ShowDebugOutput()
+        elseif cmds[1] and cmds[1] == "useAura" then
+			if cmds[2] and cmds[2] == "false" then
+				self.db.profile.useAuraForShield = false
+				self:Print("Not using the aura.")
+			elseif cmds[2] and cmds[2] == "true" then
+				self.db.profile.useAuraForShield = true
+				self:Print("Using the aura.")
+			else
+				self:Print("useAura = " .. tostring(self.db.profile.useAuraForShield))
+			end
         end
         --LibStub("AceConfigCmd-3.0").HandleCommand(BloodShieldTracker, "bst", "BloodShieldTracker", input)
     end
@@ -3147,14 +3319,15 @@ function BloodShieldTracker:OnInitialize()
     end
 
 	-- Create the bars
-	self.shieldbar = Bar:Create("ShieldBar")
+	self.shieldbar = Bar:Create("ShieldBar", "Shield Bar")
 	self:UpdateShieldBarMode()
     self:UpdateShieldBarText(0, 0, 0)
-    self.estimatebar = Bar:Create("EstimateBar")
-	self.pwsbar = Bar:Create("PWSBar")
-	self.illumbar = Bar:Create("IllumBar")
-	self.healthbar = Bar:Create("HealthBar")
-	self.absorbsbar = Bar:Create("TotalAbsorbsBar")
+    self.estimatebar = Bar:Create("EstimateBar", "Estimate Bar")
+	self.pwsbar = Bar:Create("PWSBar", "PW:S Bar")
+	self.illumbar = Bar:Create("IllumBar", "Illuminated Healing Bar")
+	self.healthbar = Bar:Create("HealthBar", "Health Bar")
+	self.absorbsbar = Bar:Create("TotalAbsorbsBar", "Total Absorbs Bar")
+	self:UpdatePositions()
 
 	-- Register for profile callbacks
 	self.db.RegisterCallback(self, "OnProfileChanged", "Reset")
@@ -3324,6 +3497,12 @@ end
 function BloodShieldTracker:UpdateBorders()
 	for name, bar in pairs(self.bars) do
 		bar:UpdateBorder()
+	end
+end
+
+function BloodShieldTracker:UpdatePositions()
+	for name, bar in pairs(self.bars) do
+		bar:UpdatePosition()
 	end
 end
 
@@ -4797,15 +4976,24 @@ function BloodShieldTracker:CheckAuras()
     end
 end
 
+local FrameNames = {
+	["Compact Runes"] = "CompactRunes_RunicPowerBar",
+}
+
 -- Define a generic class for the bars
 Bar.__index = Bar
 
-function Bar:Create(name)
+function Bar:Create(name, friendlyName, disableAnchor)
     local object = setmetatable({}, Bar)
 	object.name = name
+	object.friendlyName = friendlyName or name
 	object:Initialize()
 	-- Add the bar to the addon's table of bars
 	BloodShieldTracker.bars[name] = object
+	if not disableAnchor then
+		FrameNames[object.friendlyName] = object.bar:GetName()
+	end
+	object:UpdatePosition()
 	return object
 end
 
@@ -4815,7 +5003,7 @@ function Bar:Initialize()
     local bar = CreateFrame("StatusBar", "BloodShieldTracker_"..self.name, UIParent)
 	self.bar = bar
 	bar.object = self
-    bar:SetPoint("CENTER", UIParent, "CENTER", self.db.x, self.db.y)
+    --bar:SetPoint("CENTER", UIParent, "CENTER", self.db.x, self.db.y)
 	bar:SetScale(self.db.scale)
     bar:SetOrientation("HORIZONTAL")
     bar:SetWidth(self.db.width)
@@ -4953,12 +5141,29 @@ function Bar:SetValue(value)
 end
 
 function Bar:Reset()
-	self.bar:SetPoint("CENTER", UIParent, "CENTER", self.db.x, self.db.y)
 	self:Lock()
+	self:UpdatePosition()
 	self:UpdateTexture()
 	self:UpdateBorder()
 	self:UpdateVisibility()
 	self:UpdateGraphics()
+end
+
+function Bar:UpdatePosition()
+	local anchorFrame = FrameNames[self.db.anchorFrame]
+	if not anchorFrame and self.db.anchorFrame == "Custom" then
+		anchorFrame = self.db.anchorFrameCustom
+	end
+
+	self.bar:ClearAllPoints()
+
+	if anchorFrame and IsFrame(anchorFrame) then
+		self.bar:SetPoint(
+			self.db.anchorPt, anchorFrame, self.db.anchorFramePt, 
+			self.db.anchorX, self.db.anchorY)
+	else
+		self.bar:SetPoint("CENTER", UIParent, "CENTER", self.db.x, self.db.y)
+	end
 end
 
 function Bar:ResetFonts()
