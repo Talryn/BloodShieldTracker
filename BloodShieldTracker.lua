@@ -162,7 +162,6 @@ local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
 local LibQTip = LibStub("LibQTip-1.0")
 local icon = LibStub("LibDBIcon-1.0")
--- Load LibsharedMedia we package it with the addon so it should be available
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
 
 local CURRENT_BUILD, CURRENT_INTERNAL, 
@@ -171,13 +170,13 @@ local CURRENT_BUILD, CURRENT_INTERNAL,
 local LookupOrKeyMT = {__index = function (t,k) return k end}
 
 local ItemIds = {
-	["IndomitablePride"] = 77211,
+	["Indomitable Pride"] = 77211,
 }
 local ItemNames = {}
-setmetatable(ItemNames, LookupOrKeyMT)
 local function LoadItemNames()
 	for k,v in pairs(ItemIds) do
-		if not ItemNames[k] then
+		local name = ItemNames[k]
+		if not name then
 			ItemNames[k] = (GetItemInfo(ItemIds[k]))
 		end
 	end
@@ -185,10 +184,10 @@ end
 LoadItemNames()
 
 local SpellIds = {
-	["PWS"] = 17,
-	["DivineAegis"] = 47753,
-	["IlluminatedHealing"] = 86273,
-	["IndomitablePride"] = 108008,
+	["Power Word: Shield"] = 17,
+	["Divine Aegis"] = 47753,
+	["Illuminated Healing"] = 86273,
+	["Indomitable Pride"] = 108008,
 	["Scent of Blood"] = 50421,
 	["Dark Succor"] = 101568,
 	["Vampiric Blood"] = 55233,
@@ -204,18 +203,41 @@ local SpellIds = {
 	["Guardian Spirit"] = 47788,
 	["Mastery: Blood Shield"] = 77513,
 	["Life Cocoon"] = 116849,
+	["Spirit Shell"] = 114908,
 	["Guard"] = 118604, -- via the Brewmaster's Black Ox Statue
 }
 local SpellNames = {}
 setmetatable(SpellNames, LookupOrKeyMT)
 local function LoadSpellNames()
 	for k,v in pairs(SpellIds) do
-		if not SpellNames[k] then
+		local name = SpellNames[k]
+		if not name or name == k then
 			SpellNames[k] = (GetSpellInfo(SpellIds[k]))
 		end
 	end
 end
 LoadSpellNames()
+
+local PriestAbsorbsOrdered = {
+	"Power Word: Shield",
+	"Divine Aegis",
+	"Spirit Shell",
+}
+
+local AbsorbShieldsOrdered = {
+	"Blood Shield",
+	"Power Word: Shield",
+	"Illuminated Healing",
+	"Divine Aegis",
+	"Life Cocoon",
+	"Spirit Shell",
+	"Guard",
+	"Indomitable Pride",
+}
+local AbsorbShields = {}
+for i, k in ipairs(AbsorbShieldsOrdered) do
+	AbsorbShields[SpellIds[k]] = k
+end
 
 local GlyphIds = {
 	["Vampiric Blood"] = 58676,
@@ -647,7 +669,11 @@ local defaults = {
 			["PWSBar"] = {
 				color = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
-				includeda = true,
+				included = {
+					["Power Word: Shield"] = true,
+					["Divine Aegis"] = true,
+					["Spirit Shell"] = true,
+				},
 				x = 100, 
 				y = -120,
 			},
@@ -660,14 +686,15 @@ local defaults = {
 			["TotalAbsorbsBar"] = {
 				color = {r = 0.58, g = 0.51, b = 0.79, a = 1},
 				bgcolor = {r = 0.58, g = 0.51, b = 0.79, a = 0.7},
-				includebs = false,
 				included = {
-					["PWS"] = true,
-					["DivineAegis"] = true,
-					["IlluminatedHealing"] = true,
+					["Blood Shield"] = false,
+					["Power Word: Shield"] = true,
+					["Divine Aegis"] = true,
+					["Illuminated Healing"] = true,
 					["Life Cocoon"] = true,
 					["Guard"] = true,
-					["IndomitablePride"] = true,
+					["Indomitable Pride"] = true,
+					["Spirit Shell"] = true,
 				},
 				x = 100, 
 				y = -90,
@@ -1960,18 +1987,12 @@ function BloodShieldTracker:GetPWSBarOptions()
 					return self.db.profile.bars["PWSBar"].locked
 				end,
 			},
-			includeda = {
-				name = L["Include Divine Aegis"],
-				desc = L["IncludeDivineAegisDesc"],
-				type = "toggle",
-				order = 30,
-				set = function(info, val)
-				    self.db.profile.bars["PWSBar"].includeda = val
-				end,
-                get = function(info)
-					return self.db.profile.bars["PWSBar"].includeda
-				end,
-			},
+            includedOptions = {
+                order = 100,
+                type = "header",
+                name = L["Included Absorbs"],
+            },
+
             dimensions = {
                 order = 300,
                 type = "header",
@@ -2158,6 +2179,25 @@ function BloodShieldTracker:GetPWSBarOptions()
 			},
 		},
 	}
+
+	-- Add included absorbs
+	local orderid = 100
+	for i, tracked in ipairs(PriestAbsorbsOrdered) do
+		orderid = orderid + 1
+		pwsBarOpts.args[tracked] = {
+			name = SpellNames[tracked],
+			desc = L["IncludeGeneric_Desc"],
+			type = "toggle",
+			order = orderid,
+			set = function(info, val)
+			    self.db.profile.bars["PWSBar"].included[tracked] = val
+			end,
+	        get = function(info)
+				return self.db.profile.bars["PWSBar"].included[tracked]
+			end,
+		}
+	end
+
 	self:AddAdvancedPositioning(pwsBarOpts, "PWSBar")
 	return pwsBarOpts
 end
@@ -2447,96 +2487,6 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
                 type = "header",
                 name = L["Included Absorbs"],
             },
-			includebs = {
-				name = L["Blood Shield"],
-				desc = L["IncludeBS_Desc"],
-				type = "toggle",
-				order = 105,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].includebs = val
-				end,
-                get = function(info)
-					return self.db.profile.bars["TotalAbsorbsBar"].includebs
-				end,
-			},
-			includepws = {
-				name = SpellNames["PWS"],
-				desc = L["IncludeGeneric_Desc"],
-				type = "toggle",
-				order = 110,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].included["PWS"] = val
-				end,
-                get = function(info)
-					return self.db.profile.bars["TotalAbsorbsBar"].included["PWS"]
-				end,
-			},
-			includeillum = {
-				name = SpellNames["IlluminatedHealing"],
-				desc = L["IncludeGeneric_Desc"],
-				type = "toggle",
-				order = 115,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].included["IlluminatedHealing"] = val
-				end,
-                get = function(info)
-					return self.db.profile.bars["TotalAbsorbsBar"].included["IlluminatedHealing"]
-				end,
-			},
-			includeda = {
-				name = SpellNames["DivineAegis"],
-				desc = L["IncludeGeneric_Desc"],
-				type = "toggle",
-				order = 120,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].included["DivineAegis"] = val
-				end,
-                get = function(info)
-					return self.db.profile.bars["TotalAbsorbsBar"].included["DivineAegis"]
-				end,
-			},
-			includelifecocoon = {
-				name = SpellNames["Life Cocoon"],
-				desc = L["IncludeGeneric_Desc"],
-				type = "toggle",
-				order = 130,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].included["Life Cocoon"] = val
-				end,
-                get = function(info)
-					return self.db.profile.bars["TotalAbsorbsBar"].included["Life Cocoon"]
-				end,
-                disabled = function()
-                    return CURRENT_UI_VERSION < 50000
-                end,
-			},
-			includeguard = {
-				name = SpellNames["Guard"],
-				desc = L["IncludeGeneric_Desc"],
-				type = "toggle",
-				order = 140,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].included["Guard"] = val
-				end,
-                get = function(info)
-					return self.db.profile.bars["TotalAbsorbsBar"].included["Guard"]
-				end,
-                disabled = function()
-                    return CURRENT_UI_VERSION < 50000
-                end,
-			},
-			includeindompride = {
-				name = ItemNames["IndomitablePride"] or "IndomitablePride",
-				desc = L["IncludeGeneric_Desc"],
-				type = "toggle",
-				order = 150,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].included["IndomitablePride"] = val
-				end,
-                get = function(info)
-					return self.db.profile.bars["TotalAbsorbsBar"].included["IndomitablePride"]
-				end,
-			},
             dimensions = {
                 order = 300,
                 type = "header",
@@ -2723,6 +2673,25 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
 			},
 		},
 	}
+
+	-- Add included absorbs
+	local orderid = 100
+	for i, tracked in ipairs(AbsorbShieldsOrdered) do
+		orderid = orderid + 1
+		absorbsBarOpts.args[tracked] = {
+			name = ItemNames[tracked] or SpellNames[tracked],
+			desc = L["IncludeGeneric_Desc"],
+			type = "toggle",
+			order = orderid,
+			set = function(info, val)
+			    self.db.profile.bars["TotalAbsorbsBar"].included[tracked] = val
+			end,
+	        get = function(info)
+				return self.db.profile.bars["TotalAbsorbsBar"].included[tracked]
+			end,
+		}
+	end
+
 	self:AddAdvancedPositioning(absorbsBarOpts, "TotalAbsorbsBar")
 	return absorbsBarOpts
 end
@@ -4657,21 +4626,9 @@ end
 local BSAuraPresent = false
 local BSAuraValue = 0
 local BSAuraExpires = 0
-local TotalAbsorbs = 0
-local AurasFound = {
-	["BS"] = false,
-	["PWS"] = false,
-	["IlluminatedHealing"] = false,
-	["DivineAegis"] = false,
-	["IndomitablePride"] = false,
-}
-local OtherShields = {
-    ["PWS"] = 0,
-    ["IlluminatedHealing"] = 0,
-    ["DivineAegis"] = 0,
-    ["IndomitablePride"] = 0,
-}
-local PreviousShields = {}
+local AurasFound = {}
+local OtherShields = {}
+local PreviousShieldValues = {}
 
 local errorReadingFmt = "Error reading the %s value."
 function BloodShieldTracker:CheckAuras()
@@ -4679,17 +4636,9 @@ function BloodShieldTracker:CheckAuras()
         caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
 		value, value2, value3
 
-	PreviousShields["PWS"] = OtherShields["PWS"] or 0
-    PreviousShields["IlluminatedHealing"] = OtherShields["IlluminatedHealing"] or 0
-    PreviousShields["DivineAegis"] = OtherShields["DivineAegis"] or 0
-
 	-- Reset variables
-	for k,v in pairs(AurasFound) do
-		AurasFound[k] = false
-	end
-	for k,v in pairs(OtherShields) do
-		OtherShields[k] = 0
-	end
+	wipe(AurasFound)
+	wipe(OtherShields)
 
     local iccBuffFound = false
     local vampBloodFound = false
@@ -4714,80 +4663,26 @@ function BloodShieldTracker:CheckAuras()
 			value, value2, value3 = UnitAura("player", i)
         if name == nil or spellId == nil then break end
 
+		local tracked = AbsorbShields[spellId]
+
 		if spellId == SpellIds["Scent of Blood"] then
 			if CURRENT_UI_VERSION > 50000 then
 				scentBloodStacks = count
 			end
 
-        elseif spellId == SpellIds["Blood Shield"] then
-            -- Blood Shield present.
-            AurasFound["BS"] = true
-			BSExpires = expires
-			BSValue = value
-
-        elseif spellId == SpellIds["PWS"] then
-            AurasFound["PWS"] = true
+        elseif tracked then
+            AurasFound[tracked] = true
             if value then
-                OtherShields["PWS"] = value
-            else
-                if self.db.profile.verbose == true then
-                    self:Print(errorReadingFmt:format(SpellNames["PWS"]))
-                end
+                OtherShields[tracked] = 
+					(OtherShields[tracked] or 0) + value
+			elseif self.db.profile.verbose == true then
+                self:Print(errorReadingFmt:format(SpellNames[tracked]))
             end
-        elseif spellId == SpellIds["IlluminatedHealing"] then
-            AurasFound["IlluminatedHealing"] = true
-            if value then
-                OtherShields["IlluminatedHealing"] = 
-                    OtherShields["IlluminatedHealing"] + value
-            else
-                if self.db.profile.verbose == true then
-                    self:Print(errorReadingFmt:format(SpellNames["IlluminatedHealing"]))
-                end
-            end
-
-        elseif spellId == SpellIds["DivineAegis"] then
-            AurasFound["DivineAegis"] = true
-            if value then
-                OtherShields["DivineAegis"] = 
-                    OtherShields["DivineAegis"] + value
-            else
-                if self.db.profile.verbose == true then
-                    self:Print(errorReadingFmt:format(SpellNames["DivineAegis"]))
-                end
-            end
-
-		elseif spellId == SpellIds["IndomitablePride"] then
-            AurasFound["IndomitablePride"] = true
-            if value then
-                OtherShields["IndomitablePride"] = 
-                    OtherShields["IndomitablePride"] + value
-            else
-                if self.db.profile.verbose == true then
-                    self:Print("Error reading the Indomitable Pride value.")
-                end
-            end
-
-        elseif spellId == SpellIds["Life Cocoon"] then
-            AurasFound["Life Cocoon"] = true
-            if value then
-                OtherShields["Life Cocoon"] = 
-                    OtherShields["Life Cocoon"] + value
-            else
-                if self.db.profile.verbose == true then
-                    self:Print(errorReadingFmt:format(SpellNames["Life Cocoon"]))
-                end
-            end
-
-        elseif spellId == SpellIds["Guard"] then
-            AurasFound["Guard"] = true
-            if value then
-                OtherShields["Guard"] = 
-                    OtherShields["Guard"] + value
-            else
-                if self.db.profile.verbose == true then
-                    self:Print(errorReadingFmt:format(SpellNames["Guard"]))
-                end
-            end
+			
+			if spellId == SpellIds["Blood Shield"] then
+				BSValue = value
+				BSExpires = expires
+			end
 
         elseif spellId == SpellIds["Frost Presence"] then
             CurrentPresence = "Frost"
@@ -4854,52 +4749,51 @@ function BloodShieldTracker:CheckAuras()
     until name == nil
    
     if self.pwsbar.db.enabled and IsBloodTank then
-		local pwsbarPrev = PreviousShields["PWS"] + PreviousShields["DivineAegis"]
-		local pwsbarTotal = OtherShields["PWS"] + OtherShields["DivineAegis"]
+		local shields = 0
+		local included = self.db.profile.bars["PWSBar"].included
+		for k,v in pairs(included) do
+			if v then
+				shields = shields + (OtherShields[k] or 0)
+			end
+		end
 
-		if AurasFound["PWS"] or divineAegisFound then
-            if pwsbarTotal and pwsbarTotal ~= pwsbarPrev then
-                self.pwsbar:SetValue(pwsbarTotal)
-            end
-            self.pwsbar.bar:Show()
-        else
-            self.pwsbar.bar:Hide()
-        end
+		if shields > 0 then
+			if shields ~= PreviousShieldValues["PWSBar"] then
+				self.pwsbar:SetValue(shields)
+			end
+			self.pwsbar.bar:Show()
+		else
+			self.pwsbar.bar:Hide()
+		end
+
+		PreviousShieldValues["PWSBar"] = shields
     end
 
     if self.illumbar.db.enabled and IsBloodTank then
-        local illumValue = OtherShields["IlluminatedHealing"]
-        if AurasFound["IlluminatedHealing"] then
-            if illumValue and illumValue ~= PreviousShields["IlluminatedHealing"] then
+        local illumValue = OtherShields["Illuminated Healing"]
+        if AurasFound["Illuminated Healing"] then
+            if illumValue and illumValue ~= PreviousShieldValues["PaladinBar"] then
                 self.illumbar:SetValue(illumValue)
             end
             self.illumbar.bar:Show()
         else
             self.illumbar.bar:Hide()
         end
+		
+		PreviousShieldValues["PaladinBar"] = illumValue
     end
 
 	if self.absorbsbar.db.enabled and IsBloodTank then
 		local shields = 0
-		local add = true
 		local included = self.db.profile.bars["TotalAbsorbsBar"].included
 		for k,v in pairs(OtherShields) do
-			add = true
-			if included[k] ~= nil and included[k] == false then
-				add = false
-			end
-
-			if add then
+			if included[k] == true then
 				shields = shields + v
 			end
 		end
 
-		if self.absorbsbar.db.includebs and AurasFound["BS"] then
-			shields = shields + BSAuraValue
-		end
-
 		if shields > 0 then
-			if shields ~= TotalAbsorbs then
+			if shields ~= PreviousShieldValues["TotalAbsorbsBar"] then
 				self.absorbsbar:SetValue(shields)
 			end
 			self.absorbsbar.bar:Show()
@@ -4907,7 +4801,7 @@ function BloodShieldTracker:CheckAuras()
 			self.absorbsbar.bar:Hide()
 		end
 
-		TotalAbsorbs = shields
+		PreviousShieldValues["TotalAbsorbsBar"] = shields
 	end
 
     if self.estimatebar.db.enabled and IsBloodTank then
@@ -4933,7 +4827,7 @@ function BloodShieldTracker:CheckAuras()
 
     self:UpdateMinHeal("CheckAura", "player")
 
-    if AurasFound["BS"] then
+    if AurasFound["Blood Shield"] then
 		if BSValue then
 	        if BSAuraPresent == false then
 	            -- Blood Shield applied
@@ -5281,7 +5175,44 @@ function BloodShieldTracker:MigrateSettings()
 		self:MigrateHealthBarSettings2()
 	end
 
-	self.db.profile.profile_version = 3
+	if profile_version == nil or profile_version < 4 then
+		self:MigrateSettings4()
+	end
+
+	self.db.profile.profile_version = 4
+end
+
+function BloodShieldTracker:MigrateSettings4()
+	local pwsbar = self.db.profile.bars["PWSBar"]
+	local absbar = self.db.profile.bars["TotalAbsorbsBar"]
+
+	-- Rename
+	if pwsbar.included["DivineAegis"] ~= nil then
+		pwsbar.included["Divine Aegis"] = pwsbar.included["DivineAegis"]
+		pwsbar.included["DivineAegis"] = nil
+	end
+	if absbar.included["DivineAegis"] ~= nil then
+		absbar.included["Divine Aegis"] = absbar.included["DivineAegis"]
+		absbar.included["DivineAegis"] = nil
+	end
+	if absbar.included["IlluminatedHealing"] ~= nil then
+		absbar.included["Illuminated Healing"] = absbar.included["IlluminatedHealing"]
+		absbar.included["IlluminatedHealing"] = nil
+	end
+	if absbar.included["IndomitablePride"] ~= nil then
+		absbar.included["Indomitable Pride"] = absbar.included["IndomitablePride"]
+		absbar.included["IndomitablePride"] = nil
+	end
+
+	if pwsbar.includeda ~= nil then
+		pwsbar.included["Divine Aegis"] = pwsbar.includeda
+		pwsbar.includeda = nil
+	end
+
+	if absbar.includebs ~= nil then
+		absbar.included["Blood Shield"] = absbar.includebs
+		absbar.includebs = nil
+	end
 end
 
 function BloodShieldTracker:MigrateIllumBarSettings2()
@@ -5387,7 +5318,7 @@ function BloodShieldTracker:MigratePWSBarSettings2()
 		settings.scale = self.db.profile.pwsbar_scale
 	end
 	if self.db.profile.pwsbar_includeda ~= nil then
-		settings.includeda = self.db.profile.pwsbar_includeda
+		settings.included["DivineAegis"] = self.db.profile.pwsbar_includeda
 	end
 
 	self.db.profile.pwsbar_enabled = nil
