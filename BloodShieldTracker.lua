@@ -3638,6 +3638,8 @@ function BloodShieldTracker:CheckTalents5()
 				if IsSpellKnown(SpellIds["Vampiric Blood"]) then
 					HasVampBlood = true
 				end
+			else
+				IsBloodTank = false
 			end
 		end
        	self:CheckGlyphs()
