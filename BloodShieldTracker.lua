@@ -3719,6 +3719,12 @@ function BloodShieldTracker:CheckGlyphs()
             end
         end
     end
+
+	if self.db.profile.verbose then
+		local trackerOutputFmt = "Check Glyphs [VB=%s,DSuccor=%s]"
+		self:Print(trackerOutputFmt:format(
+			tostring(hasVBGlyphed), tostring(HasSuccorGlyphed)))
+	end
 end
 
 function BloodShieldTracker:GetEffectiveHealingBuffModifiers()
