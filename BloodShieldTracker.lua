@@ -212,7 +212,7 @@ local function LoadSpellNames()
 	for k,v in pairs(SpellIds) do
 		local name = SpellNames[k]
 		if not name or name == k then
-			SpellNames[k] = (GetSpellInfo(SpellIds[k]))
+			SpellNames[k] = (GetSpellInfo(SpellIds[v]))
 		end
 	end
 end
