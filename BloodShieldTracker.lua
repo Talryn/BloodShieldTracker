@@ -3539,6 +3539,9 @@ function BloodShieldTracker:OnEnable()
 end
 
 function BloodShieldTracker:Load()
+	if self.db.profile.verbose then
+		self:Print("Loading.")
+	end
 	self:RegisterEvent("PLAYER_REGEN_ENABLED")
 	self:RegisterEvent("PLAYER_REGEN_DISABLED")
 	self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
@@ -3561,6 +3564,9 @@ function BloodShieldTracker:Load()
 end
 
 function BloodShieldTracker:Unload()
+	if self.db.profile.verbose then
+		self:Print("Unloading.")
+	end
     self:UnregisterEvent("PLAYER_REGEN_ENABLED")
     self:UnregisterEvent("PLAYER_REGEN_DISABLED")
     self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
