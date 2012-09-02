@@ -3574,7 +3574,11 @@ function BloodShieldTracker:Unload()
     self:UnregisterEvent("UNIT_SPELLCAST_SENT")
     self:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     self:UnregisterEvent("UNIT_HEALTH")
+	self.shieldbar.bar:Hide()
 	self.estimatebar.bar:Hide()
+	self.pwsbar.bar:Hide()
+	self.illumbar.bar:Hide()
+	self.absorbsbar.bar:Hide()
 end
 
 function BloodShieldTracker:OnDisable()
@@ -3614,8 +3618,8 @@ function BloodShieldTracker:CheckTalents()
 		local trackerOutputFmt = "Check Talents [DK=%s,BT=%s,MA=%s,VB=%s]"
 		self:Print(trackerOutputFmt:format(tostring(isDK),
 			tostring(IsBloodTank),tostring(hasBloodShield),tostring(HasVampBlood)))
-		end
 	end
+end
 
 -- New method to check talents for MoP
 function BloodShieldTracker:CheckTalents5()
@@ -4194,19 +4198,11 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         param9, param10, param11, param12, param13, param14, 
         param15, param16, param17, param18, param19, param20
 
-    if CURRENT_UI_VERSION >= 40200 then
-        event, timestamp, eventtype, hideCaster, 
-        srcGUID, srcName, srcFlags, srcRaidFlags,
-        destGUID, destName, destFlags, destRaidFlags,
-        param9, param10, param11, param12, param13, param14, 
-        param15, param16, param17, param18, param19, param20 = ...
-    else
-        event, timestamp, eventtype, hideCaster, 
-        srcGUID, srcName, srcFlags,  
-        destGUID, destName, destFlags, 
-        param9, param10, param11, param12, param13, param14, 
-        param15, param16, param17, param18, param19, param20 = ...
-    end
+    event, timestamp, eventtype, hideCaster, 
+    srcGUID, srcName, srcFlags, srcRaidFlags,
+    destGUID, destName, destFlags, destRaidFlags,
+    param9, param10, param11, param12, param13, param14, 
+    param15, param16, param17, param18, param19, param20 = ...
 
     if not event or not eventtype or not destName then return end
 
