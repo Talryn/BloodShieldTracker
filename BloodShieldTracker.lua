@@ -205,6 +205,7 @@ local SpellIds = {
 	["Life Cocoon"] = 116849,
 	["Spirit Shell"] = 114908,
 	["Guard"] = 118604, -- via the Brewmaster's Black Ox Statue
+	["Shroud of Purgatory"] = 116888,
 }
 local SpellNames = {}
 setmetatable(SpellNames, LookupOrKeyMT)
@@ -568,6 +569,7 @@ local defaults = {
 			hide = true,
 		},
         verbose = false,
+		debug = false,
         enable_only_for_blood = true,
         precision = "Zero",
 		numberFormat = "Abbreviated",
@@ -698,6 +700,15 @@ local defaults = {
 				},
 				x = 100, 
 				y = -90,
+			},
+			["PurgatoryBar"] = {
+				enabled = true,
+				color = {r = 0.03, g = 0.54, b = 0.03, a = 1},
+				bgcolor = {r = 0.05, g = 0.70, b = 0.05, a = 0.7},
+				x = 0, 
+				y = 0,
+				width = 100,
+				height = 30,
 			},
 		}
     }
@@ -866,6 +877,7 @@ function BloodShieldTracker:GetOptions()
 				pwsBarOpts = self:GetPWSBarOptions(),
 				illumBarOpts = self:GetIllumBarOptions(),
 				absorbsBarOpts = self:GetAbsorbsBarOptions(),
+				purgatoryBarOpts = self:GetPurgatoryBarOptions(),
 				healthBarOpts = self:GetHealthBarOptions(),
 				skinningOpts = self:GetSkinningOptions(),
             }
@@ -995,6 +1007,7 @@ function BloodShieldTracker:GetGeneralOptions()
 						self.pwsbar.bar:Hide()
 						self.illumbar.bar:Hide()
 						self.absorbsbar.bar:Hide()
+						self.purgatorybar.bar:Hide()
 						if not self.healthbar.db.enabled or 
 							(self.healthbar.db.hide_ooc and 
 							not InCombatLockdown()) then
@@ -2696,9 +2709,244 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
 	return absorbsBarOpts
 end
 
+function BloodShieldTracker:GetPurgatoryBarOptions()
+	local purgatoryBarOpts = {
+		order = 6,
+		type = "group",
+		name = L["Purgatory Bar"],
+		desc = L["Purgatory Bar"],
+		args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["PurgatoryBar_Desc"],
+		    },
+            generalOptions = {
+                order = 2,
+                type = "header",
+                name = L["General Options"],
+            },
+    		bar_enabled = {
+				name = L["Enabled"],
+				desc = L["EnableBarDesc"],
+				type = "toggle",
+				order = 10,
+				set = function(info, val)
+				    self.db.profile.bars["PurgatoryBar"].enabled = val
+				    if not val then
+					    self.bars["PurgatoryBar"].bar:Hide()
+					end
+				end,
+                get = function(info)
+					return self.db.profile.bars["PurgatoryBar"].enabled
+				end,
+			},
+			lock_bar = {
+				name = L["Lock bar"],
+				desc = L["LockBarDesc"],
+				type = "toggle",
+				order = 20,
+				set = function(info, val)
+				    self.db.profile.bars["PurgatoryBar"].locked = val 
+					self.bars["PurgatoryBar"]:Lock(val)
+				end,
+                get = function(info)
+					return self.db.profile.bars["PurgatoryBar"].locked
+				end,
+			},
+            dimensions = {
+                order = 300,
+                type = "header",
+                name = L["Dimensions"],
+            },
+			bar_width = {
+				order = 310,
+				name = L["Width"],
+				desc = L["BarWidth_Desc"],	
+				type = "range",
+				min = 50,
+				max = 300,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["PurgatoryBar"].width = val 
+					self.bars["PurgatoryBar"].bar:SetWidth(val)
+					self.bars["PurgatoryBar"].bar.border:SetWidth(val+9)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["PurgatoryBar"].width
+				end,
+			},
+			bar_height = {
+				order = 320,
+				name = L["Height"],
+				desc = L["BarHeight_Desc"],
+				type = "range",
+				min = 10,
+				max = 30,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["PurgatoryBar"].height = val 
+					self.bars["PurgatoryBar"].bar:SetHeight(val)
+					self.bars["PurgatoryBar"].bar.border:SetHeight(val + 8)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["PurgatoryBar"].height
+				end,					
+			},
+			bar_scaling = {
+				order = 330,
+				name = L["Scale"],
+				desc = L["ScaleDesc"],
+				type = "range",
+				min = 0.1,
+				max = 3,
+				step = 0.1,
+				get = function()
+					return self.db.profile.bars["PurgatoryBar"].scale
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["PurgatoryBar"].scale = val
+				    self.bars["PurgatoryBar"].bar:SetScale(val)
+				end
+			},
+            position = {
+                order = 390,
+                type = "header",
+                name = L["Position"],
+            },
+			x = {
+				order = 391,
+				name = L["X Offset"],
+				desc = L["XOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenWidth()/2),
+				softMax = floor(GetScreenWidth()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["PurgatoryBar"].x = val
+					self.bars["PurgatoryBar"].bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["PurgatoryBar"].x, 
+						self.db.profile.bars["PurgatoryBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["PurgatoryBar"].x
+				end,
+			},
+			y = {
+				order = 392,
+				name = L["Y Offset"],
+				desc = L["YOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenHeight()/2),
+				softMax = floor(GetScreenHeight()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["PurgatoryBar"].y = val
+					self.bars["PurgatoryBar"].bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["PurgatoryBar"].x, 
+						self.db.profile.bars["PurgatoryBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["PurgatoryBar"].y
+				end,
+			},
+            colors = {
+                order = 400,
+                type = "header",
+                name = L["Colors"],
+            },
+			bar_textcolor = {
+				order = 410,
+				name = L["Text Color"],
+				desc = L["BarTextColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["PurgatoryBar"].textcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["PurgatoryBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["PurgatoryBar"].textcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			bar_color = {
+				order = 420,
+				name = L["Bar Color"],
+				desc = L["BarColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["PurgatoryBar"].color
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["PurgatoryBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["PurgatoryBar"].color
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+            appearance = {
+                order = 500,
+                type = "header",
+                name = L["Appearance"],
+            },
+			bar_texture_opt = {
+				order = 510,
+				name = L["Texture"],
+				desc = L["BarTexture_OptionDesc"],
+				type = "select",
+				values = LSM:HashTable("statusbar"),
+				dialogControl = 'LSM30_Statusbar',
+				get = function()
+				    return self.db.profile.bars["PurgatoryBar"].texture
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["PurgatoryBar"].texture = val
+				    self.bars["PurgatoryBar"]:UpdateTexture()
+				end,
+				disabled = function()
+				    return not self.db.profile.bars["PurgatoryBar"].shown
+				end,
+			},
+			bar_border_visible_opt = {
+				order = 520,
+				name = L["ShowBorder"],
+				desc = L["ShowBorderDesc"],
+				type = "toggle",
+				get = function()
+				    return self.db.profile.bars["PurgatoryBar"].border
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["PurgatoryBar"].border = val
+				    self.bars["PurgatoryBar"]:UpdateBorder()
+				end,
+			},
+			bar_visible_opt = {
+				order = 530,
+				name = L["ShowBar"],
+				desc = L["ShowBarDesc"],
+				type = "toggle",
+				get = function()
+					return self.db.profile.bars["PurgatoryBar"].shown
+				end,
+				set = function(info,val) 
+			        self.db.profile.bars["PurgatoryBar"].shown = val
+			        self.bars["PurgatoryBar"]:UpdateVisibility()
+			    end,
+			},
+		},
+	}
+	self:AddAdvancedPositioning(purgatoryBarOpts, "PurgatoryBar")
+	return purgatoryBarOpts
+end
+
 function BloodShieldTracker:GetHealthBarOptions()
 	local healthBarOpts = {
-	    order = 7,
+	    order = 8,
 	    type = "group",
 	    name = L["Health Bar"],
 	    desc = L["Health Bar"],
@@ -3057,7 +3305,7 @@ end
 
 function BloodShieldTracker:GetSkinningOptions()
 	local skinningOpts = {
-	    order = 8,
+	    order = 10,
 		name = L["Skinning"],
 		type = "group",
 		args = {
@@ -3244,13 +3492,13 @@ function BloodShieldTracker:ChatCommand(input)
     else
 		local cmds = splitWords(input)
         if input == "debug" then
-            if DEBUG_OUTPUT == false then
-                DEBUG_OUTPUT = true
-                self:Print("Debugging on.")
-            else
-                DEBUG_OUTPUT = false
-                self:Print("Debugging off.")
-            end
+			self.db.profile.debug = true
+            DEBUG_OUTPUT = true
+            self:Print("Debugging on.  Use '/bst nodebug' to disable.")
+        elseif input == "nodebug" then
+			self.db.profile.debug = false
+            DEBUG_OUTPUT = false
+            self:Print("Debugging off.")
         elseif input == "showdebug" then
             self:ShowDebugOutput()
         elseif cmds[1] and cmds[1] == "useAura" then
@@ -3275,6 +3523,8 @@ function BloodShieldTracker:OnInitialize()
 	-- Migrate the settings
 	self:MigrateSettings()
 
+	DEBUG_OUTPUT = self.db.profile.debug
+
 	-- Set the number format
 	self:SetNumberFormat(self.db.profile.numberFormat)
 
@@ -3296,6 +3546,7 @@ function BloodShieldTracker:OnInitialize()
 	self.illumbar = Bar:Create("IllumBar", "Illuminated Healing Bar")
 	self.healthbar = Bar:Create("HealthBar", "Health Bar")
 	self.absorbsbar = Bar:Create("TotalAbsorbsBar", "Total Absorbs Bar")
+	self.purgatorybar = Bar:Create("PurgatoryBar", "Purgatory Bar")
 	self:UpdatePositions()
 
 	-- Register for profile callbacks
@@ -3510,6 +3761,8 @@ function BloodShieldTracker:OnEnable()
 		    displayName, L["Illuminated Healing Bar"], displayName, "illumBarOpts")
 		self.optionsFrame.AbsorbsBar = ACD:AddToBlizOptions(
 		    displayName, L["Total Absorbs Bar"], displayName, "absorbsBarOpts")
+		self.optionsFrame.PurgatoryBar = ACD:AddToBlizOptions(
+		    displayName, L["Purgatory Bar"], displayName, "purgatoryBarOpts")
 		self.optionsFrame.HealthBar = ACD:AddToBlizOptions(
 		    displayName, L["Health Bar"], displayName, "healthBarOpts")
 		self.optionsFrame.Skinning = ACD:AddToBlizOptions(
@@ -3526,12 +3779,13 @@ function BloodShieldTracker:OnEnable()
 	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 	self:UpdateMastery()
 	self:CheckTalents()
-	self:RegisterEvent("PLAYER_TALENT_UPDATE","CheckTalents")
-	self:RegisterEvent("CHARACTER_POINTS_CHANGED","CheckTalents")
 	if CURRENT_UI_VERSION > 50000 then
+		self:RegisterEvent("PLAYER_TALENT_UPDATE", "CheckTalents")
 		self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED","CheckTalents")
 	else
-		self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED","CheckTalents")
+		self:RegisterEvent("PLAYER_TALENT_UPDATE", "CheckTalents")
+		self:RegisterEvent("CHARACTER_POINTS_CHANGED", "CheckTalents")
+		self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED", "CheckTalents")
 	end
 	self:RegisterEvent("GLYPH_ADDED", "CheckGlyphs")
 	self:RegisterEvent("GLYPH_REMOVED", "CheckGlyphs")
@@ -3608,7 +3862,7 @@ function BloodShieldTracker:CheckClass()
     end
 end
 
-function BloodShieldTracker:CheckTalents()
+function BloodShieldTracker:CheckTalents(event)
 	ImpDSModifier = 1
 	IsBloodTank = false
 	hasBloodShield = false
@@ -3620,10 +3874,11 @@ function BloodShieldTracker:CheckTalents()
 		self:CheckTalents4()
 	end
 
-	if self.db.profile.verbose then
-		local trackerOutputFmt = "Check Talents [DK=%s,BT=%s,MA=%s,VB=%s]"
+	if self.db.profile.debug then
+		local trackerOutputFmt = "Check Talents [DK=%s,BT=%s,MA=%s,VB=%s,Event=%s]"
 		self:Print(trackerOutputFmt:format(tostring(isDK),
-			tostring(IsBloodTank),tostring(hasBloodShield),tostring(HasVampBlood)))
+			tostring(IsBloodTank),tostring(hasBloodShield),tostring(HasVampBlood),
+			tostring(event or "")))
 	end
 end
 
@@ -3730,7 +3985,7 @@ function BloodShieldTracker:CheckGlyphs()
         end
     end
 
-	if self.db.profile.verbose then
+	if self.db.profile.debug then
 		local trackerOutputFmt = "Check Glyphs [VB=%s,DSuccor=%s]"
 		self:Print(trackerOutputFmt:format(
 			tostring(hasVBGlyphed), tostring(HasSuccorGlyphed)))
@@ -3987,7 +4242,7 @@ end
 function BloodShieldTracker:UpdateShieldBar()
     if not IsBloodTank then return end
 
-	if self.shieldbar.shield_curr < 0 and self.db.profile.verbose then
+	if self.shieldbar.shield_curr < 0 and self.db.profile.debug then
         local badShieldValueFmt = "Bad shield value [Cur=%d, Dmg=%d, Max=%d]"
         self:Print(badShieldValueFmt:format(
             self.shieldbar.shield_curr, damage, self.shieldbar.shield_max))
@@ -4184,7 +4439,7 @@ function BloodShieldTracker:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName)
             local diff = succeededTime - DS_SentTime
             if diff > 0 then
                 DS_Latency = diff
-                if self.db.profile.verbose then
+                if self.db.profile.debug then
                     self:Print("DS Latency: "..DS_Latency)
                 end
                 -- If the latency appears overly large then cap it at 2 seconds.
@@ -4220,7 +4475,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if eventtype:find("SWING_") and param9 then
             local damage, absorb = param9, param14 or 0
 
-            if self.db.profile.verbose then
+            if self.db.profile.debug then
                 local swingDmgFmt = "Swing Damage for %d [%d absorbed]"
                 self:Print(swingDmgFmt:format(damage, absorb))
             end
@@ -4239,7 +4494,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             -- particular items like Shannox's Jagged Tear?
             if srcName == nil then
                 countDamage = false
-                if self.db.profile.verbose then
+                if self.db.profile.debug then
                     self:Print("Ignoring no source damage [" .. spellName .. 
                         "] of "..(damage or 0))
                 end
@@ -4249,7 +4504,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             if spellName == SpellIds["Spirit Link"] and 
 				srcName == SpellNames["Spirit Link Totem"] then
                 countDamage = false
-                if self.db.profile.verbose then
+                if self.db.profile.debug then
                     self:Print("Ignoring Spirit Link damage of "..(damage or 0))
                 end
             end
@@ -4258,7 +4513,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                 self:AddDamageTaken(timestamp, damage)
             end
 
-            if self.db.profile.verbose then
+            if self.db.profile.debug then
                 local spellDmgFmt = "%s Damage (%s-%s,%d) for %d [%d absorbed]"
                 self:Print(spellDmgFmt:format(
                     type, spellName, schoolName, school, damage, absorb))
@@ -4277,7 +4532,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     			    damage = param10 or 0
                 end
 
-                if self.db.profile.verbose then
+                if self.db.profile.debug then
                     local absorbFmt = "Absorbed swing for %d"
                     self:Print(absorbFmt:format(damage))
                 end
@@ -4295,7 +4550,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                 local spellName, school = param10 or "n/a", param11 or 0
                 local schoolName = self:GetSpellSchool(school) or "N/A"
 
-                if self.db.profile.verbose then
+                if self.db.profile.debug then
                     local absorbFmt = "Absorbed spell (%s-%s,%d) for %d"
                     self:Print(absorbFmt:format(spellName, schoolName, school, damage))
                 end
@@ -4306,7 +4561,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 	if eventtype == "SPELL_CAST_SUCCESS" and srcName == self.playerName and 
 	    param9 == SpellIds["Death Strike"] then
 
-        if self.db.profile.verbose then
+        if self.db.profile.debug then
             local dsHealFormat = "Estimated damage of %d will be a heal for %d"
             local recentDmg = self:GetRecentDamageTaken(timestamp)
             local predictedHeal = 0
@@ -4371,7 +4626,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                     self:GetEffectiveHealingDebuffModifiers())
         end
 
-        if self.db.profile.verbose then
+        if self.db.profile.debug then
             local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d, Mast: %0.2f%%, SoB: %0.2f%%, MinBS: %d]"
 			local sobValue = scentBloodStacks * scentBloodStackBuff
             self:Print(dsHealFormat:format(
@@ -4392,7 +4647,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if param13 then spellAbsorb = param13 end
 
         if param9 == SpellIds["Blood Shield"] then
-            if self.db.profile.verbose then
+            if self.db.profile.debug then
                 if spellAbsorb and spellAbsorb ~= "" then
                     self:Print("Blood Shield applied.  Value = "..spellAbsorb)
                 else
@@ -4403,12 +4658,16 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             if self.db.profile.useAuraForShield == false then
                 self:NewBloodShield(timestamp, spellAbsorb)
             end
+        elseif param9 == SpellIds["Shroud of Purgatory"] then
+            if self.db.profile.debug then
+                self:Print("Purgatory applied.  Value = "..tostring(spellAbsorb or 0)..", "..tostring(param14 or 0))
+			end
         elseif param9 == SpellIds["Vampiric Blood"] then
-            if self.db.profile.verbose then
+            if self.db.profile.debug then
                 self:Print("Vampiric Blood applied.")
             end
         elseif param9 == SpellIds["Guardian Spirit"] then
-            if self.db.profile.verbose then
+            if self.db.profile.debug then
                 self:Print("Guardian Spirit applied.")
             end
         end
@@ -4420,13 +4679,18 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
         if param9 then
             if param9 == SpellIds["Blood Shield"] then
-                if self.db.profile.verbose and spellAbsorb and spellAbsorb ~= "" then
+                if self.db.profile.debug and spellAbsorb and spellAbsorb ~= "" then
                     self:Print("Blood Shield refresh.  New value = "..spellAbsorb)
                 end
 
                 if self.db.profile.useAuraForShield == false then
                     self:BloodShieldUpdated("refreshed", timestamp, spellAbsorb or 0)
                 end
+	        elseif param9 == SpellIds["Shroud of Purgatory"] then
+	            if self.db.profile.debug then
+	                self:Print("Purgatory refreshed.  Value = "..tostring(spellAbsorb or 0)..", "..tostring(param14 or 0))
+				end
+
             end
         end
     end
@@ -4440,15 +4704,19 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                 self:BloodShieldUpdated("removed", timestamp, spellAbsorb or 0)
             end
 
-            if self.db.profile.verbose and spellAbsorb and spellAbsorb ~= "" then
+            if self.db.profile.debug and spellAbsorb and spellAbsorb ~= "" then
                 self:Print("Blood Shield removed.  Remaining = "..spellAbsorb)
             end
+        elseif param9 == SpellIds["Shroud of Purgatory"] then
+            if self.db.profile.debug then
+                self:Print("Purgatory removed.  Value = "..tostring(spellAbsorb or 0)..", "..tostring(param14 or 0))
+			end
         elseif param9 == SpellIds["Vampiric Blood"] then
-            if self.db.profile.verbose then
+            if self.db.profile.debug then
                 self:Print("Vampiric Blood removed.")
             end
         elseif param9 == SpellIds["Guardian Spirit"] then
-            if self.db.profile.verbose then
+            if self.db.profile.debug then
                 self:Print("Guardian Spirit removed.")
             end
         end
@@ -4480,14 +4748,14 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue)
         UpdateLDBData()
     end
 
-    if self.db.profile.verbose or DEBUG_OUPUT then
+    if self.db.profile.debug or DEBUG_OUPUT then
         local shieldInd = ""
         if isMinimum then
             shieldInd = " (min)"
         end
 
         local shieldFormat = "Blood Shield Amount: %d%s"
-        if self.db.profile.verbose then
+        if self.db.profile.debug then
             self:Print(shieldFormat:format(shieldValue,shieldInd))
         end
 
@@ -4590,7 +4858,7 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
         currPerc = curr / max * 100
     end
 
-    if self.db.profile.verbose then
+    if self.db.profile.debug then
         local bsRemovedFmt = "Blood Shield %s [%d/%d %d%%]%s"
         local addedFmt = "[Added %d%s]"
         local minStr = ""
@@ -4639,6 +4907,8 @@ local BSAuraExpires = 0
 local AurasFound = {}
 local OtherShields = {}
 local PreviousShieldValues = {}
+local PurgatoryAbsorb = 0
+local PurgatoryActive = false
 
 local errorReadingFmt = "Error reading the %s value."
 function BloodShieldTracker:CheckAuras()
@@ -4664,6 +4934,7 @@ function BloodShieldTracker:CheckAuras()
 	healingDebuffMultiplier = 0
     gsBuff = false
     gsHealModifier = 0.0
+	PurgatoryAbsorb = 0
 
     -- Loop through unit auras to find ones of interest.
     i = 1
@@ -4685,7 +4956,7 @@ function BloodShieldTracker:CheckAuras()
             if value then
                 OtherShields[tracked] = 
 					(OtherShields[tracked] or 0) + value
-			elseif self.db.profile.verbose == true then
+			elseif self.db.profile.debug == true then
                 self:Print(errorReadingFmt:format(SpellNames[tracked]))
             end
 			
@@ -4757,7 +5028,30 @@ function BloodShieldTracker:CheckAuras()
 
         i = i + 1
     until name == nil
-   
+
+    i = 1
+    repeat
+        name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+            consolidate, spellId, canApplyAura, isBossDebuff, 
+			value, value2, value3 = UnitAura("player", i, "HARMFUL")
+        if name == nil or spellId == nil then break end
+
+        if spellId == SpellIds["Shroud of Purgatory"] then
+            AurasFound["Shroud of Purgatory"] = true
+
+			if not PurgatoryActive then
+				if self.db.profile.debug then
+					self:Print("Pugatory! ["..tostring(value or 0).."]")
+				end
+				PurgatoryActive = true
+			end
+
+			PurgatoryAbsorb = value or 0
+		end
+
+        i = i + 1
+    until name == nil
+
     if self.pwsbar.db.enabled and IsBloodTank then
 		local shields = 0
 		local included = self.db.profile.bars["PWSBar"].included
@@ -4818,6 +5112,14 @@ function BloodShieldTracker:CheckAuras()
 		self.estimatebar.bar.stacks:SetText(scentBloodStacks)
 	end
 
+	if self.purgatorybar.db.enabled and AurasFound["Shroud of Purgatory"] then
+		self.purgatorybar:SetValue(PurgatoryAbsorb or 0)
+		self.purgatorybar.bar:Show()
+	else
+		PurgatoryActive = false
+		self.purgatorybar.bar:Hide()
+	end
+
     -- If the ICC buff isn't present, reset the values
     if not iccBuffFound then
         iccBuff = false
@@ -4841,7 +5143,7 @@ function BloodShieldTracker:CheckAuras()
 		if BSValue then
 	        if BSAuraPresent == false then
 	            -- Blood Shield applied
-	            if self.db.profile.verbose == true then
+	            if self.db.profile.debug == true then
 	                self:Print("AURA: Blood Shield applied. "..BSValue)
 	            end
 	            self:NewBloodShield(GetTime(), BSValue)
@@ -4849,7 +5151,7 @@ function BloodShieldTracker:CheckAuras()
 	            if BSValue ~= BSAuraValue or 
 	                (BSExpires ~= BSAuraExpires and BSValue > 0) then
 	                -- Blood Shield refreshed
-	                if self.db.profile.verbose == true then
+	                if self.db.profile.debug == true then
 	                    self:Print("AURA: Blood Shield refreshed. "..BSValue
 	                        .." ["..(BSValue - BSAuraValue).."]")
 	                end
@@ -4860,7 +5162,7 @@ function BloodShieldTracker:CheckAuras()
 	        BSAuraValue = BSValue
 	        BSAuraExpires = BSExpires
 		else
-			if self.db.profile.verbose == true then
+			if self.db.profile.debug == true then
 				self:Print("Error reading the Blood Shield value.")
 			end
 		end
@@ -4868,7 +5170,7 @@ function BloodShieldTracker:CheckAuras()
 	else
         if BSAuraPresent == true then
             -- Blood Shield removed
-            if self.db.profile.verbose == true then
+            if self.db.profile.debug == true then
                 self:Print("AURA: Blood Shield removed. "..BSAuraValue)
             end
 
