@@ -3491,16 +3491,28 @@ function BloodShieldTracker:ChatCommand(input)
         self:ShowOptions()
     else
 		local cmds = splitWords(input)
-        if input == "debug" then
-			self.db.profile.debug = true
-            DEBUG_OUTPUT = true
-            self:Print("Debugging on.  Use '/bst nodebug' to disable.")
-        elseif input == "nodebug" then
-			self.db.profile.debug = false
-            DEBUG_OUTPUT = false
-            self:Print("Debugging off.")
-        elseif input == "showdebug" then
-            self:ShowDebugOutput()
+        if cmds[1] and cmds[1] == "debug" then
+			if cmds[2] and cmds[2] == "on" then
+				self.db.profile.debug = true
+	            self:Print("Debugging on.  Use '/bst debug off' to disable.")
+		    elseif cmds[2] and cmds[2] == "off" then
+				self.db.profile.debug = false
+	            self:Print("Debugging off.")
+			else
+				self:Print("Debugging is "..(self.db.profile.debug and "on." or "off."))
+			end
+        elseif cmds[1] and cmds[1] == "log" then
+			if cmds[2] and cmds[2] == "on" then
+	            DEBUG_OUTPUT = true
+	            self:Print("Logging on.")
+	        elseif cmds[2] and cmds[2] == "off" then
+	            DEBUG_OUTPUT = false
+	            self:Print("Logging off.")
+	        elseif cmds[2] and cmds[2] == "show" then
+	            self:ShowDebugOutput()
+			else
+				self:Print("Logging is "..(DEBUG_OUTPUT and "on." or "off."))
+			end
         elseif cmds[1] and cmds[1] == "useAura" then
 			if cmds[2] and cmds[2] == "false" then
 				self.db.profile.useAuraForShield = false
