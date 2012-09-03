@@ -702,11 +702,8 @@ local defaults = {
 				y = -90,
 			},
 			["PurgatoryBar"] = {
-				enabled = true,
 				color = {r = 0.03, g = 0.54, b = 0.03, a = 1},
 				bgcolor = {r = 0.05, g = 0.70, b = 0.05, a = 0.7},
-				x = 0, 
-				y = 0,
 				width = 100,
 				height = 30,
 			},
