@@ -1156,9 +1156,7 @@ function BloodShieldTracker:GetShieldBarOptions()
 				order = 10,
 				set = function(info, val)
 				    self.db.profile.bars["ShieldBar"].enabled = val
-				    if not val then
-					    self.shieldbar.bar:Hide()
-					end
+					self.bars["ShieldBar"]:UpdateVisibility()
 				end,
                 get = function(info)
 					return self.db.profile.bars["ShieldBar"].enabled
@@ -1507,7 +1505,7 @@ function BloodShieldTracker:GetShieldBarOptions()
 				end,
 				set = function(info,val) 
 			        self.db.profile.bars["ShieldBar"].shown = val
-			        self.shieldbar:UpdateVisibility()
+			        self.shieldbar:UpdateUI()
 			    end,
 			},
 		},
@@ -1541,9 +1539,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				order = 20,
 				set = function(info, val)
 				    self.db.profile.bars["EstimateBar"].enabled = val
-				    if not val then
-					    self.estimatebar.bar:Hide()
-					end
+					self.bars["EstimateBar"]:UpdateVisibility()
 				end,
                 get = function(info)
 					return self.db.profile.bars["EstimateBar"].enabled 
@@ -1638,11 +1634,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				order = 110,
 				set = function(info, val)
 				    self.db.profile.bars["EstimateBar"].show_stacks = val
-				    if val and CURRENT_UI_VERSION > 50000 then
-				        self.estimatebar.bar.stacks:Show()
-			        else
-			            self.estimatebar.bar.stacks:Hide()
-		            end
+					self.bars["EstimateBar"]:UpdateVisibility()
 				end,
                 get = function(info)
                     return self.db.profile.bars["EstimateBar"].show_stacks
@@ -1906,7 +1898,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				end,
 				set = function(info,val)
 				    self.db.profile.bars["EstimateBar"].shown = val
-				    self.estimatebar:UpdateVisibility()
+				    self.estimatebar:UpdateUI()
 				end,
 			},
             latencyOptions = {
@@ -1976,9 +1968,7 @@ function BloodShieldTracker:GetPWSBarOptions()
 				order = 10,
 				set = function(info, val)
 				    self.db.profile.bars["PWSBar"].enabled = val
-				    if not val then
-					    self.bars["PWSBar"].bar:Hide()
-					end
+					self.bars["PWSBar"]:UpdateVisibility()
 				end,
                 get = function(info)
 					return self.db.profile.bars["PWSBar"].enabled
@@ -2184,7 +2174,7 @@ function BloodShieldTracker:GetPWSBarOptions()
 				end,
 				set = function(info,val) 
 			        self.db.profile.bars["PWSBar"].shown = val
-			        self.bars["PWSBar"]:UpdateVisibility()
+			        self.bars["PWSBar"]:UpdateUI()
 			    end,
 			},
 		},
@@ -2236,9 +2226,7 @@ function BloodShieldTracker:GetIllumBarOptions()
 				order = 10,
 				set = function(info, val)
 				    self.db.profile.bars["IllumBar"].enabled = val
-				    if not val then
-					    self.bars["IllumBar"].bar:Hide()
-					end
+					self.bars["IllumBar"]:UpdateVisibility()
 				end,
                 get = function(info)
 					return self.db.profile.bars["IllumBar"].enabled
@@ -2438,7 +2426,7 @@ function BloodShieldTracker:GetIllumBarOptions()
 				end,
 				set = function(info,val) 
 			        self.db.profile.bars["IllumBar"].shown = val
-			        self.bars["IllumBar"]:UpdateVisibility()
+			        self.bars["IllumBar"]:UpdateUI()
 			    end,
 			},
 		},
@@ -2471,9 +2459,7 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
 				order = 10,
 				set = function(info, val)
 				    self.db.profile.bars["TotalAbsorbsBar"].enabled = val
-				    if not val then
-					    self.bars["TotalAbsorbsBar"].bar:Hide()
-					end
+					self.bars["TotalAbsorbsBar"]:UpdateVisibility()
 				end,
                 get = function(info) 
 					return self.db.profile.bars["TotalAbsorbsBar"].enabled
@@ -2678,7 +2664,7 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
 				end,
 				set = function(info,val) 
 			        self.db.profile.bars["TotalAbsorbsBar"].shown = val
-			        self.bars["TotalAbsorbsBar"]:UpdateVisibility()
+			        self.bars["TotalAbsorbsBar"]:UpdateUI()
 			    end,
 			},
 		},
@@ -2730,9 +2716,7 @@ function BloodShieldTracker:GetPurgatoryBarOptions()
 				order = 10,
 				set = function(info, val)
 				    self.db.profile.bars["PurgatoryBar"].enabled = val
-				    if not val then
-					    self.bars["PurgatoryBar"].bar:Hide()
-					end
+					self.bars["PurgatoryBar"]:UpdateVisibility()
 				end,
                 get = function(info)
 					return self.db.profile.bars["PurgatoryBar"].enabled
@@ -2932,7 +2916,7 @@ function BloodShieldTracker:GetPurgatoryBarOptions()
 				end,
 				set = function(info,val) 
 			        self.db.profile.bars["PurgatoryBar"].shown = val
-			        self.bars["PurgatoryBar"]:UpdateVisibility()
+			        self.bars["PurgatoryBar"]:UpdateUI()
 			    end,
 			},
 		},
@@ -2965,7 +2949,7 @@ function BloodShieldTracker:GetHealthBarOptions()
 				order = 10,
 				set = function(info, val)
 				    self.db.profile.bars["HealthBar"].enabled = val
-			        self:ToggleHealthBar(val)
+			        self:ToggleHealthBar()
 				end,
                 get = function(info)
                     return self.db.profile.bars["HealthBar"].enabled
@@ -3290,7 +3274,7 @@ function BloodShieldTracker:GetHealthBarOptions()
 				end,
 				set = function(info,val)
 				    self.db.profile.bars["HealthBar"].shown = val
-				    self.healthbar:UpdateVisibility()
+				    self.healthbar:UpdateUI()
 				end,
 			},
 
@@ -3817,12 +3801,9 @@ function BloodShieldTracker:Load()
     self:RegisterEvent("PLAYER_ALIVE", "CheckAuras")
     self:RegisterEvent("UNIT_SPELLCAST_SENT")
     self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
-    if self:IsTrackerEnabled() and 
-		(not self.estimatebar.db.hide_ooc or InCombatLockdown()) then
-        self.estimatebar.bar:Show()
-    end
-    self:ToggleHealthBar(self.db.profile.bars["HealthBar"].enabled)
-    self.shieldbar:UpdateVisibility()
+    self:ToggleHealthBar()
+    self.shieldbar:UpdateUI()
+	self.estimatebar:UpdateUI()
 	self.estimatebar:UpdateVisibility()
 end
 
@@ -3843,11 +3824,12 @@ function BloodShieldTracker:Unload()
     self:UnregisterEvent("UNIT_SPELLCAST_SENT")
     self:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     self:UnregisterEvent("UNIT_HEALTH")
-	self.shieldbar.bar:Hide()
-	self.estimatebar.bar:Hide()
-	self.pwsbar.bar:Hide()
-	self.illumbar.bar:Hide()
-	self.absorbsbar.bar:Hide()
+	
+	for k, v in pairs(self.bars) do
+		if v then
+			v.bar:Hide()
+		end
+	end
 end
 
 function BloodShieldTracker:OnDisable()
@@ -3882,6 +3864,8 @@ function BloodShieldTracker:CheckTalents(event)
 	else
 		self:CheckTalents4()
 	end
+
+	self.bars["EstimateBar"]:UpdateVisibility()
 
 	if self.db.profile.debug then
 		local trackerOutputFmt = "Check Talents [DK=%s,BT=%s,MA=%s,VB=%s,Event=%s]"
@@ -4271,25 +4255,15 @@ function BloodShieldTracker:UpdateShieldBar()
     self:UpdateShieldBarText(self.shieldbar.shield_curr, self.shieldbar.shield_max, diff)
 end
 
-function BloodShieldTracker:ToggleHealthBar(enable)
-	if enable == nil then
-		enable = self.db.profile.bars["HealthBar"].enabled
-	end
-    if enable then
+function BloodShieldTracker:ToggleHealthBar()
+    if self.db.profile.bars["HealthBar"].enabled then
         self:RegisterEvent("UNIT_HEALTH")
 		self:UNIT_HEALTH("ToggleHealthBar", "player")
 		self:UpdateHealthBar(true)
-        if self.healthbar.db.hide_ooc and (not InCombatLockdown() or idle) then
-            if self.healthbar.bar:IsVisible() then
-                self.healthbar.bar:Hide()
-            end
-        else
-            self.healthbar.bar:Show()
-        end
     else
-        self.healthbar.bar:Hide()
         self:UnregisterEvent("UNIT_HEALTH")
     end
+	self.bars["HealthBar"]:UpdateVisibility()
 end
 
 local percentIntFmt = "%d%%"
@@ -5117,7 +5091,8 @@ function BloodShieldTracker:CheckAuras()
 		PreviousShieldValues["TotalAbsorbsBar"] = shields
 	end
 
-    if self.estimatebar.db.enabled and IsBloodTank then
+    if self.estimatebar.db.enabled and 
+		self.estimatebar.db.show_stacks and IsBloodTank then
 		self.estimatebar.bar.stacks:SetText(scentBloodStacks)
 	end
 
@@ -5282,11 +5257,7 @@ function Bar:Initialize()
 	    bar.stacks:SetShadowOffset(1, -1)
 	    bar.stacks:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 	    bar.stacks:SetText("0")
-	    if self.db.show_stacks and CURRENT_UI_VERSION > 50000 then
-	        bar.stacks:Show()
-	    else
-	        bar.stacks:Hide()
-	    end
+		self:UpdateVisibility()
 	end
 
     bar:SetMovable()
@@ -5336,6 +5307,37 @@ function Bar:Initialize()
 	end
 end
 
+function Bar:UpdateVisibility()
+	if self.name == "HealthBar" then
+        if not self.db.enabled or 
+			(self.db.hide_ooc and (not InCombatLockdown() or idle)) then
+            if self.bar:IsVisible() then
+                self.bar:Hide()
+            end
+        else
+            self.bar:Show()
+        end
+	elseif self.name == "EstimateBar" then
+		if self.db.enabled and BloodShieldTracker:IsTrackerEnabled() and
+			(not self.db.hide_ooc or InCombatLockdown()) then
+			self.bar:Show()
+		else
+			self.bar:Hide()
+		end
+
+		if self.db.enabled and self.db.show_stacks and 
+			CURRENT_UI_VERSION > 50000 and IsBloodTank then
+		    self.bar.stacks:Show()
+		else
+		    self.bar.stacks:Hide()
+		end
+	else
+		if not self.db.enabled then
+			self.bar:Hide()
+		end
+	end
+end
+
 function Bar:Lock(locked)
 	if locked == nil then
 		locked = self.db.locked
@@ -5360,7 +5362,7 @@ function Bar:Reset()
 	self:UpdatePosition()
 	self:UpdateTexture()
 	self:UpdateBorder()
-	self:UpdateVisibility()
+	self:UpdateUI()
 	self:UpdateGraphics()
 end
 
@@ -5395,7 +5397,7 @@ function Bar:ResetFonts()
 	end
 end
 
-function Bar:UpdateVisibility()
+function Bar:UpdateUI()
 	local show = self.db.shown
 	if not show then
 		self.bar:SetStatusBarTexture("")
@@ -5471,11 +5473,7 @@ function Bar:UpdateGraphics()
         self.bar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 	end
 	if self.name == "EstimateBar" then
-	    if self.db.show_stacks and CURRENT_UI_VERSION > 50000 then
-	        self.bar.stacks:Show()
-	    else
-	        self.bar.stacks:Hide()
-	    end
+		self:UpdateVisibility()
 	    self.bar.stacks:SetPoint(self.db.stacks_pos or "LEFT")
         self.bar.stacks:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 	end
