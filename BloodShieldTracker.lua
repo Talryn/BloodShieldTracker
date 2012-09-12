@@ -206,6 +206,7 @@ local SpellIds = {
 	["Spirit Shell"] = 114908,
 	["Guard"] = 118604, -- via the Brewmaster's Black Ox Statue
 	["Shroud of Purgatory"] = 116888,
+	["Blood Charge"] = 114851,
 }
 local SpellNames = {}
 setmetatable(SpellNames, LookupOrKeyMT)
@@ -247,6 +248,7 @@ local GlyphIds = {
 
 -- Constants
 local BS_DURATION = 10  -- The duration of Blood Shield
+local MAX_BLOOD_CHARGES = 12
 local dsHealModifier = 0.20  -- Percent of the DS Heal from the tooltip.
 local dsMinHealPercent = 0.07
 local dsMinHealPercentSuccor = 0.20
@@ -637,6 +639,14 @@ local defaults = {
 				width = 100,
 				y = -90,
 			},
+			["BloodChargeBar"] = {
+				enabled = false,
+		        progress = "Time",
+		        show_time = false,
+		        time_pos = "RIGHT",
+				x = -90,
+				y = -90,
+			},
 			["EstimateBar"] = {
 				enabled = true,
 				hide_ooc = false,
@@ -871,6 +881,7 @@ function BloodShieldTracker:GetOptions()
 				core = self:GetGeneralOptions(),
 				shieldBarOpts = self:GetShieldBarOptions(),
 				estimateBarOpts = self:GetEstimateBarOptions(),
+				bloodChargeOpts = self:GetBloodChargeBarOptions(),
 				pwsBarOpts = self:GetPWSBarOptions(),
 				illumBarOpts = self:GetIllumBarOptions(),
 				absorbsBarOpts = self:GetAbsorbsBarOptions(),
@@ -1513,6 +1524,317 @@ function BloodShieldTracker:GetShieldBarOptions()
 
 	self:AddAdvancedPositioning(shieldBarOpts, "ShieldBar")
 	return shieldBarOpts
+end
+
+function BloodShieldTracker:GetBloodChargeBarOptions()
+	local bloodChargeOpts = {
+		order = 2,
+		type = "group",
+		name = L["Blood Charge Bar"],
+		desc = L["Blood Charge Bar"],
+		args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["BloodChargeBar_Desc"],
+		    },
+            generalOptions = {
+                order = 2,
+                type = "header",
+                name = L["General Options"],
+            },
+    		status_bar_enabled = {
+				name = L["Enabled"],
+				desc = L["EnableBarDesc"],
+				type = "toggle",
+				order = 10,
+				set = function(info, val)
+				    self.db.profile.bars["BloodChargeBar"].enabled = val
+					self.bars["BloodChargeBar"]:UpdateVisibility()
+				end,
+                get = function(info)
+					return self.db.profile.bars["BloodChargeBar"].enabled
+				end,
+			},
+			lock_bar = {
+				name = L["Lock bar"],
+				desc = L["LockBarDesc"],
+				type = "toggle",
+				order = 20,
+				set = function(info, val)
+				    self.db.profile.bars["BloodChargeBar"].locked = val 
+					self.bars["BloodChargeBar"]:Lock()
+				end,
+                get = function(info)
+					return self.db.profile.bars["BloodChargeBar"].locked
+				end,
+			},
+			progress = {
+				name = L["Progress Bar"],
+				desc = L["BloodChargeProgress_OptionDesc"],
+				type = "select",
+				values = {
+				    ["None"] = L["None"],
+				    ["Time"] = L["Time Remaining"],
+				    ["Charges"] = L["Charges"]
+				},
+				order = 40,
+				set = function(info, val)
+				    self.db.profile.bars["BloodChargeBar"].progress = val
+			        self:UpdateBloodChargeBarMode()
+				end,
+                get = function(info)
+                    return self.db.profile.bars["BloodChargeBar"].progress
+                end,
+			},
+            timeRemaining = {
+                order = 100,
+                type = "header",
+                name = L["Time Remaining"],
+            },
+			show_time = {
+				name = L["Show Time"],
+				desc = L["ShowTime_OptionDesc"],
+				type = "toggle",
+				order = 110,
+				set = function(info, val)
+				    self.db.profile.bars["BloodChargeBar"].show_time = val
+				    if val then
+				        self.bars["BloodChargeBar"].bar.time:Show()
+			        else
+			            self.bars["BloodChargeBar"].bar.time:Hide()
+		            end
+				end,
+                get = function(info)
+                    return self.db.profile.bars["BloodChargeBar"].show_time
+                end,
+			},
+			time_pos = {
+				name = L["Position"],
+				desc = L["TimePosition_OptionDesc"],
+				type = "select",
+				values = {
+				    ["RIGHT"] = L["Right"],
+				    ["LEFT"] = L["Left"],
+				},
+				order = 120,
+				set = function(info, val)
+				    self.db.profile.bars["BloodChargeBar"].time_pos = val
+			        self.bars["BloodChargeBar"].bar.time:SetPoint(val or "RIGHT")
+			        self.bars["BloodChargeBar"].bar.time:SetJustifyH(val or "RIGHT")
+				end,
+                get = function(info)
+                    return self.db.profile.bars["BloodChargeBar"].time_pos
+                end,
+                disabled = function()
+                    return not self.db.profile.bars["BloodChargeBar"].show_time
+                end,
+			},
+            dimensions = {
+                order = 300,
+                type = "header",
+                name = L["Dimensions"],
+            },
+			width = {
+				order = 310,
+				name = L["Width"],
+				desc = L["BarWidth_Desc"],	
+				type = "range",
+				min = 50,
+				max = 300,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["BloodChargeBar"].width = val 
+					self.bars["BloodChargeBar"].bar:SetWidth(val)
+					self.bars["BloodChargeBar"].bar.border:SetWidth(val+9)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["BloodChargeBar"].width
+				end,
+			},
+			height = {
+				order = 320,
+				name = L["Height"],
+				desc = L["BarHeight_Desc"],
+				type = "range",
+				min = 10,
+				max = 30,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["BloodChargeBar"].height = val 
+					self.bars["BloodChargeBar"].bar:SetHeight(val)
+					self.bars["BloodChargeBar"].bar.border:SetHeight(val + 8)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["BloodChargeBar"].height
+				end,					
+			},
+			scale = {
+				order = 330,
+				name = L["Scale"],
+				desc = L["ScaleDesc"],
+				type = "range",
+				min = 0.1,
+				max = 3,
+				step = 0.1,
+				get = function()
+					return self.db.profile.bars["BloodChargeBar"].scale
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["BloodChargeBar"].scale = val
+				    self.bars["BloodChargeBar"].bar:SetScale(val)
+				end
+			},
+            position = {
+                order = 400,
+                type = "header",
+                name = L["Position"],
+            },
+			x = {
+				order = 410,
+				name = L["X Offset"],
+				desc = L["XOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenWidth()/2),
+				softMax = floor(GetScreenWidth()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["BloodChargeBar"].x = val
+					self.bars["BloodChargeBar"].bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["BloodChargeBar"].x, 
+						self.db.profile.bars["BloodChargeBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["BloodChargeBar"].x
+				end,
+			},
+			y = {
+				order = 420,
+				name = L["Y Offset"],
+				desc = L["YOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenHeight()/2),
+				softMax = floor(GetScreenHeight()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["BloodChargeBar"].y = val
+					self.bars["BloodChargeBar"].bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["BloodChargeBar"].x, 
+						self.db.profile.bars["BloodChargeBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["BloodChargeBar"].y
+				end,
+			},
+            colors = {
+                order = 500,
+                type = "header",
+                name = L["Colors"],
+            },
+			textcolor = {
+				order = 510,
+				name = L["Text Color"],
+				desc = L["BarTextColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["BloodChargeBar"].textcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["BloodChargeBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["BloodChargeBar"].textcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			color = {
+				order = 520,
+				name = L["Bar Color"],
+				desc = L["BarColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["BloodChargeBar"].color
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["BloodChargeBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["BloodChargeBar"].color
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			bgcolor = {
+				order = 530,
+				name = L["Bar Background Color"],
+				desc = L["BarBackgroundColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["BloodChargeBar"].bgcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["BloodChargeBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["BloodChargeBar"].bgcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+            appearance = {
+                order = 600,
+                type = "header",
+                name = L["Appearance"],
+            },
+			texture_opt = {
+				order = 610,
+				name = L["Texture"],
+				desc = L["BarTexture_OptionDesc"],
+				type = "select",
+				values = LSM:HashTable("statusbar"),
+				dialogControl = 'LSM30_Statusbar',
+				get = function()
+				    return self.db.profile.bars["BloodChargeBar"].texture
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["BloodChargeBar"].texture = val
+				    self.bars["BloodChargeBar"]:UpdateTexture()
+				end,
+				disabled = function()
+				    return not self.db.profile.bars["BloodChargeBar"].shown
+				end,
+			},
+			border_visible_opt = {
+				order = 620,
+				name = L["ShowBorder"],
+				desc = L["ShowBorderDesc"],
+				type = "toggle",
+				get = function()
+				    return self.db.profile.bars["BloodChargeBar"].border
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["BloodChargeBar"].border = val
+				    self.bars["BloodChargeBar"]:UpdateBorder()
+				end,
+			},
+			visible_opt = {
+				order = 630,
+				name = L["ShowBar"],
+				desc = L["ShowBarDesc"],
+				type = "toggle",
+				get = function()
+					return self.db.profile.bars["BloodChargeBar"].shown
+				end,
+				set = function(info,val) 
+			        self.db.profile.bars["BloodChargeBar"].shown = val
+			        self.bars["BloodChargeBar"]:UpdateUI()
+			    end,
+			},
+		},
+	}
+
+	self:AddAdvancedPositioning(bloodChargeOpts, "BloodChargeBar")
+	return bloodChargeOpts
 end
 
 function BloodShieldTracker:GetEstimateBarOptions()
@@ -3540,6 +3862,7 @@ function BloodShieldTracker:OnInitialize()
 	self.healthbar = Bar:Create("HealthBar", "Health Bar")
 	self.absorbsbar = Bar:Create("TotalAbsorbsBar", "Total Absorbs Bar")
 	self.purgatorybar = Bar:Create("PurgatoryBar", "Purgatory Bar")
+	self.bloodchargebar = Bar:Create("BloodChargeBar", "Blood Charge Bar")
 	self:UpdatePositions()
 
 	-- Register for profile callbacks
@@ -3563,6 +3886,7 @@ end
 function BloodShieldTracker:Reset()
 	-- Reset positions
 	for name,bar in pairs(self.bars) do
+		bar.db = self.db.profile.bars[bar.name]
 		bar:Reset()
 	end
 
@@ -3748,6 +4072,8 @@ function BloodShieldTracker:OnEnable()
 		    displayName, L["Blood Shield Bar"], displayName, "shieldBarOpts")
 		self.optionsFrame.EstHealBar = ACD:AddToBlizOptions(
 		    displayName, L["Estimated Healing Bar"], displayName, "estimateBarOpts")
+		self.optionsFrame.BloodChargeBar = ACD:AddToBlizOptions(
+		    displayName, L["Blood Charge Bar"], displayName, "bloodChargeOpts")
 		self.optionsFrame.PriestBar = ACD:AddToBlizOptions(
 		    displayName, L["PW:S Bar"], displayName, "pwsBarOpts")
 		self.optionsFrame.IllumBar = ACD:AddToBlizOptions(
@@ -4214,6 +4540,20 @@ function BloodShieldTracker:UpdateShieldBarMode()
     elseif self.shieldbar.db.progress == "None" then
         self.shieldbar.bar:SetMinMaxValues(0, 1)
         self.shieldbar.bar:SetValue(1)        
+    end
+end
+
+function BloodShieldTracker:UpdateBloodChargeBarMode()
+	local bar = self.bloodchargebar
+    if bar.db.progress == "Time" then
+        bar.bar:SetMinMaxValues(0, BS_DURATION)
+        bar.bar:SetValue(BS_DURATION)
+    elseif bar.db.progress == "Charges" then
+        bar.bar:SetMinMaxValues(0, MAX_BLOOD_CHARGES)
+        bar.bar:SetValue(0)
+    elseif bar.db.progress == "None" then
+        bar.bar:SetMinMaxValues(0, 1)
+        bar.bar:SetValue(1)        
     end
 end
 
@@ -4877,6 +5217,31 @@ function BloodShieldTracker:ResetStats()
     LastFightStats:Reset()
 end
 
+local function onUpdateBloodCharge(self, elapsed)
+	local profile = BloodShieldTracker.db.profile.bars["BloodChargeBar"]
+	if self.active then
+		self.timer = self.timer - elapsed
+		if self.timer < 0 then
+			self.timer = 0
+			self.active = false
+			self:SetScript("OnUpdate", nil)
+			self:Hide()
+		else
+			if profile.show_time then
+				self.time:SetText(tostring(round(self.timer)))
+			end
+			self:Show()
+			if profile.progress == "Time" then
+				self:SetValue(self.timer)
+			elseif profile.progress == "Charges" then
+				self:SetValue(self.count)
+			end
+		end
+	else
+		self:Hide()
+	end
+end
+
 function BloodShieldTracker:UNIT_AURA(...)
     local event, unit = ...
     if unit == "player" then
@@ -4908,6 +5273,9 @@ function BloodShieldTracker:CheckAuras()
     local healingDebuff = 0
 	local BSValue = 0
 	local BSExpires = 0
+	local BCExpires = 0
+	local BCDuration = 0
+	local BCCount = 0
 
     CurrentPresence = nil
 	scentBloodStacks = 0
@@ -4947,6 +5315,12 @@ function BloodShieldTracker:CheckAuras()
 				BSValue = value
 				BSExpires = expires
 			end
+
+		elseif spellId == SpellIds["Blood Charge"] then
+			AurasFound["Blood Charge"] = true
+			BCExpires = expires
+			BCDuration = duration
+			BCCount = count
 
         elseif spellId == SpellIds["Frost Presence"] then
             CurrentPresence = "Frost"
@@ -5123,6 +5497,30 @@ function BloodShieldTracker:CheckAuras()
 
     self:UpdateMinHeal("CheckAura", "player")
 
+	if self.db.profile.bars["BloodChargeBar"].enabled then
+		local bcBar = self.bloodchargebar
+		if AurasFound["Blood Charge"] then
+			bcBar.bar.timer = BCExpires - GetTime()
+			if bcBar.db.progress == "Charges" then
+				bcBar.bar:SetMinMaxValues(0, MAX_BLOOD_CHARGES)
+			elseif bcBar.db.progress == "Time" then
+				bcBar.bar:SetMinMaxValues(0, BCDuration)
+			else
+				bcBar.bar:SetMinMaxValues(0, 1)
+			end
+			bcBar.bar.value:SetText(tostring(BCCount))
+			bcBar.bar.active = true
+			bcBar.bar.count = BCCount
+			bcBar.bar:Show()
+			bcBar.bar:SetScript("OnUpdate", onUpdateBloodCharge)
+		else
+			bcBar.bar.active = false
+			bcBar.bar.timer = 0
+			bcBar.bar:SetScript("OnUpdate", nil)
+			bcBar.bar:Hide()
+		end
+	end
+
     if AurasFound["Blood Shield"] then
 		if BSValue then
 	        if BSAuraPresent == false then
@@ -5230,7 +5628,7 @@ function Bar:Initialize()
     bar.value:SetText("0")
     bar.lock = false
 
-	if self.name == "ShieldBar" then
+	if self.name == "ShieldBar" or self.name == "BloodChargeBar" then
 	    bar.time = bar:CreateFontString(nil, "OVERLAY")
 	    bar.time:SetPoint(self.db.time_pos or "RIGHT")
 	    bar.time:SetFont(font, 
@@ -5296,6 +5694,10 @@ function Bar:Initialize()
 		self.shield_max = 0
 	    self.expires = 0
 	    self.active = false
+	elseif self.name == "BloodChargeBar" then
+		self.bar.active = false
+		self.bar.timer = 0
+		self.bar.count = 0
 	elseif self.name == "EstimateBar" then
 	    local text = ""
 	    if self.db.bar_mode == "BS" then
@@ -5387,7 +5789,7 @@ function Bar:ResetFonts()
 	local ff, fh, fontFlags = BloodShieldTracker:GetFontSettings()
 	self.bar.value:SetFont(ff, fh, fontFlags)						
 	self.bar.value:SetText(self.bar.value:GetText())
-	if self.name == "ShieldBar" then
+	if self.name == "ShieldBar" or self.name == "BloodChargeBar" then
 		self.bar.time:SetFont(ff, fh, fontFlags)
 		self.bar.time:SetText(self.bar.time:GetText())
 	end
@@ -5463,7 +5865,7 @@ function Bar:UpdateGraphics()
     self.bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
     self.bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 
-	if self.name == "ShieldBar" then
+	if self.name == "ShieldBar" or self.name == "BloodChargeBar" then
 	    if self.db.show_time then
 	        self.bar.time:Show()
 	    else
