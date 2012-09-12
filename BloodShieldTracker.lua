@@ -1012,6 +1012,7 @@ function BloodShieldTracker:GetGeneralOptions()
 						if self.estimatebar.db.hide_ooc and not InCombatLockdown() then
 						    self.estimatebar.bar:Hide()
                         end
+						self.bloodchargebar.bar:Hide()
 						self.pwsbar.bar:Hide()
 						self.illumbar.bar:Hide()
 						self.absorbsbar.bar:Hide()
