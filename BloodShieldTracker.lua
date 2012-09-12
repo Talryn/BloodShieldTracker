@@ -5569,6 +5569,9 @@ local FrameNames = {
 	["Compact Runes"] = "CompactRunes_RunicPowerBar",
 }
 
+function BloodShieldTracker:UpdateBarPosition()
+end
+
 -- Define a generic class for the bars
 Bar.__index = Bar
 
@@ -5576,6 +5579,7 @@ function Bar:Create(name, friendlyName, disableAnchor)
     local object = setmetatable({}, Bar)
 	object.name = name
 	object.friendlyName = friendlyName or name
+	object.anchorTries = 0
 	object:Initialize()
 	-- Add the bar to the addon's table of bars
 	BloodShieldTracker.bars[name] = object
@@ -5777,12 +5781,27 @@ function Bar:UpdatePosition()
 
 	self.bar:ClearAllPoints()
 
-	if anchorFrame and IsFrame(anchorFrame) then
+	local isFrame = IsFrame(anchorFrame)
+	local BST = BloodShieldTracker
+	if anchorFrame and isFrame then
+		if BST.db.profile.debug then
+			BST:Print("Found anchor for bar '"..tostring(self.name).."'.")
+		end
 		self.bar:SetPoint(
 			self.db.anchorPt, anchorFrame, self.db.anchorFramePt, 
 			self.db.anchorX, self.db.anchorY)
+		self.anchorTries = 0
 	else
 		self.bar:SetPoint("CENTER", UIParent, "CENTER", self.db.x, self.db.y)
+		if anchorFrame and not isFrame and self.anchorTries < 13 then
+			if BST.db.profile.debug then
+				BST:Print("Waiting for anchor for bar '"..tostring(self.name).."'.")
+			end
+	    	BST:ScheduleTimer(Bar.UpdatePosition, 5, self)
+			self.anchorTries = (self.anchorTries or 0) + 1
+		else
+			self.anchorTries = 0
+		end
 	end
 end
 
