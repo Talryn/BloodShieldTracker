@@ -37,6 +37,7 @@ local AGU = LibStub("AceGUI-3.0")
 local tinsert, tremove, tgetn = table.insert, table.remove, table.getn
 local tconcat = table.concat
 local floor, ceil, abs = math.floor, math.ceil, math.abs
+local rawget = rawget
 
 BloodShieldTracker.playerName = UnitName("player")
 BloodShieldTracker.bars = {}
@@ -211,10 +212,9 @@ local SpellIds = {
 local SpellNames = {}
 setmetatable(SpellNames, LookupOrKeyMT)
 local function LoadSpellNames()
-	for k,v in pairs(SpellIds) do
-		local name = SpellNames[k]
-		if not name or name == k then
-			SpellNames[k] = (GetSpellInfo(SpellIds[v]))
+	for k, v in pairs(SpellIds) do
+		if rawget(SpellNames, k) == nil then
+			SpellNames[k] = GetSpellInfo(v)
 		end
 	end
 end
