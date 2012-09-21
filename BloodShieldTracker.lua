@@ -5219,27 +5219,31 @@ function BloodShieldTracker:ResetStats()
 end
 
 local function onUpdateBloodCharge(self, elapsed)
-	local profile = BloodShieldTracker.db.profile.bars["BloodChargeBar"]
-	if self.active then
-		self.timer = self.timer - elapsed
-		if self.timer < 0 then
-			self.timer = 0
-			self.active = false
-			self:SetScript("OnUpdate", nil)
-			self:Hide()
+	self.lastUpdate = (self.lastUpdate or 0) + elapsed
+	self.timer = self.timer - elapsed
+	if self.lastUpdate >= 0.1 then
+		if self.active then
+			local profile = BloodShieldTracker.db.profile.bars["BloodChargeBar"]
+			if self.timer < 0 then
+				self.timer = 0
+				self.active = false
+				self:SetScript("OnUpdate", nil)
+				self:Hide()
+			else
+				if profile.show_time then
+					self.time:SetText(tostring(round(self.timer)))
+				end
+				self:Show()
+				if profile.progress == "Time" then
+					self:SetValue(self.timer)
+				elseif profile.progress == "Charges" then
+					self:SetValue(self.count)
+				end
+			end
 		else
-			if profile.show_time then
-				self.time:SetText(tostring(round(self.timer)))
-			end
-			self:Show()
-			if profile.progress == "Time" then
-				self:SetValue(self.timer)
-			elseif profile.progress == "Charges" then
-				self:SetValue(self.count)
-			end
+			self:Hide()
 		end
-	else
-		self:Hide()
+		self.lastUpdate = 0
 	end
 end
 
