@@ -348,7 +348,7 @@ local HealingDebuffs = {
 
 local function round(number)
     if not number then return 0 end
-    return ceil(number-0.5)
+    return floor(number+0.5)
 end
 
 local ThousandsDelim = ('%.1f'):format(1/5):match('([^0-9])') == '.' and ',' or '.'
