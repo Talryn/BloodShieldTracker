@@ -149,8 +149,9 @@ local ORANGE = "|cffff9933"
 local shieldBarFormatFull = "%s/%s (%d%%)"
 local shieldBarFormatNoPer = "%s/%s"
 local shieldBarFormatCurrPerc = "%s (%d%%)"
-local healBarFormat = "%s: %s"
-local healBarNoTextFormat = "%s"
+
+local estimateBarFormat = "%s%s%s"
+local estBarPercFmt = "%s%%"
 
 local millFmtOne = "%.1fm"
 local thousandFmtOne = "%.1fk"
@@ -158,6 +159,9 @@ local millFmtZero = "%.0fm"
 local thousandFmtZero = "%.0fk"
 local millFmt = millFmtZero
 local thousandFmt = thousandFmtZero
+local baseFmtOne = "%.1f"
+local baseFmtZero = "%.0f"
+local baseFmt = baseFmtZero
 
 local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
@@ -208,6 +212,7 @@ local SpellIds = {
 	["Guard"] = 118604, -- via the Brewmaster's Black Ox Statue
 	["Shroud of Purgatory"] = 116888,
 	["Blood Charge"] = 114851,
+	["Vengeance"] = 132365,
 }
 local SpellNames = {}
 setmetatable(SpellNames, LookupOrKeyMT)
@@ -408,6 +413,18 @@ function BloodShieldTracker:SetNumberFormat(format)
 	end
 end
 
+function BloodShieldTracker:SetNumberPrecision()
+    if self.db.profile.precision == "One" then
+        millFmt = millFmtOne
+        thousandFmt = thousandFmtOne
+		baseFmt = baseFmtOne
+    else
+        millFmt = millFmtZero
+        thousandFmt = thousandFmtZero
+		baseFmt = baseFmtZero
+    end
+end
+
 local Broker = CreateFrame("Frame")
 Broker.obj = LDB:NewDataObject(GetAddOnMetadata(ADDON_NAME, "Title"), {
     type = "data source",
@@ -440,6 +457,7 @@ local DataFeed = {
     lastDS = 0,
     lastBS = 0,
     estimateBar = 0,
+	vengeance = 0,
 }
 
 local function UpdateLDBData()
@@ -449,6 +467,8 @@ local function UpdateLDBData()
         Broker.obj.text = FormatNumber(DataFeed.lastDS)
     elseif DataFeed.display == "EstimateBar" then
         Broker.obj.text = FormatNumber(DataFeed.estimateBar)
+	elseif DataFeed.display == "Vengeance" then
+        Broker.obj.text = FormatNumber(DataFeed.vengeance)
     else
         Broker.obj.text = GetAddOnMetadata(ADDON_NAME, "Title")
     end
@@ -652,6 +672,7 @@ local defaults = {
 				hide_ooc = false,
 				show_text = true,
 				bar_mode = "DS",
+				usePercent = false,
 				alternateMinimum = 0,
 		        show_stacks = true,
 		        stacks_pos = "LEFT",
@@ -984,13 +1005,7 @@ function BloodShieldTracker:GetGeneralOptions()
 				order = 35,
 				set = function(info, val)
 				    self.db.profile.precision = val
-				    if val == "One" then
-                        millFmt = millFmtOne
-                        thousandFmt = thousandFmtOne
-			        else
-                        millFmt = millFmtZero
-                        thousandFmt = thousandFmtZero
-                    end
+					self:SetNumberPrecision()
 				end,
                 get = function(info)
                     return self.db.profile.precision
@@ -1123,6 +1138,7 @@ function BloodShieldTracker:GetGeneralOptions()
 				    ["LastDS"] = L["Last Death Strike Heal"],
 				    ["LastBS"] = L["Last Blood Shield Value"],
 				    ["EstimateBar"] = L["Estimate Bar Value"],
+					["Vengeance"] = SpellNames["Vengeance"],
 				},
 				order = 320,
 				set = function(info, val)
@@ -1929,8 +1945,20 @@ function BloodShieldTracker:GetEstimateBarOptions()
                     return self.db.profile.bars["EstimateBar"].bar_mode
                 end,
 			},
+    		usePercent = {
+				name = L["Percent"],
+				desc = L["Percent_OptDesc"],
+				type = "toggle",
+				order = 70,
+				set = function(info, val)
+				    self.db.profile.bars["EstimateBar"].usePercent = val
+				end,
+                get = function(info)
+					return self.db.profile.bars["EstimateBar"].usePercent 
+				end,
+			},
     		alternateMinimum = {
-				order = 60,
+				order = 80,
 				name = L["Alternate Minimum"],
 				desc = L["AlternateMinimum_OptDesc"],
 				type = "range",
@@ -3845,13 +3873,7 @@ function BloodShieldTracker:OnInitialize()
 	self:SetNumberFormat(self.db.profile.numberFormat)
 
     -- Set the precision
-    if self.db.profile.precision == "One" then
-        millFmt = millFmtOne
-        thousandFmt = thousandFmtOne
-    else
-        millFmt = millFmtZero
-        thousandFmt = thousandFmtZero
-    end
+	self:SetNumberPrecision()
 
 	-- Create the bars
 	self.shieldbar = Bar:Create("ShieldBar", "Shield Bar")
@@ -4433,6 +4455,10 @@ function BloodShieldTracker:PLAYER_DEAD()
             self.healthbar.bar:Hide()
         end
     end
+	if DataFeed.vengeance > 0 then
+		DataFeed.vengeance = 0
+		UpdateLDBData()
+	end
 end
 
 function BloodShieldTracker:UpdateBars(timestamp)
@@ -4517,21 +4543,28 @@ function BloodShieldTracker:UpdateEstimateBar(timestamp)
 end
 
 function BloodShieldTracker:UpdateEstimateBarText(estimate)
+	local text = ""
+	local sep = ""
     if self.estimatebar.db.show_text then
-        local text = ""
+		sep = ": "
         if self.estimatebar.db.bar_mode == "BS" then
             text = L["EstimateBarBSText"]
         else
             text = L["HealBarText"]
         end
-        self.estimatebar.bar.value:SetText(
-            healBarFormat:format(
-                text, FormatNumber(estimate)))
-    else
-	    self.estimatebar.bar.value:SetText(
-	        healBarNoTextFormat:format(
-	            FormatNumber(estimate)))
     end
+
+	local val
+	if self.estimatebar.db.usePercent then
+		val = estBarPercFmt:format(
+			baseFmt:format(estimate / (maxHealth or 1) * 100))
+	else
+		val = FormatNumber(estimate)
+	end
+
+    self.estimatebar.bar.value:SetText(
+        estimateBarFormat:format(
+            text, sep, val))
 end
 
 function BloodShieldTracker:UpdateShieldBarMode()
@@ -5321,6 +5354,11 @@ function BloodShieldTracker:CheckAuras()
 				BSExpires = expires
 			end
 
+		elseif spellId == SpellIds["Vengeance"] then
+			AurasFound["Vengeance"] = true
+			DataFeed.vengeance = value or 0
+			UpdateLDBData()
+
 		elseif spellId == SpellIds["Blood Charge"] then
 			AurasFound["Blood Charge"] = true
 			BCExpires = expires
@@ -5413,6 +5451,13 @@ function BloodShieldTracker:CheckAuras()
 
         i = i + 1
     until name == nil
+
+	if not AurasFound["Vengeance"] then
+		if DataFeed.vengeance > 0 then
+			DataFeed.vengeance = 0
+			UpdateLDBData()
+		end
+	end
 
     if self.pwsbar.db.enabled and IsBloodTank then
 		local shields = 0
@@ -5707,14 +5752,8 @@ function Bar:Initialize()
 		self.bar.active = false
 		self.bar.timer = 0
 		self.bar.count = 0
-	elseif self.name == "EstimateBar" then
-	    local text = ""
-	    if self.db.bar_mode == "BS" then
-	        text = L["EstimateBarBSText"]
-	    else
-	        text = L["HealBarText"]
-	    end
-	    bar.value:SetText(healBarFormat:format(text, dsHealMin))
+	--elseif self.name == "EstimateBar" then
+	--	self:UpdateEstimateBarText(dsHealMin)
 	end
 end
 
