@@ -213,6 +213,7 @@ local SpellIds = {
 	["Shroud of Purgatory"] = 116888,
 	["Blood Charge"] = 114851,
 	["Vengeance"] = 132365,
+	["Anti-Magic Shell"] = 48707,
 }
 local SpellNames = {}
 setmetatable(SpellNames, LookupOrKeyMT)
@@ -240,6 +241,7 @@ local AbsorbShieldsOrdered = {
 	"Spirit Shell",
 	"Guard",
 	"Indomitable Pride",
+	"Anti-Magic Shell",
 }
 local AbsorbShields = {}
 for i, k in ipairs(AbsorbShieldsOrdered) do
@@ -728,6 +730,7 @@ local defaults = {
 					["Guard"] = true,
 					["Indomitable Pride"] = true,
 					["Spirit Shell"] = true,
+					["Anti-Magic Shell"] = false,
 				},
 				x = 100, 
 				y = -90,
@@ -737,6 +740,12 @@ local defaults = {
 				bgcolor = {r = 0.05, g = 0.70, b = 0.05, a = 0.7},
 				width = 100,
 				height = 30,
+			},
+			["AMSBar"] = {
+				color = {r = 0.83, g = 0.94, b = 0.15, a = 1},
+				bgcolor = {r = 0.75, g = 0.9, b = 0.13, a = 0.7},
+				x = 200,
+				y = 0,
 			},
 		}
     }
@@ -771,6 +780,7 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 			["PW:S Bar"] = L["PW:S Bar"],
 			["Illuminated Healing Bar"] = L["Illuminated Healing Bar"],
 			["Total Absorbs Bar"] = L["Total Absorbs Bar"],
+			["Anti-Magic Shell Bar"] = L["Anti-Magic Shell Bar"],
 		},
 		order = 1010,
 		set = function(info, val)
@@ -907,6 +917,7 @@ function BloodShieldTracker:GetOptions()
 				illumBarOpts = self:GetIllumBarOptions(),
 				absorbsBarOpts = self:GetAbsorbsBarOptions(),
 				purgatoryBarOpts = self:GetPurgatoryBarOptions(),
+				amsBarOpts = self:GetAMSBarOptions(),
 				healthBarOpts = self:GetHealthBarOptions(),
 				skinningOpts = self:GetSkinningOptions(),
             }
@@ -3276,6 +3287,299 @@ function BloodShieldTracker:GetPurgatoryBarOptions()
 	return purgatoryBarOpts
 end
 
+function BloodShieldTracker:GetAMSBarOptions()
+	local amsBarOpts = {
+		order = 2,
+		type = "group",
+		name = L["Anti-Magic Shell Bar"],
+		desc = L["Anti-Magic Shell Bar"],
+		args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["AMSBar_Desc"],
+		    },
+            generalOptions = {
+                order = 2,
+                type = "header",
+                name = L["General Options"],
+            },
+    		status_bar_enabled = {
+				name = L["Enabled"],
+				desc = L["EnableBarDesc"],
+				type = "toggle",
+				order = 10,
+				set = function(info, val)
+				    self.db.profile.bars["AMSBar"].enabled = val
+					self.bars["AMSBar"]:UpdateVisibility()
+				end,
+                get = function(info)
+					return self.db.profile.bars["AMSBar"].enabled
+				end,
+			},
+			lock_bar = {
+				name = L["Lock bar"],
+				desc = L["LockBarDesc"],
+				type = "toggle",
+				order = 20,
+				set = function(info, val)
+				    self.db.profile.bars["AMSBar"].locked = val 
+					self.bars["AMSBar"]:Lock()
+				end,
+                get = function(info)
+					return self.db.profile.bars["AMSBar"].locked
+				end,
+			},
+            timeRemaining = {
+                order = 100,
+                type = "header",
+                name = L["Time Remaining"],
+            },
+			show_time = {
+				name = L["Show Time"],
+				desc = L["ShowTime_OptionDesc"],
+				type = "toggle",
+				order = 110,
+				set = function(info, val)
+				    self.db.profile.bars["AMSBar"].show_time = val
+				    if val then
+				        self.bars["AMSBar"].bar.time:Show()
+			        else
+			            self.bars["AMSBar"].bar.time:Hide()
+		            end
+				end,
+                get = function(info)
+                    return self.db.profile.bars["AMSBar"].show_time
+                end,
+			},
+			time_pos = {
+				name = L["Position"],
+				desc = L["TimePosition_OptionDesc"],
+				type = "select",
+				values = {
+				    ["RIGHT"] = L["Right"],
+				    ["LEFT"] = L["Left"],
+				},
+				order = 120,
+				set = function(info, val)
+				    self.db.profile.bars["AMSBar"].time_pos = val
+			        self.bars["AMSBar"].bar.time:SetPoint(val or "RIGHT")
+			        self.bars["AMSBar"].bar.time:SetJustifyH(val or "RIGHT")
+				end,
+                get = function(info)
+                    return self.db.profile.bars["AMSBar"].time_pos
+                end,
+                disabled = function()
+                    return not self.db.profile.bars["AMSBar"].show_time
+                end,
+			},
+            dimensions = {
+                order = 300,
+                type = "header",
+                name = L["Dimensions"],
+            },
+			width = {
+				order = 310,
+				name = L["Width"],
+				desc = L["BarWidth_Desc"],	
+				type = "range",
+				min = 50,
+				max = 300,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["AMSBar"].width = val 
+					self.bars["AMSBar"].bar:SetWidth(val)
+					self.bars["AMSBar"].bar.border:SetWidth(val+9)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["AMSBar"].width
+				end,
+			},
+			height = {
+				order = 320,
+				name = L["Height"],
+				desc = L["BarHeight_Desc"],
+				type = "range",
+				min = 10,
+				max = 30,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["AMSBar"].height = val 
+					self.bars["AMSBar"].bar:SetHeight(val)
+					self.bars["AMSBar"].bar.border:SetHeight(val + 8)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["AMSBar"].height
+				end,					
+			},
+			scale = {
+				order = 330,
+				name = L["Scale"],
+				desc = L["ScaleDesc"],
+				type = "range",
+				min = 0.1,
+				max = 3,
+				step = 0.1,
+				get = function()
+					return self.db.profile.bars["AMSBar"].scale
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["AMSBar"].scale = val
+				    self.bars["AMSBar"].bar:SetScale(val)
+				end
+			},
+            position = {
+                order = 400,
+                type = "header",
+                name = L["Position"],
+            },
+			x = {
+				order = 410,
+				name = L["X Offset"],
+				desc = L["XOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenWidth()/2),
+				softMax = floor(GetScreenWidth()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["AMSBar"].x = val
+					self.bars["AMSBar"].bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["AMSBar"].x, 
+						self.db.profile.bars["AMSBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["AMSBar"].x
+				end,
+			},
+			y = {
+				order = 420,
+				name = L["Y Offset"],
+				desc = L["YOffset_Desc"],	
+				type = "range",
+				softMin = -floor(GetScreenHeight()/2),
+				softMax = floor(GetScreenHeight()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["AMSBar"].y = val
+					self.bars["AMSBar"].bar:SetPoint(
+						"CENTER", UIParent, "CENTER", 
+						self.db.profile.bars["AMSBar"].x, 
+						self.db.profile.bars["AMSBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["AMSBar"].y
+				end,
+			},
+            colors = {
+                order = 500,
+                type = "header",
+                name = L["Colors"],
+            },
+			textcolor = {
+				order = 510,
+				name = L["Text Color"],
+				desc = L["BarTextColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["AMSBar"].textcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["AMSBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["AMSBar"].textcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			color = {
+				order = 520,
+				name = L["Bar Color"],
+				desc = L["BarColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["AMSBar"].color
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["AMSBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["AMSBar"].color
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			bgcolor = {
+				order = 530,
+				name = L["Bar Background Color"],
+				desc = L["BarBackgroundColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["AMSBar"].bgcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["AMSBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["AMSBar"].bgcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+            appearance = {
+                order = 600,
+                type = "header",
+                name = L["Appearance"],
+            },
+			texture_opt = {
+				order = 610,
+				name = L["Texture"],
+				desc = L["BarTexture_OptionDesc"],
+				type = "select",
+				values = LSM:HashTable("statusbar"),
+				dialogControl = 'LSM30_Statusbar',
+				get = function()
+				    return self.db.profile.bars["AMSBar"].texture
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["AMSBar"].texture = val
+				    self.bars["AMSBar"]:UpdateTexture()
+				end,
+				disabled = function()
+				    return not self.db.profile.bars["AMSBar"].shown
+				end,
+			},
+			border_visible_opt = {
+				order = 620,
+				name = L["ShowBorder"],
+				desc = L["ShowBorderDesc"],
+				type = "toggle",
+				get = function()
+				    return self.db.profile.bars["AMSBar"].border
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["AMSBar"].border = val
+				    self.bars["AMSBar"]:UpdateBorder()
+				end,
+			},
+			visible_opt = {
+				order = 630,
+				name = L["ShowBar"],
+				desc = L["ShowBarDesc"],
+				type = "toggle",
+				get = function()
+					return self.db.profile.bars["AMSBar"].shown
+				end,
+				set = function(info,val) 
+			        self.db.profile.bars["AMSBar"].shown = val
+			        self.bars["AMSBar"]:UpdateUI()
+			    end,
+			},
+		},
+	}
+
+	self:AddAdvancedPositioning(amsBarOpts, "AMSBar")
+	return amsBarOpts
+end
+
 function BloodShieldTracker:GetHealthBarOptions()
 	local healthBarOpts = {
 	    order = 8,
@@ -3876,16 +4180,17 @@ function BloodShieldTracker:OnInitialize()
 	self:SetNumberPrecision()
 
 	-- Create the bars
-	self.shieldbar = Bar:Create("ShieldBar", "Shield Bar")
+	self.shieldbar = Bar:Create("ShieldBar", "Shield Bar", true)
 	self:UpdateShieldBarMode()
     self:UpdateShieldBarText(0, 0, 0)
-    self.estimatebar = Bar:Create("EstimateBar", "Estimate Bar")
-	self.pwsbar = Bar:Create("PWSBar", "PW:S Bar")
-	self.illumbar = Bar:Create("IllumBar", "Illuminated Healing Bar")
-	self.healthbar = Bar:Create("HealthBar", "Health Bar")
-	self.absorbsbar = Bar:Create("TotalAbsorbsBar", "Total Absorbs Bar")
-	self.purgatorybar = Bar:Create("PurgatoryBar", "Purgatory Bar")
-	self.bloodchargebar = Bar:Create("BloodChargeBar", "Blood Charge Bar")
+    self.estimatebar = Bar:Create("EstimateBar", "Estimate Bar", false)
+	self.pwsbar = Bar:Create("PWSBar", "PW:S Bar", false)
+	self.illumbar = Bar:Create("IllumBar", "Illuminated Healing Bar", false)
+	self.healthbar = Bar:Create("HealthBar", "Health Bar", false)
+	self.absorbsbar = Bar:Create("TotalAbsorbsBar", "Total Absorbs Bar", false)
+	self.purgatorybar = Bar:Create("PurgatoryBar", "Purgatory Bar", false)
+	self.bloodchargebar = Bar:Create("BloodChargeBar", "Blood Charge Bar", true)
+	self.amsbar = Bar:Create("AMSBar", "Anti-Magic Shell Bar", true)
 	self:UpdatePositions()
 
 	-- Register for profile callbacks
@@ -4103,6 +4408,8 @@ function BloodShieldTracker:OnEnable()
 		    displayName, L["Illuminated Healing Bar"], displayName, "illumBarOpts")
 		self.optionsFrame.AbsorbsBar = ACD:AddToBlizOptions(
 		    displayName, L["Total Absorbs Bar"], displayName, "absorbsBarOpts")
+		self.optionsFrame.AMSBar = ACD:AddToBlizOptions(
+		    displayName, L["Anti-Magic Shell Bar"], displayName, "amsBarOpts")
 		self.optionsFrame.PurgatoryBar = ACD:AddToBlizOptions(
 		    displayName, L["Purgatory Bar"], displayName, "purgatoryBarOpts")
 		self.optionsFrame.HealthBar = ACD:AddToBlizOptions(
@@ -5280,6 +5587,31 @@ local function onUpdateBloodCharge(self, elapsed)
 	end
 end
 
+local function onUpdateAMS(self, elapsed)
+	self.lastUpdate = (self.lastUpdate or 0) + elapsed
+	self.timer = self.timer - elapsed
+	if self.lastUpdate >= 0.1 then
+		if self.active then
+			local profile = BloodShieldTracker.db.profile.bars["AMSBar"]
+			if self.timer < 0 then
+				self.timer = 0
+				self.active = false
+				self:SetScript("OnUpdate", nil)
+				self:Hide()
+			else
+				if profile.show_time then
+					self.time:SetText(tostring(round(self.timer)))
+				end
+				self:SetValue(self.timer)
+				self:Show()
+			end
+		else
+			self:Hide()
+		end
+		self.lastUpdate = 0
+	end
+end
+
 function BloodShieldTracker:UNIT_AURA(...)
     local event, unit = ...
     if unit == "player" then
@@ -5311,9 +5643,13 @@ function BloodShieldTracker:CheckAuras()
     local healingDebuff = 0
 	local BSValue = 0
 	local BSExpires = 0
+	local BSDuration = 0
 	local BCExpires = 0
 	local BCDuration = 0
 	local BCCount = 0
+	local AMSValue = 0
+	local AMSExpires = 0
+	local AMSDuration = 0
 
     CurrentPresence = nil
 	scentBloodStacks = 0
@@ -5352,6 +5688,13 @@ function BloodShieldTracker:CheckAuras()
 			if spellId == SpellIds["Blood Shield"] then
 				BSValue = value
 				BSExpires = expires
+				BSDuration = duration
+			end
+
+			if spellId == SpellIds["Anti-Magic Shell"] then
+				AMSValue = value
+				AMSExpires = expires
+				AMSDuration = duration
 			end
 
 		elseif spellId == SpellIds["Vengeance"] then
@@ -5571,6 +5914,26 @@ function BloodShieldTracker:CheckAuras()
 		end
 	end
 
+	if self.db.profile.bars["AMSBar"].enabled then
+		local amsBar = self.amsbar
+		if AurasFound["Anti-Magic Shell"] then
+			amsBar:SetValue(AMSValue or 0)
+			amsBar.bar.timer = AMSExpires - GetTime()
+			if amsBar.bar.duration ~= AMSDuration then
+				amsBar.bar.duration = AMSDuration
+				amsBar.bar:SetMinMaxValues(0, amsBar.bar.duration or 1)
+			end
+			amsBar.bar.active = true
+			amsBar.bar:Show()
+			amsBar.bar:SetScript("OnUpdate", onUpdateAMS)
+		else
+			amsBar.bar.active = false
+			amsBar.bar.timer = 0
+			amsBar.bar:SetScript("OnUpdate", nil)
+			amsBar.bar:Hide()
+		end
+	end
+
     if AurasFound["Blood Shield"] then
 		if BSValue then
 	        if BSAuraPresent == false then
@@ -5624,11 +5987,12 @@ end
 -- Define a generic class for the bars
 Bar.__index = Bar
 
-function Bar:Create(name, friendlyName, disableAnchor)
+function Bar:Create(name, friendlyName, hasTimeRemaining, disableAnchor)
     local object = setmetatable({}, Bar)
 	object.name = name
 	object.friendlyName = friendlyName or name
 	object.anchorTries = 0
+	object.hasTimeRemaining = hasTimeRemaining
 	object:Initialize()
 	-- Add the bar to the addon's table of bars
 	BloodShieldTracker.bars[name] = object
@@ -5682,7 +6046,7 @@ function Bar:Initialize()
     bar.value:SetText("0")
     bar.lock = false
 
-	if self.name == "ShieldBar" or self.name == "BloodChargeBar" then
+	if self.hasTimeRemaining then
 	    bar.time = bar:CreateFontString(nil, "OVERLAY")
 	    bar.time:SetPoint(self.db.time_pos or "RIGHT")
 	    bar.time:SetFont(font, 
@@ -5734,7 +6098,8 @@ function Bar:Initialize()
 			self:SetUserPlaced(false);
         end)
     bar:EnableMouse(true)
-    bar:SetMinMaxValues(0, 1)
+	bar.duration = 1
+    bar:SetMinMaxValues(0, bar.duration)
     bar:SetValue(1)
     bar:Hide()
 	self:Lock(self.db.locked)
@@ -5752,6 +6117,9 @@ function Bar:Initialize()
 		self.bar.active = false
 		self.bar.timer = 0
 		self.bar.count = 0
+	elseif self.name == "AMSBar" then
+		self.bar.active = false
+		self.bar.timer = 0
 	--elseif self.name == "EstimateBar" then
 	--	self:UpdateEstimateBarText(dsHealMin)
 	end
@@ -5852,7 +6220,7 @@ function Bar:ResetFonts()
 	local ff, fh, fontFlags = BloodShieldTracker:GetFontSettings()
 	self.bar.value:SetFont(ff, fh, fontFlags)						
 	self.bar.value:SetText(self.bar.value:GetText())
-	if self.name == "ShieldBar" or self.name == "BloodChargeBar" then
+	if self.hasTimeRemaining then
 		self.bar.time:SetFont(ff, fh, fontFlags)
 		self.bar.time:SetText(self.bar.time:GetText())
 	end
@@ -5928,7 +6296,7 @@ function Bar:UpdateGraphics()
     self.bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
     self.bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 
-	if self.name == "ShieldBar" or self.name == "BloodChargeBar" then
+	if self.hasTimeRemaining then
 	    if self.db.show_time then
 	        self.bar.time:Show()
 	    else
