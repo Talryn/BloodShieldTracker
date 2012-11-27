@@ -5664,9 +5664,9 @@ function BloodShieldTracker:CheckAuras()
     -- Loop through unit auras to find ones of interest.
     i = 1
     repeat
-        name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-            consolidate, spellId, canApplyAura, isBossDebuff, 
-			value, value2, value3 = UnitAura("player", i)
+        name, rank, icon, count, dispelType, duration, expires, caster, 
+			stealable, consolidate, spellId, canApplyAura, isBossDebuff, 
+			_, value, value2, value3 = UnitAura("player", i)
         if name == nil or spellId == nil then break end
 
 		local tracked = AbsorbShields[spellId]
@@ -5776,7 +5776,7 @@ function BloodShieldTracker:CheckAuras()
     repeat
         name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
             consolidate, spellId, canApplyAura, isBossDebuff, 
-			value, value2, value3 = UnitAura("player", i, "HARMFUL")
+			_, value, value2, value3 = UnitAura("player", i, "HARMFUL")
         if name == nil or spellId == nil then break end
 
         if spellId == SpellIds["Shroud of Purgatory"] then
