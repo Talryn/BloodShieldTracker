@@ -39,6 +39,7 @@ local tconcat = table.concat
 local floor, ceil, abs = math.floor, math.ceil, math.abs
 local rawget = rawget
 
+BloodShieldTracker.loaded = false
 BloodShieldTracker.playerName = UnitName("player")
 BloodShieldTracker.bars = {}
 BloodShieldTracker.shieldbar = nil
@@ -55,6 +56,7 @@ local ImpDSModifier = 1
 local HasVampBlood = false
 local hasVBGlyphed = false
 local HasSuccorGlyphed = false
+local Tier14Bonus = 1
 
 -- Settings to allow custom fonts and textures which override the
 -- user set options.
@@ -267,6 +269,7 @@ local vbGlyphedHealingInc = 0.4
 local vbUnglyphedHealthInc = 0.15
 local vbUnglyphedHealingInc = 0.25
 local guardianSpiritHealBuff = 0.40
+local T14BonusAmt = 0.1
 
 -- Curent state information
 local DarkSuccorBuff = false
@@ -4425,6 +4428,7 @@ function BloodShieldTracker:OnEnable()
 	end
 
     self:CheckClass()
+	self:CheckGear()
 	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 	self:UpdateMastery()
 	self:CheckTalents()
@@ -4442,6 +4446,10 @@ function BloodShieldTracker:OnEnable()
 end
 
 function BloodShieldTracker:Load()
+	if self.loaded then return end
+
+	self.loaded = true
+
 	if self.db.profile.verbose then
 		self:Print("Loading.")
 	end
@@ -4457,6 +4465,7 @@ function BloodShieldTracker:Load()
     self:RegisterEvent("PLAYER_ALIVE", "CheckAuras")
     self:RegisterEvent("UNIT_SPELLCAST_SENT")
     self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+    self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
     self:ToggleHealthBar()
     self.shieldbar:UpdateUI()
 	self.estimatebar:UpdateUI()
@@ -4464,6 +4473,9 @@ function BloodShieldTracker:Load()
 end
 
 function BloodShieldTracker:Unload()
+	if not self.loaded then return end
+
+	self.loaded = false
 	if self.db.profile.verbose then
 		self:Print("Unloading.")
 	end
@@ -4480,6 +4492,7 @@ function BloodShieldTracker:Unload()
     self:UnregisterEvent("UNIT_SPELLCAST_SENT")
     self:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     self:UnregisterEvent("UNIT_HEALTH")
+    self:UnregisterEvent("PLAYER_EQUIPMENT_CHANGED")
 	
 	for k, v in pairs(self.bars) do
 		if v then
@@ -4638,6 +4651,71 @@ function BloodShieldTracker:CheckGlyphs()
 		local trackerOutputFmt = "Check Glyphs [VB=%s,DSuccor=%s]"
 		self:Print(trackerOutputFmt:format(
 			tostring(hasVBGlyphed), tostring(HasSuccorGlyphed)))
+	end
+end
+
+local TierSlotIds = {
+	["Head"] = GetInventorySlotInfo("HeadSlot"),
+	["Shoulder"] = GetInventorySlotInfo("ShoulderSlot"),
+	["Chest"] = GetInventorySlotInfo("ChestSlot"),
+	["Legs"] = GetInventorySlotInfo("LegsSlot"),
+	["Hands"] = GetInventorySlotInfo("HandsSlot"),
+}
+
+local Tier14Ids = {
+	["Head"] = {
+		[86656] = true,
+		[85316] = true,
+		[86920] = true,
+		},
+	["Shoulder"] = {
+		[86654] = true,
+		[85314] = true,
+		[86922] = true,
+		},
+	["Chest"] = {
+		[86658] = true,
+		[85318] = true,
+		[86918] = true,
+		},
+	["Legs"] = {
+		[86655] = true,
+		[85315] = true,
+		[86921] = true,
+		},
+	["Hands"] = {
+		[86657] = true,
+		[85317] = true,
+		[86919] = true,
+		},
+}
+
+local TierSlots = {}
+for k, v in pairs(TierSlotIds) do
+	TierSlots[v] = true
+end
+
+function BloodShieldTracker:CheckGear()
+	if isDK then
+		local tier14Count = 0
+		for slot, slotid in pairs(TierSlotIds) do
+			local id = GetInventoryItemID("player", slotid)
+			if Tier14Ids[slot][id] then
+				tier14Count = tier14Count + 1
+			end
+		end
+		Tier14Bonus = 1 + (tier14Count >= 4 and T14BonusAmt or 0)
+
+		if self.db.profile.verbose then
+			local fmt = "T14 Detected: %d/5 (Adjustment: %d%%)"
+			self:Print(fmt:format(tier14Count, Tier14Bonus*100))
+		end
+	end
+end
+
+function BloodShieldTracker:PLAYER_EQUIPMENT_CHANGED(event, slot, hasItem)
+	if TierSlots[slot] then
+		self:CheckGear()
 	end
 end
 
@@ -4807,8 +4885,8 @@ function BloodShieldTracker:UpdateEstimateBar(timestamp)
         local shieldPercent = masteryRating*shieldPerMasteryPoint/100
 
         local predictedValue, minimumValue = 0, 0
-        local baseValue = recentDamage * dsHealModifier * ImpDSModifier +
-			(1 + scentBloodStacks * scentBloodStackBuff)
+        local baseValue = recentDamage * dsHealModifier * ImpDSModifier *
+			Tier14Bonus * (1 + scentBloodStacks * scentBloodStackBuff)
 
         if self.estimatebar.db.bar_mode == "BS" then
             predictedValue = round(baseValue * shieldPercent)
@@ -5232,6 +5310,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             if healingDebuffMultiplier ~= 1 then 
                 predictedHeal = round(
                     recentDmg * dsHealModifier * ImpDSModifier * 
+					Tier14Bonus *
 					(1 + scentBloodStacks * scentBloodStackBuff) *
                     self:GetEffectiveHealingBuffModifiers() * 
                     self:GetEffectiveHealingDebuffModifiers())
@@ -5285,6 +5364,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
             predictedHeal = round(
                 recentDmg * dsHealModifier * ImpDSModifier * 
+					Tier14Bonus * 
 					(1 + scentBloodStacks * scentBloodStackBuff) *
                     self:GetEffectiveHealingBuffModifiers() * 
                     self:GetEffectiveHealingDebuffModifiers())
