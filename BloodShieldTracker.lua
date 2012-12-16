@@ -5712,7 +5712,7 @@ local errorReadingFmt = "Error reading the %s value."
 function BloodShieldTracker:CheckAuras()
     local name, rank, icon, count, dispelType, duration, expires,
         caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
-		value, value2, value3
+		castByPlayer, value, value2, value3
 
 	-- Reset variables
 	wipe(AurasFound)
@@ -5746,7 +5746,7 @@ function BloodShieldTracker:CheckAuras()
     repeat
         name, rank, icon, count, dispelType, duration, expires, caster, 
 			stealable, consolidate, spellId, canApplyAura, isBossDebuff, 
-			_, value, value2, value3 = UnitAura("player", i)
+			castByPlayer, value, value2, value3 = UnitAura("player", i)
         if name == nil or spellId == nil then break end
 
 		local tracked = AbsorbShields[spellId]
@@ -5856,7 +5856,7 @@ function BloodShieldTracker:CheckAuras()
     repeat
         name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
             consolidate, spellId, canApplyAura, isBossDebuff, 
-			_, value, value2, value3 = UnitAura("player", i, "HARMFUL")
+			castByPlayer, value, value2, value3 = UnitAura("player", i, "HARMFUL")
         if name == nil or spellId == nil then break end
 
         if spellId == SpellIds["Shroud of Purgatory"] then
