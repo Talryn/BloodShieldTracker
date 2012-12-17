@@ -6,9 +6,16 @@ local math = _G.math
 local pairs = _G.pairs
 local ipairs = _G.ipairs
 local select = _G.select
-local LibStub = _G.LibStub
 
-local BloodShieldTracker = LibStub("AceAddon-3.0"):NewAddon("BloodShieldTracker", "AceConsole-3.0", "AceEvent-3.0","AceTimer-3.0")
+local L = _G.LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
+local LDB = _G.LibStub("LibDataBroker-1.1")
+local LibQTip = _G.LibStub("LibQTip-1.0")
+local icon = _G.LibStub("LibDBIcon-1.0")
+local LSM = _G.LibStub:GetLibrary("LibSharedMedia-3.0")
+local AGU = _G.LibStub("AceGUI-3.0")
+
+local BloodShieldTracker = _G.LibStub("AceAddon-3.0"):NewAddon("BloodShieldTracker", "AceConsole-3.0", "AceEvent-3.0","AceTimer-3.0")
+local BST = BloodShieldTracker
 
 -- Try to remove the Git hash at the end, otherwise return the passed in value.
 local function cleanupVersion(version)
@@ -22,8 +29,8 @@ local function cleanupVersion(version)
 	return version
 end
 
-local ADDON_NAME = ...
-local ADDON_VERSION = cleanupVersion("@project-version@")
+BloodShieldTracker.ADDON_NAME = ...
+BloodShieldTracker.ADDON_VERSION = cleanupVersion("@project-version@")
 
 local DEBUG_OUTPUT = false
 local DEBUG_BUFFER = ""
@@ -31,13 +38,22 @@ local DEBUG_BUFFER = ""
 -- Define Bar for now but the rest is at the bottom of the file.
 local Bar = {}
 
-local AGU = LibStub("AceGUI-3.0")
-
 -- Local versions for performance
 local tinsert, tremove, tgetn = table.insert, table.remove, table.getn
 local tconcat = table.concat
 local floor, ceil, abs = math.floor, math.ceil, math.abs
-local rawget = rawget
+local rawget = _G.rawget
+local unpack = _G.unpack
+local tostring = _G.tostring
+local tonumber = _G.tonumber
+local wipe = _G.wipe
+local type = _G.type
+
+-- Local versions of WoW API calls
+local UnitAura = _G.UnitAura
+local GetTime = _G.GetTime
+local UnitHealth = _G.UnitHealth
+local UnitHealthMax = _G.UnitHealthMax
 
 BloodShieldTracker.loaded = false
 BloodShieldTracker.playerName = UnitName("player")
@@ -75,14 +91,15 @@ local updateTimer = nil
 local lastSeconds = 5
 local damageTaken = {}
 local removeList = {}
+local GearChangeTimer = nil
 
 -- Define a simplistic class for shield statistics
-ShieldStats = {}
+local ShieldStats = {}
 ShieldStats.__index = ShieldStats
 
 function ShieldStats:new()
     local stats = {}
-    setmetatable(stats, ShieldStats)
+    _G.setmetatable(stats, ShieldStats)
     stats:Reset()
     return stats
 end
@@ -137,10 +154,12 @@ function ShieldStats:Reset()
 end
 
 -- Stats for all fights
-TotalShieldStats = ShieldStats:new()
+BloodShieldTracker.TotalShieldStats = ShieldStats:new()
+local TotalShieldStats = BloodShieldTracker.TotalShieldStats
 
 -- Last fight stats
-LastFightStats = ShieldStats:new()
+BloodShieldTracker.LastFightStats = ShieldStats:new()
+local LastFightStats = BloodShieldTracker.LastFightStats
 
 -- Color codes
 local GREEN = "|cff00ff00"
@@ -165,12 +184,6 @@ local baseFmtOne = "%.1f"
 local baseFmtZero = "%.0f"
 local baseFmt = baseFmtZero
 
-local L = LibStub("AceLocale-3.0"):GetLocale("BloodShieldTracker", true)
-local LDB = LibStub("LibDataBroker-1.1")
-local LibQTip = LibStub("LibQTip-1.0")
-local icon = LibStub("LibDBIcon-1.0")
-local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
-
 local CURRENT_BUILD, CURRENT_INTERNAL, 
     CURRENT_BUILD_DATE, CURRENT_UI_VERSION = GetBuildInfo()
 
@@ -184,7 +197,7 @@ local function LoadItemNames()
 	for k,v in pairs(ItemIds) do
 		local name = ItemNames[k]
 		if not name then
-			ItemNames[k] = (GetItemInfo(ItemIds[k]))
+			ItemNames[k] = (_G.GetItemInfo(ItemIds[k]))
 		end
 	end
 end
@@ -218,11 +231,11 @@ local SpellIds = {
 	["Anti-Magic Shell"] = 48707,
 }
 local SpellNames = {}
-setmetatable(SpellNames, LookupOrKeyMT)
+_G.setmetatable(SpellNames, LookupOrKeyMT)
 local function LoadSpellNames()
 	for k, v in pairs(SpellIds) do
 		if rawget(SpellNames, k) == nil then
-			SpellNames[k] = GetSpellInfo(v)
+			SpellNames[k] = _G.GetSpellInfo(v)
 		end
 	end
 end
@@ -273,6 +286,8 @@ local T14BonusAmt = 0.1
 
 -- Curent state information
 local DarkSuccorBuff = false
+local DS_SentTime = nil
+local DS_Latency = nil
 -- The actual minimum DS heal percent, based on spec, glyphs, and presence.
 local actualDsMinHeal = dsMinHealPercent
 local maxHealth = 0
@@ -308,7 +323,7 @@ local hellscreamBuffs = {
     [HELLSCREAM_BUFF_25] = 0.25,
     [HELLSCREAM_BUFF_30] = 0.30,    
 }
-local HELLSCREAM_BUFF = (GetSpellInfo(HELLSCREAM_BUFF_30))
+local HELLSCREAM_BUFF = (_G.GetSpellInfo(HELLSCREAM_BUFF_30))
 local WRYNN_BUFF_05 = 73816
 local WRYNN_BUFF_10 = 73818
 local WRYNN_BUFF_15 = 73819
@@ -323,7 +338,7 @@ local wrynnBuffs = {
     [WRYNN_BUFF_25] = 0.25,
     [WRYNN_BUFF_30] = 0.30,
 }
-local WRYNN_BUFF = (GetSpellInfo(WRYNN_BUFF_30))
+local WRYNN_BUFF = (_G.GetSpellInfo(WRYNN_BUFF_30))
 
 local HealingDebuffs = {
     -- PvP healing debuffs
@@ -430,26 +445,26 @@ function BloodShieldTracker:SetNumberPrecision()
     end
 end
 
-local Broker = CreateFrame("Frame")
-Broker.obj = LDB:NewDataObject(GetAddOnMetadata(ADDON_NAME, "Title"), {
+local Broker = _G.CreateFrame("Frame")
+Broker.obj = LDB:NewDataObject(_G.GetAddOnMetadata(BST.ADDON_NAME, "Title"), {
     type = "data source",
     icon = "Interface\\Icons\\Spell_DeathKnight_DeathStrike",
-    label = GetAddOnMetadata(ADDON_NAME, "Title"),
-    text = GetAddOnMetadata(ADDON_NAME, "Title"),
+    label = _G.GetAddOnMetadata(BST.ADDON_NAME, "Title"),
+    text = _G.GetAddOnMetadata(BST.ADDON_NAME, "Title"),
     barValue = 0,
     barR = 0,
     barG = 0,
     barB = 1,
 	OnClick = function(clickedframe, button)
 		if button == "RightButton" then
-			local optionsFrame = InterfaceOptionsFrame
+			local optionsFrame = _G.InterfaceOptionsFrame
 
 			if optionsFrame:IsVisible() then
 				optionsFrame:Hide()
 			else
 				BloodShieldTracker:ShowOptions()
 			end
-		elseif button == "LeftButton" and IsShiftKeyDown() then
+		elseif button == "LeftButton" and _G.IsShiftKeyDown() then
 		    BloodShieldTracker:ResetStats()
         end
 	end
@@ -475,7 +490,7 @@ local function UpdateLDBData()
 	elseif DataFeed.display == "Vengeance" then
         Broker.obj.text = FormatNumber(DataFeed.vengeance)
     else
-        Broker.obj.text = GetAddOnMetadata(ADDON_NAME, "Title")
+        Broker.obj.text = _G.GetAddOnMetadata(BST.ADDON_NAME, "Title")
     end
 end
 
@@ -483,7 +498,7 @@ local function SetBrokerLabel()
     if BloodShieldTracker.db.profile.ldb_short_label then
         Broker.obj.label = L["BST"]
     else
-        Broker.obj.label = GetAddOnMetadata(ADDON_NAME, "Title")
+        Broker.obj.label = _G.GetAddOnMetadata(BST.ADDON_NAME, "Title")
     end
 end
 
@@ -503,7 +518,7 @@ local durationLine = YELLOW..L["Fight Duration:"]
 local shieldFreqLine = YELLOW..L["Shield Frequency:"]
 local lastFightValueHdr = ORANGE..L["Last Fight Data"]
 
-function AddStats(tooltip, stats)
+local function AddStats(tooltip, stats)
     local percentMinimum = 0
     local avgShieldMaxValue
     if stats.numShields > 0 then
@@ -541,7 +556,7 @@ function Broker.obj:OnEnter()
 	local tooltip = LibQTip:Acquire("BloodShieldTrackerTooltip", 2, "LEFT", "RIGHT")
 	self.tooltip = tooltip 
 
-    tooltip:AddHeader(addonHdr:format(GetAddOnMetadata(ADDON_NAME,"Title"), ADDON_VERSION))
+    tooltip:AddHeader(addonHdr:format(_G.GetAddOnMetadata(BST.ADDON_NAME,"Title"), BST.ADDON_VERSION))
     tooltip:AddLine()
 
     if isDK then
@@ -580,7 +595,7 @@ end
 
 local function IsFrame(frame)
 	if frame and type(frame) == "string" then
-		local f = GetClickFrame(frame)
+		local f = _G.GetClickFrame(frame)
 		if f and type(f) == "table" and f.SetPoint and f.GetName then
 			return true
 		end
@@ -794,7 +809,7 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
             return self.db.profile.bars[barName].anchorFrame
         end,
 	}
-	if select(6, GetAddOnInfo("CompactRunes")) ~= "MISSING" or 
+	if select(6, _G.GetAddOnInfo("CompactRunes")) ~= "MISSING" or 
 		self.db.profile.bars[barName].anchorFrame == "Compact Runes" then
 		options.args.anchorFrame.values["Compact Runes"] = 
 			L["Compact Runes"]
@@ -866,8 +881,8 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 		name = L["X Offset"],
 		desc = L["XOffsetAnchor_Desc"],	
 		type = "range",
-		softMin = -floor(GetScreenWidth()),
-		softMax = floor(GetScreenWidth()),
+		softMin = -floor(_G.GetScreenWidth()),
+		softMax = floor(_G.GetScreenWidth()),
 		bigStep = 1,
 		set = function(info, val)
 		    self.db.profile.bars[barName].anchorX = val
@@ -885,8 +900,8 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 		name = L["Y Offset"],
 		desc = L["YOffsetAnchor_Desc"],	
 		type = "range",
-		softMin = -floor(GetScreenHeight()),
-		softMax = floor(GetScreenHeight()),
+		softMin = -floor(_G.GetScreenHeight()),
+		softMax = floor(_G.GetScreenHeight()),
 		bigStep = 1,
 		set = function(info, val)
 		    self.db.profile.bars[barName].anchorY = val
@@ -902,15 +917,15 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 end
 
 function BloodShieldTracker:ShowOptions()
-	InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.ShieldBar)
-	InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.Main)
+	_G.InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.ShieldBar)
+	_G.InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.Main)
 end
 
 function BloodShieldTracker:GetOptions()
     if not options then
         options = {
             type = "group",
-            name = GetAddOnMetadata(ADDON_NAME, "Title"),
+            name = _G.GetAddOnMetadata(BST.ADDON_NAME, "Title"),
             args = {
 				core = self:GetGeneralOptions(),
 				shieldBarOpts = self:GetShieldBarOptions(),
@@ -925,7 +940,7 @@ function BloodShieldTracker:GetOptions()
 				skinningOpts = self:GetSkinningOptions(),
             }
         }
-		options.args.profile = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
+		options.args.profile = _G.LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
     end
     return options
 end
@@ -1038,7 +1053,8 @@ function BloodShieldTracker:GetGeneralOptions()
 						end
 					else
 						self.shieldbar.bar:Hide()
-						if self.estimatebar.db.hide_ooc and not InCombatLockdown() then
+						if self.estimatebar.db.hide_ooc and 
+							not _G.InCombatLockdown() then
 						    self.estimatebar.bar:Hide()
                         end
 						self.bloodchargebar.bar:Hide()
@@ -1046,9 +1062,10 @@ function BloodShieldTracker:GetGeneralOptions()
 						self.illumbar.bar:Hide()
 						self.absorbsbar.bar:Hide()
 						self.purgatorybar.bar:Hide()
+						self.amsbar.bar:Hide()
 						if not self.healthbar.db.enabled or 
 							(self.healthbar.db.hide_ooc and 
-							not InCombatLockdown()) then
+							not _G.InCombatLockdown()) then
 						    self.healthbar.bar:Hide()
                         end
 					end
@@ -1415,13 +1432,13 @@ function BloodShieldTracker:GetShieldBarOptions()
 				name = L["X Offset"],
 				desc = L["XOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenWidth()/2),
-				softMax = floor(GetScreenWidth()/2),
+				softMin = -floor(_G.GetScreenWidth()/2),
+				softMax = floor(_G.GetScreenWidth()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["ShieldBar"].x = val
 					self.shieldbar.bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["ShieldBar"].x, 
 						self.db.profile.bars["ShieldBar"].y)
 				end,
@@ -1434,13 +1451,13 @@ function BloodShieldTracker:GetShieldBarOptions()
 				name = L["Y Offset"],
 				desc = L["YOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenHeight()/2),
-				softMax = floor(GetScreenHeight()/2),
+				softMin = -floor(_G.GetScreenHeight()/2),
+				softMax = floor(_G.GetScreenHeight()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["ShieldBar"].y = val
 					self.shieldbar.bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["ShieldBar"].x, 
 						self.db.profile.bars["ShieldBar"].y)
 				end,
@@ -1726,13 +1743,13 @@ function BloodShieldTracker:GetBloodChargeBarOptions()
 				name = L["X Offset"],
 				desc = L["XOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenWidth()/2),
-				softMax = floor(GetScreenWidth()/2),
+				softMin = -floor(_G.GetScreenWidth()/2),
+				softMax = floor(_G.GetScreenWidth()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["BloodChargeBar"].x = val
 					self.bars["BloodChargeBar"].bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["BloodChargeBar"].x, 
 						self.db.profile.bars["BloodChargeBar"].y)
 				end,
@@ -1745,13 +1762,13 @@ function BloodShieldTracker:GetBloodChargeBarOptions()
 				name = L["Y Offset"],
 				desc = L["YOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenHeight()/2),
-				softMax = floor(GetScreenHeight()/2),
+				softMin = -floor(_G.GetScreenHeight()/2),
+				softMax = floor(_G.GetScreenHeight()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["BloodChargeBar"].y = val
 					self.bars["BloodChargeBar"].bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["BloodChargeBar"].x, 
 						self.db.profile.bars["BloodChargeBar"].y)
 				end,
@@ -1918,7 +1935,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				order = 40,
 				set = function(info, val)
 				    self.db.profile.bars["EstimateBar"].hide_ooc = val
-					if not InCombatLockdown() then
+					if not _G.InCombatLockdown() then
 					    if val then
 					        self.estimatebar.bar:Hide()
 				        elseif self:IsTrackerEnabled() then
@@ -2094,13 +2111,13 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				name = L["X Offset"],
 				desc = L["XOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenWidth()/2),
-				softMax = floor(GetScreenWidth()/2),
+				softMin = -floor(_G.GetScreenWidth()/2),
+				softMax = floor(_G.GetScreenWidth()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["EstimateBar"].x = val
 					self.estimatebar.bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["EstimateBar"].x, 
 						self.db.profile.bars["EstimateBar"].y)
 				end,
@@ -2113,13 +2130,13 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				name = L["Y Offset"],
 				desc = L["YOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenHeight()/2),
-				softMax = floor(GetScreenHeight()/2),
+				softMin = -floor(_G.GetScreenHeight()/2),
+				softMax = floor(_G.GetScreenHeight()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["EstimateBar"].y = val
 					self.estimatebar.bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["EstimateBar"].x, 
 						self.db.profile.bars["EstimateBar"].y)
 				end,
@@ -2423,13 +2440,13 @@ function BloodShieldTracker:GetPWSBarOptions()
 				name = L["X Offset"],
 				desc = L["XOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenWidth()/2),
-				softMax = floor(GetScreenWidth()/2),
+				softMin = -floor(_G.GetScreenWidth()/2),
+				softMax = floor(_G.GetScreenWidth()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["PWSBar"].x = val
 					self.pwsbar.bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["PWSBar"].x, 
 						self.db.profile.bars["PWSBar"].y)
 				end,
@@ -2442,13 +2459,13 @@ function BloodShieldTracker:GetPWSBarOptions()
 				name = L["Y Offset"],
 				desc = L["YOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenHeight()/2),
-				softMax = floor(GetScreenHeight()/2),
+				softMin = -floor(_G.GetScreenHeight()/2),
+				softMax = floor(_G.GetScreenHeight()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["PWSBar"].y = val
 					self.pwsbar.bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["PWSBar"].x, 
 						self.db.profile.bars["PWSBar"].y)
 				end,
@@ -2675,13 +2692,13 @@ function BloodShieldTracker:GetIllumBarOptions()
 				name = L["X Offset"],
 				desc = L["XOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenWidth()/2),
-				softMax = floor(GetScreenWidth()/2),
+				softMin = -floor(_G.GetScreenWidth()/2),
+				softMax = floor(_G.GetScreenWidth()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["IllumBar"].x = val
 					self.illumbar.bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["IllumBar"].x, 
 						self.db.profile.bars["IllumBar"].y)
 				end,
@@ -2694,13 +2711,13 @@ function BloodShieldTracker:GetIllumBarOptions()
 				name = L["Y Offset"],
 				desc = L["YOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenHeight()/2),
-				softMax = floor(GetScreenHeight()/2),
+				softMin = -floor(_G.GetScreenHeight()/2),
+				softMax = floor(_G.GetScreenHeight()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["IllumBar"].y = val
 					self.illumbar.bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["IllumBar"].x, 
 						self.db.profile.bars["IllumBar"].y)
 				end,
@@ -2913,13 +2930,13 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
 				name = L["X Offset"],
 				desc = L["XOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenWidth()/2),
-				softMax = floor(GetScreenWidth()/2),
+				softMin = -floor(_G.GetScreenWidth()/2),
+				softMax = floor(_G.GetScreenWidth()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["TotalAbsorbsBar"].x = val
 					self.absorbsbar.bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["TotalAbsorbsBar"].x, 
 						self.db.profile.bars["TotalAbsorbsBar"].y)
 				end,
@@ -2932,13 +2949,13 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
 				name = L["Y Offset"],
 				desc = L["YOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenHeight()/2),
-				softMax = floor(GetScreenHeight()/2),
+				softMin = -floor(_G.GetScreenHeight()/2),
+				softMax = floor(_G.GetScreenHeight()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["TotalAbsorbsBar"].y = val
 					self.absorbsbar.bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["TotalAbsorbsBar"].x, 
 						self.db.profile.bars["TotalAbsorbsBar"].y)
 				end,
@@ -3128,7 +3145,7 @@ function BloodShieldTracker:GetPurgatoryBarOptions()
 				desc = L["BarHeight_Desc"],
 				type = "range",
 				min = 10,
-				max = 30,
+				max = 90,
 				step = 1,
 				set = function(info, val)
 				    self.db.profile.bars["PurgatoryBar"].height = val 
@@ -3165,13 +3182,13 @@ function BloodShieldTracker:GetPurgatoryBarOptions()
 				name = L["X Offset"],
 				desc = L["XOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenWidth()/2),
-				softMax = floor(GetScreenWidth()/2),
+				softMin = -floor(_G.GetScreenWidth()/2),
+				softMax = floor(_G.GetScreenWidth()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["PurgatoryBar"].x = val
 					self.bars["PurgatoryBar"].bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["PurgatoryBar"].x, 
 						self.db.profile.bars["PurgatoryBar"].y)
 				end,
@@ -3184,13 +3201,13 @@ function BloodShieldTracker:GetPurgatoryBarOptions()
 				name = L["Y Offset"],
 				desc = L["YOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenHeight()/2),
-				softMax = floor(GetScreenHeight()/2),
+				softMin = -floor(_G.GetScreenHeight()/2),
+				softMax = floor(_G.GetScreenHeight()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["PurgatoryBar"].y = val
 					self.bars["PurgatoryBar"].bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["PurgatoryBar"].x, 
 						self.db.profile.bars["PurgatoryBar"].y)
 				end,
@@ -3441,13 +3458,13 @@ function BloodShieldTracker:GetAMSBarOptions()
 				name = L["X Offset"],
 				desc = L["XOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenWidth()/2),
-				softMax = floor(GetScreenWidth()/2),
+				softMin = -floor(_G.GetScreenWidth()/2),
+				softMax = floor(_G.GetScreenWidth()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["AMSBar"].x = val
 					self.bars["AMSBar"].bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["AMSBar"].x, 
 						self.db.profile.bars["AMSBar"].y)
 				end,
@@ -3460,13 +3477,13 @@ function BloodShieldTracker:GetAMSBarOptions()
 				name = L["Y Offset"],
 				desc = L["YOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenHeight()/2),
-				softMax = floor(GetScreenHeight()/2),
+				softMin = -floor(_G.GetScreenHeight()/2),
+				softMax = floor(_G.GetScreenHeight()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["AMSBar"].y = val
 					self.bars["AMSBar"].bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["AMSBar"].x, 
 						self.db.profile.bars["AMSBar"].y)
 				end,
@@ -3633,7 +3650,7 @@ function BloodShieldTracker:GetHealthBarOptions()
 				order = 30,
 				set = function(info, val)
 				    self.db.profile.bars["HealthBar"].hide_ooc = val
-					if not InCombatLockdown() then
+					if not _G.InCombatLockdown() then
 					    if val then
 					        self.healthbar.bar:Hide()
 				        elseif self:IsTrackerEnabled() then
@@ -3745,13 +3762,13 @@ function BloodShieldTracker:GetHealthBarOptions()
 				name = L["X Offset"],
 				desc = L["XOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenWidth()/2),
-				softMax = floor(GetScreenWidth()/2),
+				softMin = -floor(_G.GetScreenWidth()/2),
+				softMax = floor(_G.GetScreenWidth()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["HealthBar"].x = val
 					self.healthbar.bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["HealthBar"].x, 
 						self.db.profile.bars["HealthBar"].y)
 				end,
@@ -3764,13 +3781,13 @@ function BloodShieldTracker:GetHealthBarOptions()
 				name = L["Y Offset"],
 				desc = L["YOffset_Desc"],	
 				type = "range",
-				softMin = -floor(GetScreenHeight()/2),
-				softMax = floor(GetScreenHeight()/2),
+				softMin = -floor(_G.GetScreenHeight()/2),
+				softMax = floor(_G.GetScreenHeight()/2),
 				bigStep = 1,
 				set = function(info, val)
 				    self.db.profile.bars["HealthBar"].y = val
 					self.healthbar.bar:SetPoint(
-						"CENTER", UIParent, "CENTER", 
+						"CENTER", _G.UIParent, "CENTER", 
 						self.db.profile.bars["HealthBar"].x, 
 						self.db.profile.bars["HealthBar"].y)
 				end,
@@ -4163,13 +4180,13 @@ function BloodShieldTracker:ChatCommand(input)
 				self:Print("useAura = " .. tostring(self.db.profile.useAuraForShield))
 			end
         end
-        --LibStub("AceConfigCmd-3.0").HandleCommand(BloodShieldTracker, "bst", "BloodShieldTracker", input)
+        --_G.LibStub("AceConfigCmd-3.0").HandleCommand(BloodShieldTracker, "bst", "BloodShieldTracker", input)
     end
 end
 
 function BloodShieldTracker:OnInitialize()
     -- Load the settings
-    self.db = LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", defaults, "Default")
+    self.db = _G.LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", defaults, "Default")
 
 	-- Migrate the settings
 	self:MigrateSettings()
@@ -4375,7 +4392,7 @@ function BloodShieldTracker:UpdatePositions()
 end
 
 function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
-	if strlen(self.db.profile.font_face) > 1 and mediatype == "font" then
+	if _G.strlen(self.db.profile.font_face) > 1 and mediatype == "font" then
 		if self.db.profile.font_face == key then
 			self:ResetFonts()
 		end
@@ -4391,12 +4408,12 @@ function BloodShieldTracker:OnEnable()
 	LoadSpellNames()
 	if not self.optionsFrame then
 		-- Register Options
-	    local displayName = GetAddOnMetadata(ADDON_NAME, "Title")
+	    local displayName = _G.GetAddOnMetadata(BST.ADDON_NAME, "Title")
 		local options = self:GetOptions()
-	    LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(displayName, options)
+	    _G.LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(displayName, options)
 
 	    self.optionsFrame = {}
-	    local ACD = LibStub("AceConfigDialog-3.0")
+	    local ACD = _G.LibStub("AceConfigDialog-3.0")
 		self.optionsFrame.Main = ACD:AddToBlizOptions(
 		    displayName, displayName, nil, "core")
 		self.optionsFrame.ShieldBar = ACD:AddToBlizOptions(
@@ -4512,7 +4529,7 @@ function BloodShieldTracker:UpdateMastery()
 end
 
 function BloodShieldTracker:CheckClass()
-    local class, className = UnitClass("player")
+    local class, className = _G.UnitClass("player")
     if className then
         if (className == 'DEATH KNIGHT' or className == 'DEATHKNIGHT') then
             isDK = true
@@ -4552,17 +4569,17 @@ function BloodShieldTracker:CheckTalents5()
 
 	if isDK then
 		-- Check spec: Blood, Frost, or Unholy spec?
-		local activeSpecNum = GetSpecialization()
+		local activeSpecNum = _G.GetSpecialization()
 		if activeSpecNum and activeSpecNum > 0 then
-			local id, name, desc, texture = GetSpecializationInfo(activeSpecNum)
+			local id, name, desc, texture = _G.GetSpecializationInfo(activeSpecNum)
 	    	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
 	    		IsBloodTank = true
 				-- Check for Mastery so we know if BS is active
-		        if IsSpellKnown(SpellIds["Mastery: Blood Shield"]) then
+		        if _G.IsSpellKnown(SpellIds["Mastery: Blood Shield"]) then
 		            hasBloodShield = true
 		        end
 				-- Check for VB
-				if IsSpellKnown(SpellIds["Vampiric Blood"]) then
+				if _G.IsSpellKnown(SpellIds["Vampiric Blood"]) then
 					HasVampBlood = true
 				end
 			else
@@ -4579,32 +4596,32 @@ function BloodShieldTracker:CheckTalents5()
     end
 end
 
-local IMP_DS_TALENT = (GetSpellInfo(81138))
+local IMP_DS_TALENT = (_G.GetSpellInfo(81138))
 function BloodShieldTracker:CheckTalents4()
     if isDK == nil then
         self:CheckClass()
     end
 
 	if isDK then
-    	for t = 1, GetNumTalentTabs() do
-    		for i = 1, GetNumTalents(t) do
-    			local talentName, _, _, _, currRank, maxRank = GetTalentInfo(t, i)
+    	for t = 1, _G.GetNumTalentTabs() do
+    		for i = 1, _G.GetNumTalents(t) do
+    			local talentName, _, _, _, currRank, maxRank = _G.GetTalentInfo(t, i)
     			if talentName == IMP_DS_TALENT and currRank > 0 then
     				ImpDSModifier = 1 + (0.15 * currRank)
     			end
     		end
     	end
-    	local primaryTalentTree = GetPrimaryTalentTree()
+    	local primaryTalentTree = _G.GetPrimaryTalentTree()
     	if primaryTalentTree then
-        	local id, name, desc, texture = GetTalentTabInfo(primaryTalentTree, false)
+        	local id, name, desc, texture = _G.GetTalentTabInfo(primaryTalentTree, false)
         	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
         		IsBloodTank = true
         		-- Check if the player knows Mastery as it is needed to get Blood Shield
-                if IsSpellKnown(86471) then
+                if _G.IsSpellKnown(86471) then
                     hasBloodShield = true
                 end
 				-- Check for VB
-				if IsSpellKnown(SpellIds["Vampiric Blood"]) then
+				if _G.IsSpellKnown(SpellIds["Vampiric Blood"]) then
 					HasVampBlood = true
 				end
         	end
@@ -4635,9 +4652,9 @@ function BloodShieldTracker:CheckGlyphs()
     hasVBGlyphed = false
     HasSuccorGlyphed = false
 	--if not HasVampBlood then return end -- Dont bother with glyph check if he doesnt have the talent
-    for id = 1, GetNumGlyphSockets() do
+    for id = 1, _G.GetNumGlyphSockets() do
         local enabled, glyphType, glyphTooltipIndex, 
-            glyphSpell, iconFilename = GetGlyphSocketInfo(id, nil)
+            glyphSpell, iconFilename = _G.GetGlyphSocketInfo(id, nil)
         if enabled then
             if glyphSpell == GlyphIds["Vampiric Blood"] then
                 hasVBGlyphed = true
@@ -4655,11 +4672,11 @@ function BloodShieldTracker:CheckGlyphs()
 end
 
 local TierSlotIds = {
-	["Head"] = GetInventorySlotInfo("HeadSlot"),
-	["Shoulder"] = GetInventorySlotInfo("ShoulderSlot"),
-	["Chest"] = GetInventorySlotInfo("ChestSlot"),
-	["Legs"] = GetInventorySlotInfo("LegsSlot"),
-	["Hands"] = GetInventorySlotInfo("HandsSlot"),
+	["Head"] = _G.GetInventorySlotInfo("HeadSlot"),
+	["Shoulder"] = _G.GetInventorySlotInfo("ShoulderSlot"),
+	["Chest"] = _G.GetInventorySlotInfo("ChestSlot"),
+	["Legs"] = _G.GetInventorySlotInfo("LegsSlot"),
+	["Hands"] = _G.GetInventorySlotInfo("HandsSlot"),
 }
 
 local Tier14Ids = {
@@ -4696,10 +4713,11 @@ for k, v in pairs(TierSlotIds) do
 end
 
 function BloodShieldTracker:CheckGear()
+	GearChangeTimer = nil
 	if isDK then
 		local tier14Count = 0
 		for slot, slotid in pairs(TierSlotIds) do
-			local id = GetInventoryItemID("player", slotid)
+			local id = _G.GetInventoryItemID("player", slotid)
 			if Tier14Ids[slot][id] then
 				tier14Count = tier14Count + 1
 			end
@@ -4714,8 +4732,8 @@ function BloodShieldTracker:CheckGear()
 end
 
 function BloodShieldTracker:PLAYER_EQUIPMENT_CHANGED(event, slot, hasItem)
-	if TierSlots[slot] then
-		self:CheckGear()
+	if TierSlots[slot] and not GearChangeTimer then
+		GearChangeTimer = self:ScheduleTimer("CheckGear", 1.5)
 	end
 end
 
@@ -4995,9 +5013,9 @@ function BloodShieldTracker:UpdateShieldBar()
     if not IsBloodTank then return end
 
 	if self.shieldbar.shield_curr < 0 and self.db.profile.debug then
-        local badShieldValueFmt = "Bad shield value [Cur=%d, Dmg=%d, Max=%d]"
+        local badShieldValueFmt = "Bad shield value [Cur=%d, Max=%d]"
         self:Print(badShieldValueFmt:format(
-            self.shieldbar.shield_curr, damage, self.shieldbar.shield_max))
+            self.shieldbar.shield_curr, self.shieldbar.shield_max))
     end
 
     if self.shieldbar.db.progress == "Current" then
@@ -5164,9 +5182,6 @@ function BloodShieldTracker:GetSpellSchool(school)
     
     return schools[school] or "Special"
 end
-
-local DS_SentTime = nil
-local DS_Latency = nil
 
 function BloodShieldTracker:UNIT_SPELLCAST_SENT(event, unit, spellName)
     if unit == "player" and spellName == SpellNames["Death Strike"] then
@@ -5492,7 +5507,7 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue)
         UpdateLDBData()
     end
 
-    if self.db.profile.debug or DEBUG_OUPUT then
+    if self.db.profile.debug or DEBUG_OUTPUT then
         local shieldInd = ""
         if isMinimum then
             shieldInd = " (min)"
@@ -5513,7 +5528,7 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue)
     self:ShowShieldBar()
 
     if self.shieldbar.db.sound_enabled and self.shieldbar.db.sound_applied then
-        PlaySoundFile(LSM:Fetch("sound", self.shieldbar.db.sound_applied))
+        _G.PlaySoundFile(LSM:Fetch("sound", self.shieldbar.db.sound_applied))
     end
 end
 
@@ -5581,7 +5596,7 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
         end
 
         if self.shieldbar.db.sound_enabled and self.shieldbar.db.sound_applied then
-            PlaySoundFile(LSM:Fetch("sound", self.shieldbar.db.sound_applied))
+            _G.PlaySoundFile(LSM:Fetch("sound", self.shieldbar.db.sound_applied))
         end
     elseif current == curr and type == "refreshed" then
         -- No damage taken but refresh the time.
@@ -5626,7 +5641,7 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
         self.shieldbar.shield_curr = 0
 
         if self.shieldbar.db.sound_enabled and self.shieldbar.db.sound_removed then
-            PlaySoundFile(LSM:Fetch("sound", self.shieldbar.db.sound_removed))
+            _G.PlaySoundFile(LSM:Fetch("sound", self.shieldbar.db.sound_removed))
         end
     end
 
@@ -5737,12 +5752,11 @@ function BloodShieldTracker:CheckAuras()
     luckOfTheDrawBuff = false
     luckOfTheDrawAmt = 0
 	healingDebuffMultiplier = 0
-    gsBuff = false
     gsHealModifier = 0.0
 	PurgatoryAbsorb = 0
 
     -- Loop through unit auras to find ones of interest.
-    i = 1
+    local i = 1
     repeat
         name, rank, icon, count, dispelType, duration, expires, caster, 
 			stealable, consolidate, spellId, canApplyAura, isBossDebuff, 
@@ -5831,7 +5845,7 @@ function BloodShieldTracker:CheckAuras()
             end
 
         elseif spellId == SpellIds["Guardian Spirit"] then
-            gsBuff = true
+            AurasFound["Guardian Spirit"] = true
             gsHealModifier = guardianSpiritHealBuff
 			
         else
@@ -6068,7 +6082,7 @@ end
 Bar.__index = Bar
 
 function Bar:Create(name, friendlyName, hasTimeRemaining, disableAnchor)
-    local object = setmetatable({}, Bar)
+    local object = _G.setmetatable({}, Bar)
 	object.name = name
 	object.friendlyName = friendlyName or name
 	object.anchorTries = 0
@@ -6086,10 +6100,10 @@ end
 function Bar:Initialize()
 	self.db = BloodShieldTracker.db.profile.bars[self.name]
 
-    local bar = CreateFrame("StatusBar", "BloodShieldTracker_"..self.name, UIParent)
+    local bar = _G.CreateFrame("StatusBar", "BloodShieldTracker_"..self.name, _G.UIParent)
 	self.bar = bar
 	bar.object = self
-    --bar:SetPoint("CENTER", UIParent, "CENTER", self.db.x, self.db.y)
+    --bar:SetPoint("CENTER", _G.UIParent, "CENTER", self.db.x, self.db.y)
 	bar:SetScale(self.db.scale)
     bar:SetOrientation("HORIZONTAL")
     bar:SetWidth(self.db.width)
@@ -6167,11 +6181,11 @@ function Bar:Initialize()
     bar:SetScript("OnDragStop",
         function(self)
             self:StopMovingOrSizing()
-			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
+			local scale = self:GetEffectiveScale() / _G.UIParent:GetEffectiveScale()
 			local x, y = self:GetCenter()
 			x, y = x * scale, y * scale
-			x = x - GetScreenWidth()/2
-			y = y - GetScreenHeight()/2
+			x = x - _G.GetScreenWidth()/2
+			y = y - _G.GetScreenHeight()/2
 			x = x / self:GetScale()
 			y = y / self:GetScale()
 			self.object.db.x, self.object.db.y = x, y
@@ -6208,7 +6222,7 @@ end
 function Bar:UpdateVisibility()
 	if self.name == "HealthBar" then
         if not self.db.enabled or 
-			(self.db.hide_ooc and (not InCombatLockdown() or idle)) then
+			(self.db.hide_ooc and (not _G.InCombatLockdown() or idle)) then
             if self.bar:IsVisible() then
                 self.bar:Hide()
             end
@@ -6217,7 +6231,7 @@ function Bar:UpdateVisibility()
         end
 	elseif self.name == "EstimateBar" then
 		if self.db.enabled and BloodShieldTracker:IsTrackerEnabled() and
-			(not self.db.hide_ooc or InCombatLockdown()) then
+			(not self.db.hide_ooc or _G.InCombatLockdown()) then
 			self.bar:Show()
 		else
 			self.bar:Hide()
@@ -6283,7 +6297,7 @@ function Bar:UpdatePosition()
 			self.db.anchorX, self.db.anchorY)
 		self.anchorTries = 0
 	else
-		self.bar:SetPoint("CENTER", UIParent, "CENTER", self.db.x, self.db.y)
+		self.bar:SetPoint("CENTER", _G.UIParent, "CENTER", self.db.x, self.db.y)
 		if anchorFrame and not isFrame and self.anchorTries < 13 then
 			if BST.db.profile.debug then
 				BST:Print("Waiting for anchor for bar '"..tostring(self.name).."'.")
