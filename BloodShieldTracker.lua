@@ -68,7 +68,6 @@ BloodShieldTracker.healthbar = nil
 local isDK = nil
 local IsBloodTank = false
 local hasBloodShield = false
-local ImpDSModifier = 1
 local HasVampBlood = false
 local hasVBGlyphed = false
 local HasSuccorGlyphed = false
@@ -2021,9 +2020,6 @@ function BloodShieldTracker:GetEstimateBarOptions()
                 get = function(info)
                     return self.db.profile.bars["EstimateBar"].show_stacks
                 end,
-                disabled = function()
-                    return CURRENT_UI_VERSION < 50000
-                end,
 			},
 			stacks_pos = {
 				name = L["Position"],
@@ -2043,8 +2039,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
                     return self.db.profile.bars["EstimateBar"].stacks_pos
                 end,
                 disabled = function()
-                    return CURRENT_UI_VERSION < 50000 or 
-						not self.db.profile.bars["EstimateBar"].show_stacks
+                    return not self.db.profile.bars["EstimateBar"].show_stacks
                 end,
 			},
             dimensions = {
@@ -4449,14 +4444,8 @@ function BloodShieldTracker:OnEnable()
 	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 	self:UpdateMastery()
 	self:CheckTalents()
-	if CURRENT_UI_VERSION > 50000 then
-		self:RegisterEvent("PLAYER_TALENT_UPDATE", "CheckTalents")
-		self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED","CheckTalents")
-	else
-		self:RegisterEvent("PLAYER_TALENT_UPDATE", "CheckTalents")
-		self:RegisterEvent("CHARACTER_POINTS_CHANGED", "CheckTalents")
-		self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED", "CheckTalents")
-	end
+	self:RegisterEvent("PLAYER_TALENT_UPDATE", "CheckTalents")
+	self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED","CheckTalents")
 	self:RegisterEvent("GLYPH_ADDED", "CheckGlyphs")
 	self:RegisterEvent("GLYPH_REMOVED", "CheckGlyphs")
 	self:RegisterEvent("GLYPH_UPDATED", "CheckGlyphs")
@@ -4540,16 +4529,11 @@ function BloodShieldTracker:CheckClass()
 end
 
 function BloodShieldTracker:CheckTalents(event)
-	ImpDSModifier = 1
 	IsBloodTank = false
 	hasBloodShield = false
 	HasVampBlood = false
 
-	if CURRENT_UI_VERSION > 50000 then
-		self:CheckTalents5()
-	else
-		self:CheckTalents4()
-	end
+	self:CheckTalents5()
 
 	self.bars["EstimateBar"]:UpdateVisibility()
 
@@ -4586,50 +4570,6 @@ function BloodShieldTracker:CheckTalents5()
 				IsBloodTank = false
 			end
 		end
-       	self:CheckGlyphs()
-	end
-
-	if self:IsTrackerEnabled() then
-	    self:Load()
-    else
-        self:Unload()
-    end
-end
-
-local IMP_DS_TALENT = (_G.GetSpellInfo(81138))
-function BloodShieldTracker:CheckTalents4()
-    if isDK == nil then
-        self:CheckClass()
-    end
-
-	if isDK then
-    	for t = 1, _G.GetNumTalentTabs() do
-    		for i = 1, _G.GetNumTalents(t) do
-    			local talentName, _, _, _, currRank, maxRank = _G.GetTalentInfo(t, i)
-    			if talentName == IMP_DS_TALENT and currRank > 0 then
-    				ImpDSModifier = 1 + (0.15 * currRank)
-    			end
-    		end
-    	end
-    	local primaryTalentTree = _G.GetPrimaryTalentTree()
-    	if primaryTalentTree then
-        	local id, name, desc, texture = _G.GetTalentTabInfo(primaryTalentTree, false)
-        	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
-        		IsBloodTank = true
-        		-- Check if the player knows Mastery as it is needed to get Blood Shield
-                if _G.IsSpellKnown(86471) then
-                    hasBloodShield = true
-                end
-				-- Check for VB
-				if _G.IsSpellKnown(SpellIds["Vampiric Blood"]) then
-					HasVampBlood = true
-				end
-        	end
-        else
-            if self.db.profile.verbose then
-                self:Print(L["Could not determine talents."])
-            end
-        end
        	self:CheckGlyphs()
 	end
 
@@ -4903,8 +4843,8 @@ function BloodShieldTracker:UpdateEstimateBar(timestamp)
         local shieldPercent = masteryRating*shieldPerMasteryPoint/100
 
         local predictedValue, minimumValue = 0, 0
-        local baseValue = recentDamage * dsHealModifier * ImpDSModifier *
-			Tier14Bonus * (1 + scentBloodStacks * scentBloodStackBuff)
+        local baseValue = recentDamage * dsHealModifier * Tier14Bonus * 
+			(1 + scentBloodStacks * scentBloodStackBuff)
 
         if self.estimatebar.db.bar_mode == "BS" then
             predictedValue = round(baseValue * shieldPercent)
@@ -5282,12 +5222,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if eventtype == "SWING_MISSED" then
             if param9 and param9 == "ABSORB" then
     			local damage = 0
-    			-- For some reason in 4.3 the amount has been moved.
-    			if CURRENT_UI_VERSION >= 40300 then
-    			    damage = param11 or 0
-			    else
-    			    damage = param10 or 0
-                end
+   			    damage = param11 or 0
 
                 if self.db.profile.debug then
                     local absorbFmt = "Absorbed swing for %d"
@@ -5297,12 +5232,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         elseif eventtype:find("SPELL_") then
             if param12 and param12 == 'ABSORB' then
                 local damage = 0
-    			-- For some reason in 4.3 the amount has been moved.
-    			if CURRENT_UI_VERSION >= 40300 then
-                    damage = param14 or 0
-                else
-                    damage = param13 or 0
-                end
+                damage = param14 or 0
 
                 local spellName, school = param10 or "n/a", param11 or 0
                 local schoolName = self:GetSpellSchool(school) or "N/A"
@@ -5324,8 +5254,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             local predictedHeal = 0
             if healingDebuffMultiplier ~= 1 then 
                 predictedHeal = round(
-                    recentDmg * dsHealModifier * ImpDSModifier * 
-					Tier14Bonus *
+                    recentDmg * dsHealModifier * Tier14Bonus *
 					(1 + scentBloodStacks * scentBloodStackBuff) *
                     self:GetEffectiveHealingBuffModifiers() * 
                     self:GetEffectiveHealingDebuffModifiers())
@@ -5378,8 +5307,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                 shieldValue = minimumBS
             end
             predictedHeal = round(
-                recentDmg * dsHealModifier * ImpDSModifier * 
-					Tier14Bonus * 
+                recentDmg * dsHealModifier * Tier14Bonus * 
 					(1 + scentBloodStacks * scentBloodStackBuff) *
                     self:GetEffectiveHealingBuffModifiers() * 
                     self:GetEffectiveHealingDebuffModifiers())
@@ -5766,9 +5694,7 @@ function BloodShieldTracker:CheckAuras()
 		local tracked = AbsorbShields[spellId]
 
 		if spellId == SpellIds["Scent of Blood"] then
-			if CURRENT_UI_VERSION > 50000 then
-				scentBloodStacks = count
-			end
+			scentBloodStacks = count
 
         elseif tracked then
             AurasFound[tracked] = true
@@ -6237,8 +6163,7 @@ function Bar:UpdateVisibility()
 			self.bar:Hide()
 		end
 
-		if self.db.enabled and self.db.show_stacks and 
-			CURRENT_UI_VERSION > 50000 and IsBloodTank then
+		if self.db.enabled and self.db.show_stacks and IsBloodTank then
 		    self.bar.stacks:Show()
 		else
 		    self.bar.stacks:Hide()
