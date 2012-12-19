@@ -5315,20 +5315,18 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         local isMinimum = false
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local minimumHeal = dsHealMin
-        local minimumBS = round(maxHealth * actualDsMinHeal * Tier14Bonus *
-			(1 + scentBloodStacks * scentBloodStackBuff) * shieldPercent)
         
         if healingDebuffMultiplier == 1 then
-            shieldValue = minimumBS
+            shieldValue = bsMinimum
             predictedHeal = 0
             isMinimum = true
         else
             shieldValue = round(totalHeal * shieldPercent / 
                 self:GetEffectiveHealingBuffModifiers() / 
                 self:GetEffectiveHealingDebuffModifiers())
-            if shieldValue <= minimumBS then
+            if shieldValue <= bsMinimum then
                 isMinimum = true
-                shieldValue = minimumBS
+                shieldValue = bsMinimum
             end
             predictedHeal = round(
                 recentDmg * dsHealModifier * Tier14Bonus * 
@@ -5341,7 +5339,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d, Mast: %0.2f%%, SoB: %0.2f%%, MinBS: %d]"
 			local sobValue = scentBloodStacks * scentBloodStackBuff
             self:Print(dsHealFormat:format(
-                totalHeal,actualHeal,overheal,recentDmg,predictedHeal,shieldPercent*100,sobValue,minimumBS))
+                totalHeal,actualHeal,overheal,recentDmg,predictedHeal,shieldPercent*100,sobValue,bsMinimum))
         end
         
         if DEBUG_OUTPUT == true then
@@ -5349,7 +5347,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 			local sobValue = scentBloodStacks * scentBloodStackBuff
             DEBUG_BUFFER = DEBUG_BUFFER .. timestamp .. "   " .. 
                 dsHealFormat:format(totalHeal,actualHeal,overheal,
-                recentDmg,predictedHeal,shieldPercent*100,sobValue,minimumBS) .. "\n"
+                recentDmg,predictedHeal,shieldPercent*100,sobValue,bsMinimum) .. "\n"
         end
     end
 
@@ -5442,12 +5440,13 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue)
 
     if not IsBloodTank or not hasBloodShield then return end
 
-    local isMinimum = false
-    local minimumBS = round(maxHealth * actualDsMinHeal * Tier14Bonus *
+	local isMinimum = false
+	-- Calculate the minimum shield value.  Use the previous SoB stack value.
+	local minimumBS = round(maxHealth * actualDsMinHeal * Tier14Bonus *
 		(1 + dsScentBloodStacks * scentBloodStackBuff) * shieldPercent)
-    if shieldValue <= minimumBS then
-        isMinimum = true
-    end
+	if shieldValue <= minimumBS then
+		isMinimum = true
+	end
 
     self.shieldbar.shield_max = self.shieldbar.shield_max + shieldValue
     self.shieldbar.shield_curr = self.shieldbar.shield_curr + shieldValue
@@ -5519,8 +5518,8 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
         -- A new BS shield amount was added.  Update all of the stats.
         added = current - curr
 
-        -- Check if it is a minimum heal.
-        local minimumBS = round(maxHealth * actualDsMinHeal * Tier14Bonus *
+        -- Check if it is a minimum heal.  Use the previous SoB stack value.
+		local minimumBS = round(maxHealth * actualDsMinHeal * Tier14Bonus *
 			(1 + dsScentBloodStacks * scentBloodStackBuff) * shieldPercent)
         if added <= minimumBS then
             isMinimum = true
