@@ -42,7 +42,6 @@ local Bar = {}
 local tinsert, tremove, tgetn = table.insert, table.remove, table.getn
 local tconcat = table.concat
 local floor, ceil, abs = math.floor, math.ceil, math.abs
-local rawget = _G.rawget
 local unpack = _G.unpack
 local tostring = _G.tostring
 local tonumber = _G.tonumber
@@ -229,12 +228,26 @@ local SpellIds = {
 	["Blood Charge"] = 114851,
 	["Vengeance"] = 132365,
 	["Anti-Magic Shell"] = 48707,
+	-- ICC Buffs for Horde
+	["Hellscream's Warsong 05"] = 73816,
+	["Hellscream's Warsong 10"] = 73818,
+	["Hellscream's Warsong 15"] = 73819,
+	["Hellscream's Warsong 20"] = 73820,
+	["Hellscream's Warsong 25"] = 73821,
+	["Hellscream's Warsong 30"] = 73822,
+	-- ICC Buffs for Alliance
+	["Strength of Wrynn 05"] = 73762,
+	["Strength of Wrynn 10"] = 73824,
+	["Strength of Wrynn 15"] = 73825,
+	["Strength of Wrynn 20"] = 73826,
+	["Strength of Wrynn 25"] = 73827,
+	["Strength of Wrynn 30"] = 73828,
 }
 local SpellNames = {}
 _G.setmetatable(SpellNames, LookupOrKeyMT)
 local function LoadSpellNames()
 	for k, v in pairs(SpellIds) do
-		if rawget(SpellNames, k) == nil then
+		if _G.rawget(SpellNames, k) == nil then
 			SpellNames[k] = _G.GetSpellInfo(v)
 		end
 	end
@@ -266,6 +279,25 @@ end
 local GlyphIds = {
 	["Vampiric Blood"] = 58676,
 	["Dark Succor"] = 96279,
+}
+
+local ICCBuffs = {
+	Horde = {
+	    [SpellIds["Hellscream's Warsong 05"]] = 0.05,
+	    [SpellIds["Hellscream's Warsong 10"]] = 0.10,
+	    [SpellIds["Hellscream's Warsong 15"]] = 0.15,
+	    [SpellIds["Hellscream's Warsong 20"]] = 0.20,
+	    [SpellIds["Hellscream's Warsong 25"]] = 0.25,
+	    [SpellIds["Hellscream's Warsong 30"]] = 0.30,
+	},
+	Alliance = {
+	    [SpellIds["Strength of Wrynn 05"]] = 0.05,
+	    [SpellIds["Strength of Wrynn 10"]] = 0.10,
+	    [SpellIds["Strength of Wrynn 15"]] = 0.15,
+	    [SpellIds["Strength of Wrynn 20"]] = 0.20,
+	    [SpellIds["Strength of Wrynn 25"]] = 0.25,
+	    [SpellIds["Strength of Wrynn 30"]] = 0.30,
+	}
 }
 
 -- Constants
@@ -310,37 +342,6 @@ local healingDebuffMultiplier = 1
 local lastDSSuccess = nil
 local masteryRating = 0
 local shieldPercent = 0
-
-local HELLSCREAM_BUFF_05 = 73816
-local HELLSCREAM_BUFF_10 = 73818
-local HELLSCREAM_BUFF_15 = 73819
-local HELLSCREAM_BUFF_20 = 73820
-local HELLSCREAM_BUFF_25 = 73821
-local HELLSCREAM_BUFF_30 = 73822
-local hellscreamBuffs = {
-    [HELLSCREAM_BUFF_05] = 0.05,
-    [HELLSCREAM_BUFF_10] = 0.10,
-    [HELLSCREAM_BUFF_15] = 0.15,
-    [HELLSCREAM_BUFF_20] = 0.20,
-    [HELLSCREAM_BUFF_25] = 0.25,
-    [HELLSCREAM_BUFF_30] = 0.30,    
-}
-local HELLSCREAM_BUFF = (_G.GetSpellInfo(HELLSCREAM_BUFF_30))
-local WRYNN_BUFF_05 = 73816
-local WRYNN_BUFF_10 = 73818
-local WRYNN_BUFF_15 = 73819
-local WRYNN_BUFF_20 = 73820
-local WRYNN_BUFF_25 = 73821
-local WRYNN_BUFF_30 = 73822
-local wrynnBuffs = {
-    [WRYNN_BUFF_05] = 0.05,
-    [WRYNN_BUFF_10] = 0.10,
-    [WRYNN_BUFF_15] = 0.15,
-    [WRYNN_BUFF_20] = 0.20,
-    [WRYNN_BUFF_25] = 0.25,
-    [WRYNN_BUFF_30] = 0.30,
-}
-local WRYNN_BUFF = (_G.GetSpellInfo(WRYNN_BUFF_30))
 
 local HealingDebuffs = {
     -- PvP healing debuffs
@@ -4823,7 +4824,7 @@ end
 
 function BloodShieldTracker:UpdateBars(timestamp)
     -- If we're out of combat and no Blood Shields are present, stop the timer
-    if idle and self.shieldbar.expires == 0 then
+    if idle and self.shieldbar.expires <= 0 then
     	if updateTimer then
             self:CancelTimer(updateTimer)
             updateTimer = nil
@@ -5365,7 +5366,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
 
             if self.db.profile.useAuraForShield == false then
-                self:NewBloodShield(timestamp, spellAbsorb)
+                self:NewBloodShield(timestamp, spellAbsorb, GetTime() + BS_DURATION)
             end
         elseif param9 == SpellIds["Shroud of Purgatory"] then
             if self.db.profile.debug then
@@ -5393,7 +5394,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                 end
 
                 if self.db.profile.useAuraForShield == false then
-                    self:BloodShieldUpdated("refreshed", timestamp, spellAbsorb or 0)
+                    self:BloodShieldUpdated("refreshed", timestamp, spellAbsorb or 0, GetTime() + BS_DURATION)
                 end
 	        elseif param9 == SpellIds["Shroud of Purgatory"] then
 	            if self.db.profile.debug then
@@ -5410,7 +5411,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
         if param9 == SpellIds["Blood Shield"] then
             if self.db.profile.useAuraForShield == false then
-                self:BloodShieldUpdated("removed", timestamp, spellAbsorb or 0)
+                self:BloodShieldUpdated("removed", timestamp, spellAbsorb or 0, 0)
             end
 
             if self.db.profile.debug and spellAbsorb and spellAbsorb ~= "" then
@@ -5432,11 +5433,11 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     end
 end
 
-function BloodShieldTracker:NewBloodShield(timestamp, shieldValue)
+function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, expires)
     self.shieldbar.active = true
     self.shieldbar.shield_curr = 0
     self.shieldbar.shield_max = 0
-    self.shieldbar.expires = GetTime() + BS_DURATION
+    self.shieldbar.expires = expires
 
     if not IsBloodTank or not hasBloodShield then return end
 
@@ -5498,7 +5499,7 @@ function BloodShieldTracker:UpdateStatsShieldAbsorb(value)
 end
 
 local shieldRefreshedFormat = "Blood Shield Refreshed: %d%s"
-function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
+function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current, expires)
     if not IsBloodTank then return end
 
     if type == "refreshed" then
@@ -5525,7 +5526,7 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
             isMinimum = true
         end
         self:UpdateStatsNewShield(added, isMinimum, true)
-        self.shieldbar.expires = GetTime() + BS_DURATION
+        self.shieldbar.expires = expires
         self.shieldbar.shield_max = self.shieldbar.shield_max + added
 
         -- Update the LDB data feed
@@ -5550,7 +5551,7 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
     elseif current == curr and type == "refreshed" then
         -- No damage taken but refresh the time.
         -- This can happen if we hit the max shield value of maximum health.
-        self.shieldbar.expires = GetTime() + BS_DURATION
+        self.shieldbar.expires = expires
     else
         absorbed = curr - current
         self:UpdateStatsShieldAbsorb(absorbed)
@@ -5768,15 +5769,17 @@ function BloodShieldTracker:CheckAuras()
             end
             luckOfTheDrawAmt = LUCK_OF_THE_DRAW_MOD * count
 
-        elseif name == HELLSCREAM_BUFF then
+        elseif name == SpellNames["Hellscream's Warsong 30"] then
             iccBuffFound = true
             iccBuff = true
-            iccBuffAmt = hellscreamBuffs[spellId] or hellscreamBuffs[HELLSCREAM_BUFF_30]
+            iccBuffAmt = ICCBuffs.Horde[spellId] or 
+				ICCBuffs.Horde[SpellIds["Hellscream's Warsong 30"]]
 
-        elseif name == WRYNN_BUFF then
+        elseif name == SpellNames["Strength of Wrynn 30"] then
             iccBuffFound = true
             iccBuff = true
-            iccBuffAmt = wrynnBuffs[spellId] or wrynnBuffs[WRYNN_BUFF_30]
+            iccBuffAmt = ICCBuffs.Alliance[spellId] or 
+				ICCBuffs.Alliance[SpellIds["Strength of Wrynn 30"]]
 
         elseif spellId == SpellIds["Vampiric Blood"] then
 			vampBloodFound = true
@@ -5982,7 +5985,7 @@ function BloodShieldTracker:CheckAuras()
 	            if self.db.profile.debug == true then
 	                self:Print("AURA: Blood Shield applied. "..BSValue)
 	            end
-	            self:NewBloodShield(GetTime(), BSValue)
+	            self:NewBloodShield(GetTime(), BSValue, BSExpires)
 	        else
 	            if BSValue ~= BSAuraValue or 
 	                (BSExpires ~= BSAuraExpires and BSValue > 0) then
@@ -5991,7 +5994,8 @@ function BloodShieldTracker:CheckAuras()
 	                    self:Print("AURA: Blood Shield refreshed. "..BSValue
 	                        .." ["..(BSValue - BSAuraValue).."]")
 	                end
-	                self:BloodShieldUpdated("refreshed", GetTime(), BSValue)
+	                self:BloodShieldUpdated("refreshed", GetTime(), 
+						BSValue, BSExpires)
 	            end
 	        end
 
@@ -6010,7 +6014,7 @@ function BloodShieldTracker:CheckAuras()
                 self:Print("AURA: Blood Shield removed. "..BSAuraValue)
             end
 
-            self:BloodShieldUpdated("removed", GetTime(), BSAuraValue)
+            self:BloodShieldUpdated("removed", GetTime(), BSAuraValue, 0)
         end
             
         BSAuraPresent = false
