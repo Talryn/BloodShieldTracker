@@ -71,6 +71,7 @@ local hasBloodShield = false
 local HasVampBlood = false
 local hasVBGlyphed = false
 local HasSuccorGlyphed = false
+local Tier14Count = 0
 local Tier14Bonus = 1
 
 -- Settings to allow custom fonts and textures which override the
@@ -85,7 +86,7 @@ CustomUI.showBorders = nil
 -- Keep track of time.  Start with current client time
 -- but will use the combat log timestamps after that.
 local currentTime = time()
-
+local idle = true
 local updateTimer = nil
 local lastSeconds = 5
 local damageTaken = {}
@@ -293,6 +294,7 @@ local maxHealth = 0
 local currentHealth = 0
 local percentHealth = 0
 local dsHealMin = 0
+local bsMinimum = 0
 local scentBloodStacks = 0
 local dsScentBloodStacks = 0 -- Have to track SoB stacks as of last DS
 local CurrentPresence = nil
@@ -307,6 +309,7 @@ local gsHealModifier = 0.0
 local healingDebuffMultiplier = 1
 local lastDSSuccess = nil
 local masteryRating = 0
+local shieldPercent = 0
 
 local HELLSCREAM_BUFF_05 = 73816
 local HELLSCREAM_BUFF_10 = 73818
@@ -4441,8 +4444,8 @@ function BloodShieldTracker:OnEnable()
 
     self:CheckClass()
 	self:CheckGear()
-	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 	self:UpdateMastery()
+	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 	self:CheckTalents()
 	self:RegisterEvent("PLAYER_TALENT_UPDATE", "CheckTalents")
 	self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED","CheckTalents")
@@ -4510,11 +4513,9 @@ end
 function BloodShieldTracker:OnDisable()
 end
 
-local GetMastery = GetMastery
-local idle = true
-
 function BloodShieldTracker:UpdateMastery()
-    masteryRating = GetMastery()
+    masteryRating = _G.GetMastery()
+	shieldPercent = masteryRating*shieldPerMasteryPoint/100
 end
 
 function BloodShieldTracker:CheckClass()
@@ -4534,6 +4535,7 @@ function BloodShieldTracker:CheckTalents(event)
 	HasVampBlood = false
 
 	self:CheckTalents5()
+	self:UpdateTierBonus()
 
 	self.bars["EstimateBar"]:UpdateVisibility()
 
@@ -4654,19 +4656,33 @@ end
 
 function BloodShieldTracker:CheckGear()
 	GearChangeTimer = nil
-	if isDK then
-		local tier14Count = 0
-		for slot, slotid in pairs(TierSlotIds) do
-			local id = _G.GetInventoryItemID("player", slotid)
-			if Tier14Ids[slot][id] then
-				tier14Count = tier14Count + 1
-			end
-		end
-		Tier14Bonus = 1 + (tier14Count >= 4 and T14BonusAmt or 0)
+	local count = 0
 
-		if self.db.profile.verbose then
-			local fmt = "T14 Detected: %d/5 (Adjustment: %d%%)"
-			self:Print(fmt:format(tier14Count, Tier14Bonus*100))
+	for slot, slotid in pairs(TierSlotIds) do
+		local id = _G.GetInventoryItemID("player", slotid)
+		if Tier14Ids[slot][id] then
+			count = count + 1
+		end
+	end
+
+	if count ~= Tier14Count then
+		Tier14Count = count
+		if self.db.profile.verbose and idle then
+			local fmt = "T14 Detected: %d/5"
+			self:Print(fmt:format(Tier14Count))
+		end
+		self:UpdateTierBonus()
+	end
+end
+
+function BloodShieldTracker:UpdateTierBonus()
+	local currentBonus = Tier14Bonus
+	Tier14Bonus = 1 + (Tier14Count >= 4 and T14BonusAmt or 0)
+	if currentBonus ~= Tier14Bonus then
+		self:UpdateMinHeal("CheckGear", "player")
+		if self.db.profile.verbose and idle then
+			local fmt = "T14 Bonus: %d%%"
+			self:Print(fmt:format(Tier14Bonus*100-100))
 		end
 	end
 end
@@ -4722,14 +4738,15 @@ function BloodShieldTracker:UpdateMinHeal(event, unit)
 			(CurrentPresence == "Unholy" or CurrentPresence == "Frost") then
    	        actualDsMinHeal = dsMinHealPercentSuccor
         end
-        
-		dsHealMin = round(
-		    maxHealth * actualDsMinHeal * 
-			(1 + scentBloodStacks * scentBloodStackBuff) *
+
+		local baseValue = maxHealth * actualDsMinHeal * Tier14Bonus *
+			(1 + scentBloodStacks * scentBloodStackBuff)
+		dsHealMin = round(baseValue *
 		    self:GetEffectiveHealingBuffModifiers() * 
 		    self:GetEffectiveHealingDebuffModifiers())
+		bsMinimum = round(baseValue * shieldPercent)
 		if idle then
-		    self:UpdateEstimateBarText(dsHealMin)
+		    self:UpdateEstimateBarTextWithMin()
 		end
 	end
 end
@@ -4762,7 +4779,7 @@ end
 
 function BloodShieldTracker:PLAYER_REGEN_ENABLED()
 	idle = true
-	self:UpdateEstimateBarText(dsHealMin)
+	self:UpdateEstimateBarTextWithMin()
     self.estimatebar.altcolor = false
     self.estimatebar:UpdateGraphics()
     self.estimatebar.bar:SetMinMaxValues(0, 1)
@@ -4840,7 +4857,6 @@ end
 function BloodShieldTracker:UpdateEstimateBar(timestamp)
     if self.estimatebar.db.enabled and not idle then
         local recentDamage = self:GetRecentDamageTaken(timestamp)
-        local shieldPercent = masteryRating*shieldPerMasteryPoint/100
 
         local predictedValue, minimumValue = 0, 0
         local baseValue = recentDamage * dsHealModifier * Tier14Bonus * 
@@ -4848,8 +4864,7 @@ function BloodShieldTracker:UpdateEstimateBar(timestamp)
 
         if self.estimatebar.db.bar_mode == "BS" then
             predictedValue = round(baseValue * shieldPercent)
-            minimumValue = maxHealth * dsMinHealPercent * shieldPercent *
-				(1 + scentBloodStacks * scentBloodStackBuff)
+            minimumValue = bsMinimum
         else
             predictedValue = round(baseValue *
                 self:GetEffectiveHealingBuffModifiers() * 
@@ -4908,6 +4923,16 @@ function BloodShieldTracker:UpdateEstimateBarText(estimate)
     self.estimatebar.bar.value:SetText(
         estimateBarFormat:format(
             text, sep, val))
+end
+
+function BloodShieldTracker:UpdateEstimateBarTextWithMin()
+	local value = 0
+    if self.estimatebar.db.bar_mode == "BS" then
+        value = bsMinimum
+    else
+        value = dsHealMin
+    end
+	self:UpdateEstimateBarText(value)
 end
 
 function BloodShieldTracker:UpdateShieldBarMode()
@@ -5265,7 +5290,6 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
     if eventtype == "SPELL_HEAL" and destName == self.playerName 
         and param9 == SpellIds["Death Strike Heal"] then
         
-        local shieldPercent = masteryRating*shieldPerMasteryPoint/100
         local totalHeal = param12 or 0
         local overheal = param13 or 0
         local actualHeal = param12-param13
@@ -5291,7 +5315,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         local isMinimum = false
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local minimumHeal = dsHealMin
-        local minimumBS = round(maxHealth * actualDsMinHeal * 
+        local minimumBS = round(maxHealth * actualDsMinHeal * Tier14Bonus *
 			(1 + scentBloodStacks * scentBloodStackBuff) * shieldPercent)
         
         if healingDebuffMultiplier == 1 then
@@ -5419,8 +5443,7 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue)
     if not IsBloodTank or not hasBloodShield then return end
 
     local isMinimum = false
-    local shieldPercent = masteryRating*shieldPerMasteryPoint/100
-    local minimumBS = round(maxHealth * actualDsMinHeal * 
+    local minimumBS = round(maxHealth * actualDsMinHeal * Tier14Bonus *
 		(1 + dsScentBloodStacks * scentBloodStackBuff) * shieldPercent)
     if shieldValue <= minimumBS then
         isMinimum = true
@@ -5497,8 +5520,7 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current)
         added = current - curr
 
         -- Check if it is a minimum heal.
-        local shieldPercent = masteryRating*shieldPerMasteryPoint/100
-        local minimumBS = round(maxHealth * actualDsMinHeal * 
+        local minimumBS = round(maxHealth * actualDsMinHeal * Tier14Bonus *
 			(1 + dsScentBloodStacks * scentBloodStackBuff) * shieldPercent)
         if added <= minimumBS then
             isMinimum = true
