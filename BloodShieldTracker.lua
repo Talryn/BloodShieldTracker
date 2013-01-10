@@ -228,6 +228,7 @@ local SpellIds = {
 	["Blood Charge"] = 114851,
 	["Vengeance"] = 132365,
 	["Anti-Magic Shell"] = 48707,
+	["Bone Shield"] = 49222,
 	-- ICC Buffs for Horde
 	["Hellscream's Warsong 05"] = 73816,
 	["Hellscream's Warsong 10"] = 73818,
@@ -768,6 +769,18 @@ local defaults = {
 				x = 200,
 				y = 0,
 			},
+			["BoneShieldBar"] = {
+				enabled = false,
+		        progress = "Charges",
+		        show_time = false,
+		        time_pos = "RIGHT",
+				showCooldown = "true",
+				showReady = "true",
+				color = {r = 0.03, g = 0.54, b = 0.03, a = 1},
+				bgcolor = {r = 0.02, g = 0.4, b = 0.01, a = 0.7},
+				x = -90,
+				y = -90,
+			},
 		}
     }
 }
@@ -934,6 +947,7 @@ function BloodShieldTracker:GetOptions()
 				shieldBarOpts = self:GetShieldBarOptions(),
 				estimateBarOpts = self:GetEstimateBarOptions(),
 				bloodChargeOpts = self:GetBloodChargeBarOptions(),
+				boneShieldOpts = self:GetBoneShieldBarOptions(),
 				pwsBarOpts = self:GetPWSBarOptions(),
 				illumBarOpts = self:GetIllumBarOptions(),
 				absorbsBarOpts = self:GetAbsorbsBarOptions(),
@@ -1061,6 +1075,7 @@ function BloodShieldTracker:GetGeneralOptions()
 						    self.estimatebar.bar:Hide()
                         end
 						self.bloodchargebar.bar:Hide()
+						self.boneshieldbar.bar:Hide()
 						self.pwsbar.bar:Hide()
 						self.illumbar.bar:Hide()
 						self.absorbsbar.bar:Hide()
@@ -1886,6 +1901,341 @@ function BloodShieldTracker:GetBloodChargeBarOptions()
 
 	self:AddAdvancedPositioning(bloodChargeOpts, "BloodChargeBar")
 	return bloodChargeOpts
+end
+
+function BloodShieldTracker:GetBoneShieldBarOptions()
+	local boneShieldOpts = {
+		order = 2,
+		type = "group",
+		name = L["Bone Shield Bar"],
+		desc = L["Bone Shield Bar"],
+		args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["BoneShieldBar_Desc"],
+		    },
+            generalOptions = {
+                order = 2,
+                type = "header",
+                name = L["General Options"],
+            },
+    		status_bar_enabled = {
+				name = L["Enabled"],
+				desc = L["EnableBarDesc"],
+				type = "toggle",
+				order = 10,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].enabled = val
+					self.bars["BoneShieldBar"]:UpdateVisibility()
+				end,
+                get = function(info)
+					return self.db.profile.bars["BoneShieldBar"].enabled
+				end,
+			},
+			lock_bar = {
+				name = L["Lock bar"],
+				desc = L["LockBarDesc"],
+				type = "toggle",
+				order = 20,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].locked = val 
+					self.bars["BoneShieldBar"]:Lock()
+				end,
+                get = function(info)
+					return self.db.profile.bars["BoneShieldBar"].locked
+				end,
+			},
+			progress = {
+				name = L["Progress Bar"],
+				desc = L["BoneShieldProgress_OptionDesc"],
+				type = "select",
+				values = {
+				    ["None"] = L["None"],
+				    ["Time"] = L["Time Remaining"],
+				    ["Charges"] = L["Charges"]
+				},
+				order = 30,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].progress = val
+			        self:UpdateBoneShieldBarMode()
+				end,
+                get = function(info)
+                    return self.db.profile.bars["BoneShieldBar"].progress
+                end,
+			},
+			showCooldown = {
+				name = L["Show on Cooldown"],
+				desc = L["ShowCooldownDesc"],
+				type = "toggle",
+				order = 40,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].showCooldown = val
+				end,
+                get = function(info)
+					return self.db.profile.bars["BoneShieldBar"].showCooldown
+				end,
+			},
+			showReady = {
+				name = L["Show when Ready"],
+				desc = L["ShowReadyDesc"],
+				type = "toggle",
+				order = 50,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].showReady = val
+				end,
+                get = function(info)
+					return self.db.profile.bars["BoneShieldBar"].showReady
+				end,
+			},
+            timeRemaining = {
+                order = 100,
+                type = "header",
+                name = L["Time Remaining"],
+            },
+			show_time = {
+				name = L["Show Time"],
+				desc = L["ShowTime_OptionDesc"],
+				type = "toggle",
+				order = 110,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].show_time = val
+				    if val then
+				        self.bars["BoneShieldBar"].bar.time:Show()
+			        else
+			            self.bars["BoneShieldBar"].bar.time:Hide()
+		            end
+				end,
+                get = function(info)
+                    return self.db.profile.bars["BoneShieldBar"].show_time
+                end,
+			},
+			time_pos = {
+				name = L["Position"],
+				desc = L["TimePosition_OptionDesc"],
+				type = "select",
+				values = {
+				    ["RIGHT"] = L["Right"],
+				    ["LEFT"] = L["Left"],
+				},
+				order = 120,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].time_pos = val
+			        self.bars["BoneShieldBar"].bar.time:SetPoint(val or "RIGHT")
+			        self.bars["BoneShieldBar"].bar.time:SetJustifyH(val or "RIGHT")
+				end,
+                get = function(info)
+                    return self.db.profile.bars["BoneShieldBar"].time_pos
+                end,
+                disabled = function()
+                    return not self.db.profile.bars["BoneShieldBar"].show_time
+                end,
+			},
+            dimensions = {
+                order = 300,
+                type = "header",
+                name = L["Dimensions"],
+            },
+			width = {
+				order = 310,
+				name = L["Width"],
+				desc = L["BarWidth_Desc"],	
+				type = "range",
+				min = 50,
+				max = 300,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].width = val 
+					self.bars["BoneShieldBar"].bar:SetWidth(val)
+					self.bars["BoneShieldBar"].bar.border:SetWidth(val+9)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["BoneShieldBar"].width
+				end,
+			},
+			height = {
+				order = 320,
+				name = L["Height"],
+				desc = L["BarHeight_Desc"],
+				type = "range",
+				min = 10,
+				max = 30,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].height = val 
+					self.bars["BoneShieldBar"].bar:SetHeight(val)
+					self.bars["BoneShieldBar"].bar.border:SetHeight(val + 8)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["BoneShieldBar"].height
+				end,					
+			},
+			scale = {
+				order = 330,
+				name = L["Scale"],
+				desc = L["ScaleDesc"],
+				type = "range",
+				min = 0.1,
+				max = 3,
+				step = 0.1,
+				get = function()
+					return self.db.profile.bars["BoneShieldBar"].scale
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].scale = val
+				    self.bars["BoneShieldBar"].bar:SetScale(val)
+				end
+			},
+            position = {
+                order = 400,
+                type = "header",
+                name = L["Position"],
+            },
+			x = {
+				order = 410,
+				name = L["X Offset"],
+				desc = L["XOffset_Desc"],	
+				type = "range",
+				softMin = -floor(_G.GetScreenWidth()/2),
+				softMax = floor(_G.GetScreenWidth()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].x = val
+					self.bars["BoneShieldBar"].bar:SetPoint(
+						"CENTER", _G.UIParent, "CENTER", 
+						self.db.profile.bars["BoneShieldBar"].x, 
+						self.db.profile.bars["BoneShieldBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["BoneShieldBar"].x
+				end,
+			},
+			y = {
+				order = 420,
+				name = L["Y Offset"],
+				desc = L["YOffset_Desc"],	
+				type = "range",
+				softMin = -floor(_G.GetScreenHeight()/2),
+				softMax = floor(_G.GetScreenHeight()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].y = val
+					self.bars["BoneShieldBar"].bar:SetPoint(
+						"CENTER", _G.UIParent, "CENTER", 
+						self.db.profile.bars["BoneShieldBar"].x, 
+						self.db.profile.bars["BoneShieldBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["BoneShieldBar"].y
+				end,
+			},
+            colors = {
+                order = 500,
+                type = "header",
+                name = L["Colors"],
+            },
+			textcolor = {
+				order = 510,
+				name = L["Text Color"],
+				desc = L["BarTextColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["BoneShieldBar"].textcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["BoneShieldBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["BoneShieldBar"].textcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			color = {
+				order = 520,
+				name = L["Bar Color"],
+				desc = L["BarColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["BoneShieldBar"].color
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["BoneShieldBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["BoneShieldBar"].color
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			bgcolor = {
+				order = 530,
+				name = L["Bar Background Color"],
+				desc = L["BarBackgroundColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["BoneShieldBar"].bgcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["BoneShieldBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["BoneShieldBar"].bgcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+            appearance = {
+                order = 600,
+                type = "header",
+                name = L["Appearance"],
+            },
+			texture_opt = {
+				order = 610,
+				name = L["Texture"],
+				desc = L["BarTexture_OptionDesc"],
+				type = "select",
+				values = LSM:HashTable("statusbar"),
+				dialogControl = 'LSM30_Statusbar',
+				get = function()
+				    return self.db.profile.bars["BoneShieldBar"].texture
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].texture = val
+				    self.bars["BoneShieldBar"]:UpdateTexture()
+				end,
+				disabled = function()
+				    return not self.db.profile.bars["BoneShieldBar"].shown
+				end,
+			},
+			border_visible_opt = {
+				order = 620,
+				name = L["ShowBorder"],
+				desc = L["ShowBorderDesc"],
+				type = "toggle",
+				get = function()
+				    return self.db.profile.bars["BoneShieldBar"].border
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["BoneShieldBar"].border = val
+				    self.bars["BoneShieldBar"]:UpdateBorder()
+				end,
+			},
+			visible_opt = {
+				order = 630,
+				name = L["ShowBar"],
+				desc = L["ShowBarDesc"],
+				type = "toggle",
+				get = function()
+					return self.db.profile.bars["BoneShieldBar"].shown
+				end,
+				set = function(info,val) 
+			        self.db.profile.bars["BoneShieldBar"].shown = val
+			        self.bars["BoneShieldBar"]:UpdateUI()
+			    end,
+			},
+		},
+	}
+
+	self:AddAdvancedPositioning(boneShieldOpts, "BoneShieldBar")
+	return boneShieldOpts
 end
 
 function BloodShieldTracker:GetEstimateBarOptions()
@@ -4209,6 +4559,7 @@ function BloodShieldTracker:OnInitialize()
 	self.absorbsbar = Bar:Create("TotalAbsorbsBar", "Total Absorbs Bar", false)
 	self.purgatorybar = Bar:Create("PurgatoryBar", "Purgatory Bar", false)
 	self.bloodchargebar = Bar:Create("BloodChargeBar", "Blood Charge Bar", true)
+	self.boneshieldbar = Bar:Create("BoneShieldBar", "Bone Shield Bar", true)
 	self.amsbar = Bar:Create("AMSBar", "Anti-Magic Shell Bar", true)
 	self:UpdatePositions()
 
@@ -4421,6 +4772,8 @@ function BloodShieldTracker:OnEnable()
 		    displayName, L["Estimated Healing Bar"], displayName, "estimateBarOpts")
 		self.optionsFrame.BloodChargeBar = ACD:AddToBlizOptions(
 		    displayName, L["Blood Charge Bar"], displayName, "bloodChargeOpts")
+		self.optionsFrame.BoneShieldBar = ACD:AddToBlizOptions(
+		    displayName, L["Bone Shield Bar"], displayName, "boneShieldOpts")
 		self.optionsFrame.PriestBar = ACD:AddToBlizOptions(
 		    displayName, L["PW:S Bar"], displayName, "pwsBarOpts")
 		self.optionsFrame.IllumBar = ACD:AddToBlizOptions(
@@ -4953,6 +5306,20 @@ function BloodShieldTracker:UpdateBloodChargeBarMode()
         bar.bar:SetValue(BS_DURATION)
     elseif bar.db.progress == "Charges" then
         bar.bar:SetMinMaxValues(0, MAX_BLOOD_CHARGES)
+        bar.bar:SetValue(0)
+    elseif bar.db.progress == "None" then
+        bar.bar:SetMinMaxValues(0, 1)
+        bar.bar:SetValue(1)        
+    end
+end
+
+function BloodShieldTracker:UpdateBoneShieldBarMode()
+	local bar = self.boneshieldbar
+    if bar.db.progress == "Time" then
+        bar.bar:SetMinMaxValues(0, 1)
+        bar.bar:SetValue(1)
+    elseif bar.db.progress == "Charges" then
+        bar.bar:SetMinMaxValues(0, 6)
         bar.bar:SetValue(0)
     elseif bar.db.progress == "None" then
         bar.bar:SetMinMaxValues(0, 1)
@@ -5632,6 +5999,57 @@ local function onUpdateBloodCharge(self, elapsed)
 	end
 end
 
+local function onUpdateBoneShield(self, elapsed)
+	self.lastUpdate = (self.lastUpdate or 0) + elapsed
+	self.timer = self.timer - elapsed
+	self.recharge = self.recharge - elapsed
+	if self.lastUpdate >= 0.1 then
+		if self.active then
+			local profile = BloodShieldTracker.db.profile.bars["BoneShieldBar"]
+			if self.timer > 0 then
+				if profile.show_time then
+					local remaining = ""
+					if self.timer > 60 then
+						remaining = tostring(ceil(self.timer / 60)) .. "m"
+					else
+						remaining = tostring(round(self.timer))
+					end
+					self.time:SetText(remaining)
+				end
+				self:Show()
+				if profile.progress == "Time" then
+					self:SetValue(self.timer)
+				elseif profile.progress == "Charges" then
+					self:SetValue(self.count)
+				end
+			else
+				self.timer = 0
+				self.active = false
+				self:SetScript("OnUpdate", nil)
+				self:Hide()
+			end
+		elseif self.recharging then
+			if self.recharge >= 0 then
+				local remaining = 0
+				if self.recharge > 60 then
+					remaining = tostring(ceil(self.recharge / 60)) .. "m"
+				else
+					remaining = tostring(round(self.recharge))
+				end
+				self.value:SetText(remaining)
+			else
+				self.recharging = false
+				self.recharge = 0
+				self.value:SetText("-")
+				self:SetScript("OnUpdate", nil)			
+			end
+		else
+			self:Hide()
+		end
+		self.lastUpdate = 0
+	end
+end
+
 local function onUpdateAMS(self, elapsed)
 	self.lastUpdate = (self.lastUpdate or 0) + elapsed
 	self.timer = self.timer - elapsed
@@ -5668,6 +6086,8 @@ local BSAuraPresent = false
 local BSAuraValue = 0
 local BSAuraExpires = 0
 local AurasFound = {}
+local AuraData = {}
+AuraData["Bone Shield"] = AuraData["Bone Shield"] or {}
 local OtherShields = {}
 local PreviousShieldValues = {}
 local PurgatoryAbsorb = 0
@@ -5678,7 +6098,7 @@ function BloodShieldTracker:CheckAuras()
     local name, rank, icon, count, dispelType, duration, expires,
         caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
 		castByPlayer, value, value2, value3
-
+	
 	-- Reset variables
 	wipe(AurasFound)
 	wipe(OtherShields)
@@ -5695,6 +6115,7 @@ function BloodShieldTracker:CheckAuras()
 	local AMSValue = 0
 	local AMSExpires = 0
 	local AMSDuration = 0
+	local Results
 
     CurrentPresence = nil
 	scentBloodStacks = 0
@@ -5717,6 +6138,12 @@ function BloodShieldTracker:CheckAuras()
 
 		if spellId == SpellIds["Scent of Blood"] then
 			scentBloodStacks = count
+
+		elseif spellId == SpellIds["Bone Shield"] then
+			AurasFound["Bone Shield"] = true
+			AuraData["Bone Shield"].expires = expires
+			AuraData["Bone Shield"].duration = duration
+			AuraData["Bone Shield"].count = count
 
         elseif tracked then
             AurasFound[tracked] = true
@@ -5958,6 +6385,83 @@ function BloodShieldTracker:CheckAuras()
 		end
 	end
 
+	if self.db.profile.bars["BoneShieldBar"].enabled and IsBloodTank then
+		local bar = self.boneshieldbar
+		local state = nil
+		local data = AuraData["Bone Shield"]
+		if AurasFound["Bone Shield"] then
+			state = 0
+			bar.bar.timer = data.expires - GetTime()
+			bar.bar.active = true
+			if data.count ~= bar.bar.count then
+				bar.bar.value:SetText(tostring(data.count))
+			end
+			bar.bar.count = data.count
+			bar.bar.recharging = false
+			bar.bar.recharge = 0
+		else
+			bar.bar.active = false
+			bar.bar.timer = 0
+			bar.bar.count = 0
+			--bar.bar:SetScript("OnUpdate", nil)
+			--bar.bar:Hide()
+
+			local start, duration, enabled = 
+				_G.GetSpellCooldown(SpellIds["Bone Shield"])
+			if duration > 0 then
+				state = 1
+				bar.bar.recharging = true
+				bar.bar.recharge = duration - (_G.GetTime() - start)
+			else
+				state = 2
+				bar.bar.recharging = false
+				bar.bar.recharging = 0
+			end
+		end
+
+		-- Update the display if state has changed
+		if state ~= bar.bar.state then
+			if state == 0 then
+				-- Active
+				if bar.db.progress == "Charges" then
+					bar.bar:SetMinMaxValues(0, 6)
+				elseif bar.db.progress == "Time" then
+					bar.bar:SetMinMaxValues(0, data.duration)
+				else
+					bar.bar:SetMinMaxValues(0, 1)
+					bar.bar:SetValue(1)
+				end
+				bar.bar:SetAlpha(1)
+				bar.bar:Show()
+				bar.bar:SetScript("OnUpdate", onUpdateBoneShield)
+			elseif state == 1 then
+				-- Recharging
+				bar.bar.time:SetText("")
+				if bar.db.showCooldown then
+					bar.bar:SetAlpha(0.5)
+					bar.bar:SetValue(_G.select(2, bar.bar:GetMinMaxValues()))
+					bar.bar:SetScript("OnUpdate", onUpdateBoneShield)
+					bar.bar:Show()
+				else
+					bar.bar:Hide()
+				end
+			else 
+				-- Ready
+				bar.bar.time:SetText("")
+				bar.bar.value:SetText("-")
+				if bar.db.showReady then
+					bar.bar:SetAlpha(0.5)
+					bar.bar:SetValue(_G.select(2, bar.bar:GetMinMaxValues()))
+					bar.bar:SetScript("OnUpdate", nil)
+					bar.bar:Show()
+				else
+					bar.bar:Hide()
+				end
+			end
+		end
+		bar.bar.state = state
+	end
+
 	if self.db.profile.bars["AMSBar"].enabled then
 		local amsBar = self.amsbar
 		if AurasFound["Anti-Magic Shell"] then
@@ -6158,7 +6662,7 @@ function Bar:Initialize()
 		self.shield_max = 0
 	    self.expires = 0
 	    self.active = false
-	elseif self.name == "BloodChargeBar" then
+	elseif self.name == "BloodChargeBar" or self.name == "BoneShieldBar" then
 		self.bar.active = false
 		self.bar.timer = 0
 		self.bar.count = 0
@@ -6167,6 +6671,9 @@ function Bar:Initialize()
 		self.bar.timer = 0
 	--elseif self.name == "EstimateBar" then
 	--	self:UpdateEstimateBarText(dsHealMin)
+	end
+	if self.name == "BoneShieldBar" then
+		self.bar.recharge = 0
 	end
 end
 
