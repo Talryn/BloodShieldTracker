@@ -4892,6 +4892,7 @@ function BloodShieldTracker:CheckTalents(event)
 	self:UpdateTierBonus()
 
 	self.bars["EstimateBar"]:UpdateVisibility()
+	self.bars["BoneShieldBar"]:UpdateVisibility()
 
 	if self.db.profile.debug then
 		local trackerOutputFmt = "Check Talents [DK=%s,BT=%s,MA=%s,VB=%s,Event=%s]"
@@ -6699,6 +6700,11 @@ function Bar:UpdateVisibility()
 		    self.bar.stacks:Show()
 		else
 		    self.bar.stacks:Hide()
+		end
+	elseif self.name == "BoneShieldBar" then
+		if not self.db.enabled or not IsBloodTank then
+			self.bar:Hide()
+			self.bar:SetScript("OnUpdate", nil)
 		end
 	else
 		if not self.db.enabled then
