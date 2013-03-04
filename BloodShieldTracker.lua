@@ -743,6 +743,7 @@ local defaults = {
 			["TotalAbsorbsBar"] = {
 				color = {r = 0.58, g = 0.51, b = 0.79, a = 1},
 				bgcolor = {r = 0.58, g = 0.51, b = 0.79, a = 0.7},
+				tracked = "Selected",
 				included = {
 					["Blood Shield"] = false,
 					["Power Word: Shield"] = true,
@@ -3214,6 +3215,23 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
                 type = "header",
                 name = L["Included Absorbs"],
             },
+			absorbsTracked = {
+				order = 101,
+				name = L["Absorbs Tracked"],
+				desc = L["AbsorbsTracked_OptionDesc"],
+				type = "select",
+				values = {
+				    ["All"] = L["All"],
+				    ["Selected"] = L["Selected"],
+				    ["Excluding"] = L["All Minus Selected"],
+				},
+				set = function(info, val)
+				    self.db.profile.bars["TotalAbsorbsBar"].tracked = val
+				end,
+                get = function(info)
+                    return self.db.profile.bars["TotalAbsorbsBar"].tracked
+                end,
+			},
             dimensions = {
                 order = 300,
                 type = "header",
@@ -3402,7 +3420,7 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
 	}
 
 	-- Add included absorbs
-	local orderid = 100
+	local orderid = 101
 	for i, tracked in ipairs(AbsorbShieldsOrdered) do
 		orderid = orderid + 1
 		absorbsBarOpts.args[tracked] = {
@@ -3415,6 +3433,9 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
 			end,
 	        get = function(info)
 				return self.db.profile.bars["TotalAbsorbsBar"].included[tracked]
+			end,
+			disabled = function()
+				return self.db.profile.bars["TotalAbsorbsBar"].tracked == "All"
 			end,
 		}
 	end
@@ -6311,11 +6332,20 @@ function BloodShieldTracker:CheckAuras()
 
 	if self.absorbsbar.db.enabled and IsBloodTank then
 		local shields = 0
-		local included = self.db.profile.bars["TotalAbsorbsBar"].included
-		for k,v in pairs(OtherShields) do
-			if included[k] == true then
-				shields = shields + v
+		local tracked = self.db.profile.bars["TotalAbsorbsBar"].tracked
+		if tracked ~= "All" then
+			local included = self.db.profile.bars["TotalAbsorbsBar"].included
+			for k,v in pairs(OtherShields) do
+				if included[k] == true then
+					shields = shields + v
+				end
 			end
+		end
+
+		if tracked == "All" then
+			shields = _G.UnitGetTotalAbsorbs("player") or 0
+		elseif tracked == "Excluding" then
+			shields = (_G.UnitGetTotalAbsorbs("player") or 0) - shields
 		end
 
 		if shields > 0 then
