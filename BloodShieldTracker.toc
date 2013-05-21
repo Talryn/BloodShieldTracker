@@ -1,4 +1,4 @@
-## Interface: 50200
+## Interface: 50300
 ## Title: Blood Shield Tracker
 ## Notes: Tracks the Blood Shield for Death Knights.
 ## Author: Talryn, kagaro
