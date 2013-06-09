@@ -4829,6 +4829,23 @@ function BloodShieldTracker:OnEnable()
 	self:RegisterEvent("GLYPH_UPDATED", "CheckGlyphs")
 end
 
+local UnitEvents = {
+	["player"] = {
+		"UNIT_AURA",
+	},
+}
+local function EventFrame_OnEvent(frame, event, ...)
+	if event == "UNIT_AURA" then
+		BloodShieldTracker:UNIT_AURA(event, ...)
+	end
+end
+local EventFrames = {}
+for unit, events in pairs(UnitEvents) do
+	local frame = _G.CreateFrame("Frame", BST.ADDON_NAME.."_EventFrame_"..unit)
+	frame:SetScript("OnEvent", EventFrame_OnEvent)
+	EventFrames[unit] = frame
+end
+
 function BloodShieldTracker:Load()
 	if self.loaded then return end
 
@@ -4844,12 +4861,23 @@ function BloodShieldTracker:Load()
 	self:RegisterEvent("MASTERY_UPDATE","UpdateMastery")
 	self:RegisterEvent("UNIT_MAXHEALTH","UpdateMinHeal")
 	self:RegisterEvent("PLAYER_DEAD")
-	self:RegisterEvent("UNIT_AURA")
     self:RegisterEvent("PLAYER_ENTERING_WORLD", "CheckAuras")
     self:RegisterEvent("PLAYER_ALIVE", "CheckAuras")
     self:RegisterEvent("UNIT_SPELLCAST_SENT")
     self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
+
+	for unit, events in pairs(UnitEvents) do
+		local eventFrame = EventFrames[unit]
+		if eventFrame then
+			for i, event in ipairs(events) do
+				eventFrame:RegisterUnitEvent(event, unit)
+			end
+		else
+			self:Print("Missing event frame for "..tostring(unit).."!")
+		end
+	end
+
     self:ToggleHealthBar()
     self.shieldbar:UpdateUI()
 	self.estimatebar:UpdateUI()
@@ -4870,14 +4898,22 @@ function BloodShieldTracker:Unload()
 	self:UnregisterEvent("MASTERY_UPDATE")
 	self:UnregisterEvent("UNIT_MAXHEALTH")
 	self:UnregisterEvent("PLAYER_DEAD")
-	self:UnregisterEvent("UNIT_AURA")
     self:UnregisterEvent("PLAYER_ENTERING_WORLD")
     self:UnregisterEvent("PLAYER_ALIVE")
     self:UnregisterEvent("UNIT_SPELLCAST_SENT")
     self:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     self:UnregisterEvent("UNIT_HEALTH")
     self:UnregisterEvent("PLAYER_EQUIPMENT_CHANGED")
-	
+
+	for unit, events in pairs(UnitEvents) do
+		local eventFrame = EventFrames[unit]
+		if eventFrame then
+			for i, event in ipairs(events) do
+				eventFrame:UnregisterEvent(event, unit)
+			end
+		end
+	end
+
 	for k, v in pairs(self.bars) do
 		if v then
 			v.bar:Hide()
@@ -6097,8 +6133,7 @@ local function onUpdateAMS(self, elapsed)
 	end
 end
 
-function BloodShieldTracker:UNIT_AURA(...)
-    local event, unit = ...
+function BloodShieldTracker:UNIT_AURA(event, unit, ...)
     if unit == "player" then
         self:CheckAuras()
     end
