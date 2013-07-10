@@ -72,6 +72,15 @@ local hasVBGlyphed = false
 local HasSuccorGlyphed = false
 local Tier14Count = 0
 local Tier14Bonus = 1
+BloodShieldTracker.boneWall = {
+	active = false,
+	charges = 0,
+	subcharges = 0,
+}
+BloodShieldTracker.tierCount = {
+	["T14 Tank"] = 0,
+	["T16 Tank"] = 0,
+}
 
 -- Settings to allow custom fonts and textures which override the
 -- user set options.
@@ -229,6 +238,15 @@ local SpellIds = {
 	["Vengeance"] = 132365,
 	["Anti-Magic Shell"] = 48707,
 	["Bone Shield"] = 49222,
+	["Bone Wall"] = 144948,
+	["Heart Strike"] = 55050,
+	["Death Coil"] = 47541,
+	["Rune Strike"] = 56815,
+	["Soul Reaper"] = 130735,
+	["Soul Reaper (Blood)"] = 114866,
+	["Soul Reaper (Frost)"] = 130735,
+	["Soul Reaper (Unholy)"] = 130736,
+	["Blood Boil"] = 48721,
 	-- ICC Buffs for Horde
 	["Hellscream's Warsong 05"] = 73816,
 	["Hellscream's Warsong 10"] = 73818,
@@ -299,6 +317,15 @@ local ICCBuffs = {
 	    [SpellIds["Strength of Wrynn 25"]] = 0.25,
 	    [SpellIds["Strength of Wrynn 30"]] = 0.30,
 	}
+}
+
+local BoneWallAbilities = {
+	[SpellIds["Heart Strike"]] = true,
+	[SpellIds["Rune Strike"]] = true,
+	[SpellIds["Soul Reaper"]] = true,
+	[SpellIds["Soul Reaper (Blood)"]] = true,
+	[SpellIds["Blood Boil"]] = true,
+	[SpellIds["Death Coil"]] = true,
 }
 
 -- Constants
@@ -782,6 +809,16 @@ local defaults = {
 				x = -90,
 				y = -90,
 			},
+			["BoneWallBar"] = {
+				enabled = false,
+		        progress = "Time",
+		        show_time = true,
+		        time_pos = "RIGHT",
+				x = -120,
+				y = -120,
+				color = {r = 0.8, g = 0.1, b = 0.1, a = 1},
+				bgcolor = {r = 0.55, g = 0.05, b = 0.05, a = 0.8},
+			},
 		}
     }
 }
@@ -954,6 +991,7 @@ function BloodShieldTracker:GetOptions()
 				absorbsBarOpts = self:GetAbsorbsBarOptions(),
 				purgatoryBarOpts = self:GetPurgatoryBarOptions(),
 				amsBarOpts = self:GetAMSBarOptions(),
+				boneWallOpts = self:GetBoneWallBarOptions(),
 				healthBarOpts = self:GetHealthBarOptions(),
 				skinningOpts = self:GetSkinningOptions(),
             }
@@ -1082,6 +1120,7 @@ function BloodShieldTracker:GetGeneralOptions()
 						self.absorbsbar.bar:Hide()
 						self.purgatorybar.bar:Hide()
 						self.amsbar.bar:Hide()
+						self.bonewallbar.bar:Hide()
 						if not self.healthbar.db.enabled or 
 							(self.healthbar.db.hide_ooc and 
 							not _G.InCombatLockdown()) then
@@ -3970,6 +4009,317 @@ function BloodShieldTracker:GetAMSBarOptions()
 	return amsBarOpts
 end
 
+function BloodShieldTracker:GetBoneWallBarOptions()
+	local boneWallOpts = {
+		order = 2,
+		type = "group",
+		name = L["Bone Wall Bar"],
+		desc = L["Bone Wall Bar"],
+		args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["BoneWallBar_Desc"],
+		    },
+            generalOptions = {
+                order = 2,
+                type = "header",
+                name = L["General Options"],
+            },
+    		status_bar_enabled = {
+				name = L["Enabled"],
+				desc = L["EnableBarDesc"],
+				type = "toggle",
+				order = 10,
+				set = function(info, val)
+				    self.db.profile.bars["BoneWallBar"].enabled = val
+					self.bars["BoneWallBar"]:UpdateVisibility()
+				end,
+                get = function(info)
+					return self.db.profile.bars["BoneWallBar"].enabled
+				end,
+			},
+			lock_bar = {
+				name = L["Lock bar"],
+				desc = L["LockBarDesc"],
+				type = "toggle",
+				order = 20,
+				set = function(info, val)
+				    self.db.profile.bars["BoneWallBar"].locked = val 
+					self.bars["BoneWallBar"]:Lock()
+				end,
+                get = function(info)
+					return self.db.profile.bars["BoneWallBar"].locked
+				end,
+			},
+			progress = {
+				name = L["Progress Bar"],
+				desc = L["ProgressBar_OptionDesc"],
+				type = "select",
+				values = {
+				    ["None"] = L["None"],
+				    ["Time"] = L["Time Remaining"],
+				    ["Charges"] = L["Charges"]
+				},
+				order = 30,
+				set = function(info, val)
+				    self.db.profile.bars["BoneWallBar"].progress = val
+			        self:UpdateBoneWallBarMode()
+				end,
+                get = function(info)
+                    return self.db.profile.bars["BoneWallBar"].progress
+                end,
+			},
+            timeRemaining = {
+                order = 100,
+                type = "header",
+                name = L["Time Remaining"],
+            },
+			show_time = {
+				name = L["Show Time"],
+				desc = L["ShowTime_OptionDesc"],
+				type = "toggle",
+				order = 110,
+				set = function(info, val)
+				    self.db.profile.bars["BoneWallBar"].show_time = val
+				    if val then
+				        self.bars["BoneWallBar"].bar.time:Show()
+			        else
+			            self.bars["BoneWallBar"].bar.time:Hide()
+		            end
+				end,
+                get = function(info)
+                    return self.db.profile.bars["BoneWallBar"].show_time
+                end,
+			},
+			time_pos = {
+				name = L["Position"],
+				desc = L["TimePosition_OptionDesc"],
+				type = "select",
+				values = {
+				    ["RIGHT"] = L["Right"],
+				    ["LEFT"] = L["Left"],
+				},
+				order = 120,
+				set = function(info, val)
+				    self.db.profile.bars["BoneWallBar"].time_pos = val
+			        self.bars["BoneWallBar"].bar.time:SetPoint(val or "RIGHT")
+			        self.bars["BoneWallBar"].bar.time:SetJustifyH(val or "RIGHT")
+				end,
+                get = function(info)
+                    return self.db.profile.bars["BoneWallBar"].time_pos
+                end,
+                disabled = function()
+                    return not self.db.profile.bars["BoneWallBar"].show_time
+                end,
+			},
+            dimensions = {
+                order = 300,
+                type = "header",
+                name = L["Dimensions"],
+            },
+			width = {
+				order = 310,
+				name = L["Width"],
+				desc = L["BarWidth_Desc"],	
+				type = "range",
+				min = 50,
+				max = 300,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["BoneWallBar"].width = val 
+					self.bars["BoneWallBar"].bar:SetWidth(val)
+					self.bars["BoneWallBar"].bar.border:SetWidth(val+9)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["BoneWallBar"].width
+				end,
+			},
+			height = {
+				order = 320,
+				name = L["Height"],
+				desc = L["BarHeight_Desc"],
+				type = "range",
+				min = 10,
+				max = 30,
+				step = 1,
+				set = function(info, val)
+				    self.db.profile.bars["BoneWallBar"].height = val 
+					self.bars["BoneWallBar"].bar:SetHeight(val)
+					self.bars["BoneWallBar"].bar.border:SetHeight(val + 8)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["BoneWallBar"].height
+				end,					
+			},
+			scale = {
+				order = 330,
+				name = L["Scale"],
+				desc = L["ScaleDesc"],
+				type = "range",
+				min = 0.1,
+				max = 3,
+				step = 0.1,
+				get = function()
+					return self.db.profile.bars["BoneWallBar"].scale
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["BoneWallBar"].scale = val
+				    self.bars["BoneWallBar"].bar:SetScale(val)
+				end
+			},
+            position = {
+                order = 400,
+                type = "header",
+                name = L["Position"],
+            },
+			x = {
+				order = 410,
+				name = L["X Offset"],
+				desc = L["XOffset_Desc"],	
+				type = "range",
+				softMin = -floor(_G.GetScreenWidth()/2),
+				softMax = floor(_G.GetScreenWidth()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["BoneWallBar"].x = val
+					self.bars["BoneWallBar"].bar:SetPoint(
+						"CENTER", _G.UIParent, "CENTER", 
+						self.db.profile.bars["BoneWallBar"].x, 
+						self.db.profile.bars["BoneWallBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["BoneWallBar"].x
+				end,
+			},
+			y = {
+				order = 420,
+				name = L["Y Offset"],
+				desc = L["YOffset_Desc"],	
+				type = "range",
+				softMin = -floor(_G.GetScreenHeight()/2),
+				softMax = floor(_G.GetScreenHeight()/2),
+				bigStep = 1,
+				set = function(info, val)
+				    self.db.profile.bars["BoneWallBar"].y = val
+					self.bars["BoneWallBar"].bar:SetPoint(
+						"CENTER", _G.UIParent, "CENTER", 
+						self.db.profile.bars["BoneWallBar"].x, 
+						self.db.profile.bars["BoneWallBar"].y)
+				end,
+				get = function(info, val)
+				    return self.db.profile.bars["BoneWallBar"].y
+				end,
+			},
+            colors = {
+                order = 500,
+                type = "header",
+                name = L["Colors"],
+            },
+			textcolor = {
+				order = 510,
+				name = L["Text Color"],
+				desc = L["BarTextColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["BoneWallBar"].textcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["BoneWallBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["BoneWallBar"].textcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			color = {
+				order = 520,
+				name = L["Bar Color"],
+				desc = L["BarColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["BoneWallBar"].color
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["BoneWallBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["BoneWallBar"].color
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+			bgcolor = {
+				order = 530,
+				name = L["Bar Background Color"],
+				desc = L["BarBackgroundColor_OptionDesc"],
+				type = "color",
+				hasAlpha = true,
+				set = function(info, r, g, b, a)
+				    local c = self.db.profile.bars["BoneWallBar"].bgcolor
+				    c.r, c.g, c.b, c.a = r, g, b, a
+				    self.bars["BoneWallBar"]:UpdateGraphics()
+				end,
+				get = function(info)
+			        local c = self.db.profile.bars["BoneWallBar"].bgcolor
+				    return c.r, c.g, c.b, c.a
+				end,					
+			},
+            appearance = {
+                order = 600,
+                type = "header",
+                name = L["Appearance"],
+            },
+			texture_opt = {
+				order = 610,
+				name = L["Texture"],
+				desc = L["BarTexture_OptionDesc"],
+				type = "select",
+				values = LSM:HashTable("statusbar"),
+				dialogControl = 'LSM30_Statusbar',
+				get = function()
+				    return self.db.profile.bars["BoneWallBar"].texture
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["BoneWallBar"].texture = val
+				    self.bars["BoneWallBar"]:UpdateTexture()
+				end,
+				disabled = function()
+				    return not self.db.profile.bars["BoneWallBar"].shown
+				end,
+			},
+			border_visible_opt = {
+				order = 620,
+				name = L["ShowBorder"],
+				desc = L["ShowBorderDesc"],
+				type = "toggle",
+				get = function()
+				    return self.db.profile.bars["BoneWallBar"].border
+				end,
+				set = function(info, val)
+				    self.db.profile.bars["BoneWallBar"].border = val
+				    self.bars["BoneWallBar"]:UpdateBorder()
+				end,
+			},
+			visible_opt = {
+				order = 630,
+				name = L["ShowBar"],
+				desc = L["ShowBarDesc"],
+				type = "toggle",
+				get = function()
+					return self.db.profile.bars["BoneWallBar"].shown
+				end,
+				set = function(info,val) 
+			        self.db.profile.bars["BoneWallBar"].shown = val
+			        self.bars["BoneWallBar"]:UpdateUI()
+			    end,
+			},
+		},
+	}
+
+	self:AddAdvancedPositioning(boneWallOpts, "BoneWallBar")
+	return boneWallOpts
+end
+
 function BloodShieldTracker:GetHealthBarOptions()
 	local healthBarOpts = {
 	    order = 8,
@@ -4582,6 +4932,8 @@ function BloodShieldTracker:OnInitialize()
 	self.bloodchargebar = Bar:Create("BloodChargeBar", "Blood Charge Bar", true)
 	self.boneshieldbar = Bar:Create("BoneShieldBar", "Bone Shield Bar", true)
 	self.amsbar = Bar:Create("AMSBar", "Anti-Magic Shell Bar", true)
+	self.bonewallbar = Bar:Create("BoneWallBar", "Bone Wall Bar", true)
+	self:UpdateBoneWallBarMode()
 	self:UpdatePositions()
 
 	-- Register for profile callbacks
@@ -4803,6 +5155,8 @@ function BloodShieldTracker:OnEnable()
 		    displayName, L["Total Absorbs Bar"], displayName, "absorbsBarOpts")
 		self.optionsFrame.AMSBar = ACD:AddToBlizOptions(
 		    displayName, L["Anti-Magic Shell Bar"], displayName, "amsBarOpts")
+		self.optionsFrame.BoneWallBar = ACD:AddToBlizOptions(
+		    displayName, L["Bone Wall Bar"], displayName, "boneWallOpts")
 		self.optionsFrame.PurgatoryBar = ACD:AddToBlizOptions(
 		    displayName, L["Purgatory Bar"], displayName, "purgatoryBarOpts")
 		self.optionsFrame.HealthBar = ACD:AddToBlizOptions(
@@ -4832,11 +5186,14 @@ end
 local UnitEvents = {
 	["player"] = {
 		"UNIT_AURA",
+		"UNIT_SPELLCAST_SUCCEEDED",
 	},
 }
 local function EventFrame_OnEvent(frame, event, ...)
 	if event == "UNIT_AURA" then
 		BloodShieldTracker:UNIT_AURA(event, ...)
+	elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
+		BloodShieldTracker:UNIT_SPELLCAST_SUCCEEDED(event, ...)
 	end
 end
 local EventFrames = {}
@@ -4864,7 +5221,6 @@ function BloodShieldTracker:Load()
     self:RegisterEvent("PLAYER_ENTERING_WORLD", "CheckAuras")
     self:RegisterEvent("PLAYER_ALIVE", "CheckAuras")
     self:RegisterEvent("UNIT_SPELLCAST_SENT")
-    self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 
 	for unit, events in pairs(UnitEvents) do
@@ -4901,7 +5257,6 @@ function BloodShieldTracker:Unload()
     self:UnregisterEvent("PLAYER_ENTERING_WORLD")
     self:UnregisterEvent("PLAYER_ALIVE")
     self:UnregisterEvent("UNIT_SPELLCAST_SENT")
-    self:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     self:UnregisterEvent("UNIT_HEALTH")
     self:UnregisterEvent("PLAYER_EQUIPMENT_CHANGED")
 
@@ -5033,32 +5388,61 @@ local TierSlotIds = {
 	["Hands"] = _G.GetInventorySlotInfo("HandsSlot"),
 }
 
-local Tier14Ids = {
-	["Head"] = {
-		[86656] = true,
-		[85316] = true,
-		[86920] = true,
-		},
-	["Shoulder"] = {
-		[86654] = true,
-		[85314] = true,
-		[86922] = true,
-		},
-	["Chest"] = {
-		[86658] = true,
-		[85318] = true,
-		[86918] = true,
-		},
-	["Legs"] = {
-		[86655] = true,
-		[85315] = true,
-		[86921] = true,
-		},
-	["Hands"] = {
-		[86657] = true,
-		[85317] = true,
-		[86919] = true,
-		},
+local TierIds = {
+	["T14 Tank"] = {
+		["Head"] = {
+			[86656] = true,
+			[85316] = true,
+			[86920] = true,
+			},
+		["Shoulder"] = {
+			[86654] = true,
+			[85314] = true,
+			[86922] = true,
+			},
+		["Chest"] = {
+			[86658] = true,
+			[85318] = true,
+			[86918] = true,
+			},
+		["Legs"] = {
+			[86655] = true,
+			[85315] = true,
+			[86921] = true,
+			},
+		["Hands"] = {
+			[86657] = true,
+			[85317] = true,
+			[86919] = true,
+			},
+	},
+	["T16 Tank"] = {
+		["Head"] = {
+			[99049] = true,
+			[99190] = true,
+			[99323] = true,
+			},
+		["Shoulder"] = {
+			[99040] = true,
+			[99179] = true,
+			[99325] = true,
+			},
+		["Chest"] = {
+			[99060] = true,
+			[99188] = true,
+			[99330] = true,
+			},
+		["Legs"] = {
+			[99039] = true,
+			[99191] = true,
+			[99324] = true,
+			},
+		["Hands"] = {
+			[99048] = true,
+			[99189] = true,
+			[99331] = true,
+			},
+	},
 }
 
 local TierSlots = {}
@@ -5069,27 +5453,33 @@ end
 function BloodShieldTracker:CheckGear()
 	GearChangeTimer = nil
 	local count = 0
+	local update = false
 
-	for slot, slotid in pairs(TierSlotIds) do
-		local id = _G.GetInventoryItemID("player", slotid)
-		if Tier14Ids[slot][id] then
-			count = count + 1
+	for tier, ids in pairs(TierIds) do
+		count = 0
+		for slot, slotid in pairs(TierSlotIds) do
+			local id = _G.GetInventoryItemID("player", slotid)
+			if ids[slot][id] then
+				count = count + 1
+			end
+		end
+
+		if count ~= self.tierCount[tier] then
+			self.tierCount[tier] = count
+			if self.db.profile.debug and not _G.UnitAffectingCombat("player") then
+				local fmt = "%s Detected: %d/5"
+				self:Print(fmt:format(tier, self.tierCount[tier]))
+			end
+			changed = true
 		end
 	end
 
-	if count ~= Tier14Count then
-		Tier14Count = count
-		if self.db.profile.verbose and idle then
-			local fmt = "T14 Detected: %d/5"
-			self:Print(fmt:format(Tier14Count))
-		end
-		self:UpdateTierBonus()
-	end
+	if changed then self:UpdateTierBonus() end
 end
 
 function BloodShieldTracker:UpdateTierBonus()
 	local currentBonus = Tier14Bonus
-	Tier14Bonus = 1 + (Tier14Count >= 4 and T14BonusAmt or 0)
+	Tier14Bonus = 1 + (self.tierCount["T14 Tank"] >= 4 and T14BonusAmt or 0)
 	if currentBonus ~= Tier14Bonus then
 		self:UpdateMinHeal("CheckGear", "player")
 		if self.db.profile.verbose and idle then
@@ -5097,6 +5487,7 @@ function BloodShieldTracker:UpdateTierBonus()
 			self:Print(fmt:format(Tier14Bonus*100-100))
 		end
 	end
+	self.boneWall.active = self.tierCount["T16 Tank"] >= 2 and IsBloodTank
 end
 
 function BloodShieldTracker:PLAYER_EQUIPMENT_CHANGED(event, slot, hasItem)
@@ -5385,6 +5776,20 @@ function BloodShieldTracker:UpdateBoneShieldBarMode()
     end
 end
 
+function BloodShieldTracker:UpdateBoneWallBarMode()
+	local bar = self.bonewallbar
+    if bar.db.progress == "Time" then
+        bar.bar:SetMinMaxValues(0, 120)
+        bar.bar:SetValue(120)
+    elseif bar.db.progress == "Charges" then
+        bar.bar:SetMinMaxValues(0, 10)
+        bar.bar:SetValue(0)
+    elseif bar.db.progress == "None" then
+        bar.bar:SetMinMaxValues(0, 1)
+        bar.bar:SetValue(1)        
+    end
+end
+
 function BloodShieldTracker:ShowShieldBar()
     if self.shieldbar.db.enabled then
         if self.shieldbar.db.progress == "Time" then
@@ -5580,23 +5985,34 @@ function BloodShieldTracker:UNIT_SPELLCAST_SENT(event, unit, spellName)
     end
 end
 
-function BloodShieldTracker:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName)
-    if unit == "player" and spellName == SpellNames["Death Strike"] then
-        local succeededTime = GetTime()
-        if DS_SentTime then
-            local diff = succeededTime - DS_SentTime
-            if diff > 0 then
-                DS_Latency = diff
-                if self.db.profile.debug then
-                    self:Print("DS Latency: "..DS_Latency)
-                end
-                -- If the latency appears overly large then cap it at 2 seconds.
-                if DS_Latency > 2 then 
-                    DS_Latency = 2
-                end
-                DS_SentTime = nil
-            end
+function BloodShieldTracker:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, rank, lineId, spellId)
+    if unit == "player" then
+		if spellName == SpellNames["Death Strike"] then
+	        local succeededTime = GetTime()
+	        if DS_SentTime then
+	            local diff = succeededTime - DS_SentTime
+	            if diff > 0 then
+	                DS_Latency = diff
+	                if self.db.profile.debug then
+	                    self:Print("DS Latency: "..DS_Latency)
+	                end
+	                -- If the latency appears overly large then cap it at 2 seconds.
+	                if DS_Latency > 2 then 
+	                    DS_Latency = 2
+	                end
+	                DS_SentTime = nil
+	            end
+			end
         end
+		if self.boneWall.active then
+			if BoneWallAbilities[spellId] then
+				if spellId ~= SpellIds["Blood Boil"] or 
+					_G.UnitAffectingCombat("player") then
+					self.boneWall.subcharges = self.boneWall.subcharges + 1
+					self:UpdateBoneWallCharges()
+				end
+			end
+		end
     end
 end
 
@@ -6133,6 +6549,54 @@ local function onUpdateAMS(self, elapsed)
 	end
 end
 
+local function onUpdateBoneWall(self, elapsed)
+	self.lastUpdate = (self.lastUpdate or 0) + elapsed
+	self.timer = self.timer - elapsed
+	if self.lastUpdate >= 0.1 then
+		if self.active then
+			if self.timer < 0 then
+				self.timer = 0
+				self.active = false
+				self:SetScript("OnUpdate", nil)
+				self:Hide()
+			else
+				if self.object.db.show_time then
+					local remaining = 0
+					if self.timer > 60 then
+						remaining = tostring(ceil(self.timer / 60)) .. "m"
+					else
+						remaining = tostring(round(self.timer))
+					end
+					self.time:SetText(remaining)
+				end
+				if self.object.db.progress == "Time" then
+					self:SetValue(self.timer)
+				end
+				self:Show()
+			end
+		else
+			self:Hide()
+		end
+		self.lastUpdate = 0
+	end
+end
+
+local boneWallFmt = "%d.%d"
+function BloodShieldTracker:UpdateBoneWallCharges()
+	local bar = self.bonewallbar
+	if bar.db.enabled and self.boneWall.active and 
+		(self.boneWall.charges > 0 or self.boneWall.subcharges > 0) then
+		bar.bar:Show()
+		bar.bar.value:SetText(
+			boneWallFmt:format(self.boneWall.charges, self.boneWall.subcharges))
+		if bar.db.progress == "Charges" then
+			bar.bar:SetValue(self.boneWall.subcharges)
+		end
+	else
+		bar.bar:Hide()
+	end 
+end
+
 function BloodShieldTracker:UNIT_AURA(event, unit, ...)
     if unit == "player" then
         self:CheckAuras()
@@ -6145,6 +6609,7 @@ local BSAuraExpires = 0
 local AurasFound = {}
 local AuraData = {}
 AuraData["Bone Shield"] = AuraData["Bone Shield"] or {}
+AuraData["Bone Wall"] = AuraData["Bone Wall"] or {}
 local OtherShields = {}
 local PreviousShieldValues = {}
 local PurgatoryAbsorb = 0
@@ -6201,6 +6666,12 @@ function BloodShieldTracker:CheckAuras()
 			AuraData["Bone Shield"].expires = expires
 			AuraData["Bone Shield"].duration = duration
 			AuraData["Bone Shield"].count = count
+
+		elseif spellId == SpellIds["Bone Wall"] then
+			AurasFound["Bone Wall"] = true
+			AuraData["Bone Wall"].expires = expires
+			AuraData["Bone Wall"].duration = duration
+			AuraData["Bone Wall"].count = count
 
         elseif tracked then
             AurasFound[tracked] = true
@@ -6455,7 +6926,7 @@ function BloodShieldTracker:CheckAuras()
 		local bar = self.boneshieldbar
 		local state = nil
 		local data = AuraData["Bone Shield"]
-		if AurasFound["Bone Shield"] then
+		if data then
 			state = 0
 			bar.bar.timer = data.expires - GetTime()
 			bar.bar.active = true
@@ -6528,23 +6999,58 @@ function BloodShieldTracker:CheckAuras()
 		bar.bar.state = state
 	end
 
-	if self.db.profile.bars["AMSBar"].enabled then
-		local amsBar = self.amsbar
-		if AurasFound["Anti-Magic Shell"] then
-			amsBar:SetValue(AMSValue or 0)
-			amsBar.bar.timer = AMSExpires - GetTime()
-			if amsBar.bar.duration ~= AMSDuration then
-				amsBar.bar.duration = AMSDuration
-				amsBar.bar:SetMinMaxValues(0, amsBar.bar.duration or 1)
+	if self.db.profile.bars["BoneWallBar"].enabled and self.boneWall.active then
+		local bar = self.bonewallbar
+		if AurasFound["Bone Wall"] then
+			local data = AuraData["Bone Wall"]
+			if bar.state ~= 1 then
+				bar.state = 1
+				if bar.db.progress == "Time" then
+					bar.bar:SetMinMaxValues(0, data.duration or 120)
+				end
 			end
-			amsBar.bar.active = true
-			amsBar.bar:Show()
-			amsBar.bar:SetScript("OnUpdate", onUpdateAMS)
+			if data then
+				bar.bar.active = true
+				if self.boneWall.charges ~= data.count then
+					self.boneWall.charges = data.count
+					self.boneWall.subcharges = 0
+					bar.bar.count = data.count			
+					self:UpdateBoneWallCharges()
+				end
+				bar.bar.timer = data.expires - GetTime()
+				bar.bar:Show()
+				bar.bar:SetScript("OnUpdate", onUpdateBoneWall)
+			end
 		else
-			amsBar.bar.active = false
-			amsBar.bar.timer = 0
-			amsBar.bar:SetScript("OnUpdate", nil)
-			amsBar.bar:Hide()
+			if bar.state ~= 0 then
+				bar.state = 0
+				bar.bar.active = false
+				self.boneWall.charges = 0
+				self.boneWall.subcharges = 0
+				bar.bar.time:SetText("-")
+				bar.bar:SetScript("OnUpdate", nil)
+				self:UpdateBoneWallCharges()
+			end
+		end
+	end
+
+	if self.db.profile.bars["AMSBar"].enabled then
+		local bar = self.amsbar
+		if AurasFound["Anti-Magic Shell"] then
+			bar:SetValue(AMSValue or 0)
+			bar.bar.timer = AMSExpires - GetTime()
+			if bar.bar.duration ~= AMSDuration then
+				bar.bar.duration = AMSDuration
+				bar.bar:SetMinMaxValues(0, bar.bar.duration or 1)
+			end
+			bar.bar.active = true
+			bar.bar:Show()
+			bar.bar:SetScript("OnUpdate", onUpdateAMS)
+		else
+			bar.bar.active = false
+			bar.bar.timer = 0
+			bar.bar:SetScript("OnUpdate", nil)
+			bar.bar:Hide()
 		end
 	end
 
@@ -6728,7 +7234,8 @@ function Bar:Initialize()
 		self.shield_max = 0
 	    self.expires = 0
 	    self.active = false
-	elseif self.name == "BloodChargeBar" or self.name == "BoneShieldBar" then
+	elseif self.name == "BloodChargeBar" or self.name == "BoneShieldBar" 
+		or self.name == "BoneWallBar" then
 		self.bar.active = false
 		self.bar.timer = 0
 		self.bar.count = 0
@@ -6766,7 +7273,7 @@ function Bar:UpdateVisibility()
 		else
 		    self.bar.stacks:Hide()
 		end
-	elseif self.name == "BoneShieldBar" then
+	elseif self.name == "BoneShieldBar" or self.name == "BoneWallBar" then
 		if not self.db.enabled or not IsBloodTank then
 			self.bar:Hide()
 			self.bar:SetScript("OnUpdate", nil)
