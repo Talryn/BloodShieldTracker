@@ -5453,7 +5453,7 @@ end
 function BloodShieldTracker:CheckGear()
 	GearChangeTimer = nil
 	local count = 0
-	local update = false
+	local changed = false
 
 	for tier, ids in pairs(TierIds) do
 		count = 0
