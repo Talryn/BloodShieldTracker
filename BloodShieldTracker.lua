@@ -6926,7 +6926,7 @@ function BloodShieldTracker:CheckAuras()
 		local bar = self.boneshieldbar
 		local state = nil
 		local data = AuraData["Bone Shield"]
-		if data then
+		if AurasFound["Bone Shield"] and data then
 			state = 0
 			bar.bar.timer = data.expires - GetTime()
 			bar.bar.active = true
