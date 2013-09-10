@@ -816,8 +816,8 @@ local defaults = {
 		        time_pos = "RIGHT",
 				x = -120,
 				y = -120,
-				color = {r = 0.8, g = 0.1, b = 0.1, a = 1},
-				bgcolor = {r = 0.55, g = 0.05, b = 0.05, a = 0.8},
+				color = {r = 0.057, g = 0.936, b = 0.057, a = 1},
+				bgcolor = {r = 0.048, g = 0.78, b = 0.048, a = 0.8},
 			},
 		}
     }
