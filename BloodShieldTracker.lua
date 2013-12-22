@@ -247,6 +247,7 @@ local SpellIds = {
 	["Soul Reaper (Frost)"] = 130735,
 	["Soul Reaper (Unholy)"] = 130736,
 	["Blood Boil"] = 48721,
+	["Sacred Shield"] = 65148,
 	-- ICC Buffs for Horde
 	["Hellscream's Warsong 05"] = 73816,
 	["Hellscream's Warsong 10"] = 73818,
@@ -288,6 +289,7 @@ local AbsorbShieldsOrdered = {
 	"Spirit Shell",
 	"Guard",
 	"Indomitable Pride",
+	"Sacred Shield",
 	"Anti-Magic Shell",
 }
 local AbsorbShields = {}
@@ -780,6 +782,7 @@ local defaults = {
 					["Guard"] = true,
 					["Indomitable Pride"] = true,
 					["Spirit Shell"] = true,
+					["Sacred Shield"] = true,
 					["Anti-Magic Shell"] = false,
 				},
 				x = 100, 
@@ -6040,8 +6043,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             local damage, absorb = param9, param14 or 0
 
             if self.db.profile.debug then
-                local swingDmgFmt = "Swing Damage for %d [%d absorbed]"
-                self:Print(swingDmgFmt:format(damage, absorb))
+                local swingDmgFmt = "Swing Damage for %d [%d absorbed, %s]"
+                self:Print(swingDmgFmt:format(damage, absorb, eventtype))
             end
 
             self:AddDamageTaken(timestamp, damage)
