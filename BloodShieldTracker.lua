@@ -1,4 +1,5 @@
 local _G = getfenv(0)
+local ADDON_NAME, addonData = ...
 
 local string = _G.string
 local table = _G.table
@@ -29,7 +30,7 @@ local function cleanupVersion(version)
 	return version
 end
 
-BloodShieldTracker.ADDON_NAME = ...
+BloodShieldTracker.ADDON_NAME = ADDON_NAME
 BloodShieldTracker.ADDON_VERSION = cleanupVersion("@project-version@")
 
 local DEBUG_OUTPUT = false
@@ -828,6 +829,254 @@ local defaults = {
 
 local options
 
+function BloodShieldTracker:ShowOptions()
+	_G.InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.ShieldBar)
+	_G.InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.Main)
+end
+
+function BloodShieldTracker:GetOptions()
+    if not options then
+        options = {
+            type = "group",
+            name = _G.GetAddOnMetadata(BST.ADDON_NAME, "Title"),
+            args = {
+				core = self:GetGeneralOptions(),
+				shieldBarOpts = self:GetShieldBarOptions(),
+				estimateBarOpts = self:GetEstimateBarOptions(),
+				bloodChargeOpts = self:GetBloodChargeBarOptions(),
+				boneShieldOpts = self:GetBoneShieldBarOptions(),
+				pwsBarOpts = self:GetPWSBarOptions(),
+				illumBarOpts = self:GetIllumBarOptions(),
+				absorbsBarOpts = self:GetAbsorbsBarOptions(),
+				purgatoryBarOpts = self:GetPurgatoryBarOptions(),
+				amsBarOpts = self:GetAMSBarOptions(),
+				boneWallOpts = self:GetBoneWallBarOptions(),
+				healthBarOpts = self:GetHealthBarOptions(),
+				skinningOpts = self:GetSkinningOptions(),
+            }
+        }
+		options.args.profile = _G.LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
+    end
+    return options
+end
+
+function BloodShieldTracker:AddDimensionOptions(opts, barName, order)
+	local seq = order or 300
+    opts.args.dimensions = {
+        order = seq,
+        type = "header",
+        name = L["Dimensions"],
+    }
+	opts.args.width = {
+		order = seq + 10,
+		name = L["Width"],
+		desc = L["BarWidth_Desc"],	
+		type = "range",
+		min = 50,
+		max = 300,
+		step = 1,
+		set = function(info, val)
+		    self.db.profile.bars[barName].width = val 
+			self.bars[barName].bar:SetWidth(val)
+			self.bars[barName].bar.border:SetWidth(val+9)
+		end,
+		get = function(info, val)
+		    return self.db.profile.bars[barName].width
+		end,
+	}
+	opts.args.height = {
+		order = seq + 20,
+		name = L["Height"],
+		desc = L["BarHeight_Desc"],
+		type = "range",
+		min = 10,
+		max = 30,
+		step = 1,
+		set = function(info, val)
+		    self.db.profile.bars[barName].height = val 
+			self.bars[barName].bar:SetHeight(val)
+			self.bars[barName].bar.border:SetHeight(val + 8)
+		end,
+		get = function(info, val)
+		    return self.db.profile.bars[barName].height
+		end,					
+	}
+	opts.args.scale = {
+		order = seq + 30,
+		name = L["Scale"],
+		desc = L["ScaleDesc"],
+		type = "range",
+		min = 0.1,
+		max = 3,
+		step = 0.1,
+		get = function()
+			return self.db.profile.bars[barName].scale
+		end,
+		set = function(info, val)
+		    self.db.profile.bars[barName].scale = val
+		    self.bars[barName].bar:SetScale(val)
+		end
+	}
+end
+
+function BloodShieldTracker:AddPositionOptions(opts, barName, order)
+	local seq = order or 400
+
+    opts.args.position = {
+        order = seq,
+        type = "header",
+        name = L["Position"],
+    }
+	opts.args.x = {
+		order = seq + 10,
+		name = L["X Offset"],
+		desc = L["XOffset_Desc"],	
+		type = "range",
+		softMin = -floor(_G.GetScreenWidth()/2),
+		softMax = floor(_G.GetScreenWidth()/2),
+		bigStep = 1,
+		set = function(info, val)
+		    self.db.profile.bars[barName].x = val
+			self.bars[barName].bar:SetPoint(
+				"CENTER", _G.UIParent, "CENTER", 
+				self.db.profile.bars[barName].x, 
+				self.db.profile.bars[barName].y)
+		end,
+		get = function(info, val)
+		    return self.db.profile.bars[barName].x
+		end,
+	}
+	opts.args.y = {
+		order = seq + 20,
+		name = L["Y Offset"],
+		desc = L["YOffset_Desc"],	
+		type = "range",
+		softMin = -floor(_G.GetScreenHeight()/2),
+		softMax = floor(_G.GetScreenHeight()/2),
+		bigStep = 1,
+		set = function(info, val)
+		    self.db.profile.bars[barName].y = val
+			self.bars[barName].bar:SetPoint(
+				"CENTER", _G.UIParent, "CENTER", 
+				self.db.profile.bars[barName].x, 
+				self.db.profile.bars[barName].y)
+		end,
+		get = function(info, val)
+		    return self.db.profile.bars[barName].y
+		end,
+	}
+end
+
+function BloodShieldTracker:AddColorsOptions(opts, barName, order)
+	local seq = order or 500
+    opts.args.colors = {
+        order = seq,
+        type = "header",
+        name = L["Colors"],
+    }
+	opts.args.textcolor = {
+		order = seq + 10,
+		name = L["Text Color"],
+		desc = L["BarTextColor_OptionDesc"],
+		type = "color",
+		hasAlpha = true,
+		set = function(info, r, g, b, a)
+		    local c = self.db.profile.bars[barName].textcolor
+		    c.r, c.g, c.b, c.a = r, g, b, a
+		    self.bars[barName]:UpdateGraphics()
+		end,
+		get = function(info)
+	        local c = self.db.profile.bars[barName].textcolor
+		    return c.r, c.g, c.b, c.a
+		end,					
+	}
+	opts.args.color = {
+		order = seq + 20,
+		name = L["Bar Color"],
+		desc = L["BarColor_OptionDesc"],
+		type = "color",
+		hasAlpha = true,
+		set = function(info, r, g, b, a)
+		    local c = self.db.profile.bars[barName].color
+		    c.r, c.g, c.b, c.a = r, g, b, a
+		    self.bars[barName]:UpdateGraphics()
+		end,
+		get = function(info)
+	        local c = self.db.profile.bars[barName].color
+		    return c.r, c.g, c.b, c.a
+		end,					
+	}
+	opts.args.bgcolor = {
+		order = seq + 30,
+		name = L["Bar Background Color"],
+		desc = L["BarBackgroundColor_OptionDesc"],
+		type = "color",
+		hasAlpha = true,
+		set = function(info, r, g, b, a)
+		    local c = self.db.profile.bars[barName].bgcolor
+		    c.r, c.g, c.b, c.a = r, g, b, a
+		    self.bars[barName]:UpdateGraphics()
+		end,
+		get = function(info)
+	        local c = self.db.profile.bars[barName].bgcolor
+		    return c.r, c.g, c.b, c.a
+		end,					
+	}
+end
+
+function BloodShieldTracker:AddAppearanceOptions(opts, barName, order)
+	local seq = order or 600
+    opts.args.appearance = {
+        order = seq,
+        type = "header",
+        name = L["Appearance"],
+    }
+	opts.args.texture_opt = {
+		order = seq + 10,
+		name = L["Texture"],
+		desc = L["BarTexture_OptionDesc"],
+		type = "select",
+		values = LSM:HashTable("statusbar"),
+		dialogControl = 'LSM30_Statusbar',
+		get = function()
+		    return self.db.profile.bars[barName].texture
+		end,
+		set = function(info, val)
+		    self.db.profile.bars[barName].texture = val
+		    self.bars[barName]:UpdateTexture()
+		end,
+		disabled = function()
+		    return not self.db.profile.bars[barName].shown
+		end,
+	}
+	opts.args.border_visible_opt = {
+		order = seq + 20,
+		name = L["ShowBorder"],
+		desc = L["ShowBorderDesc"],
+		type = "toggle",
+		get = function()
+		    return self.db.profile.bars[barName].border
+		end,
+		set = function(info, val)
+		    self.db.profile.bars[barName].border = val
+		    self.bars[barName]:UpdateBorder()
+		end,
+	}
+	opts.args.visible_opt = {
+		order = seq + 30,
+		name = L["ShowBar"],
+		desc = L["ShowBarDesc"],
+		type = "toggle",
+		get = function()
+			return self.db.profile.bars[barName].shown
+		end,
+		set = function(info,val) 
+	        self.db.profile.bars[barName].shown = val
+	        self.bars[barName]:UpdateUI()
+	    end,
+	}
+end
+
 function BloodShieldTracker:AddAdvancedPositioning(options, barName)
     options.args.advPos = {
         order = 1000,
@@ -971,37 +1220,6 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 			return self.db.profile.bars[barName].anchorFrame == "None"
 		end,
 	}
-end
-
-function BloodShieldTracker:ShowOptions()
-	_G.InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.ShieldBar)
-	_G.InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.Main)
-end
-
-function BloodShieldTracker:GetOptions()
-    if not options then
-        options = {
-            type = "group",
-            name = _G.GetAddOnMetadata(BST.ADDON_NAME, "Title"),
-            args = {
-				core = self:GetGeneralOptions(),
-				shieldBarOpts = self:GetShieldBarOptions(),
-				estimateBarOpts = self:GetEstimateBarOptions(),
-				bloodChargeOpts = self:GetBloodChargeBarOptions(),
-				boneShieldOpts = self:GetBoneShieldBarOptions(),
-				pwsBarOpts = self:GetPWSBarOptions(),
-				illumBarOpts = self:GetIllumBarOptions(),
-				absorbsBarOpts = self:GetAbsorbsBarOptions(),
-				purgatoryBarOpts = self:GetPurgatoryBarOptions(),
-				amsBarOpts = self:GetAMSBarOptions(),
-				boneWallOpts = self:GetBoneWallBarOptions(),
-				healthBarOpts = self:GetHealthBarOptions(),
-				skinningOpts = self:GetSkinningOptions(),
-            }
-        }
-		options.args.profile = _G.LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
-    end
-    return options
 end
 
 function BloodShieldTracker:GetGeneralOptions()
@@ -1428,209 +1646,12 @@ function BloodShieldTracker:GetShieldBarOptions()
 				    return not self.db.profile.bars["ShieldBar"].sound_enabled
 				end,
 			},
-            dimensions = {
-                order = 300,
-                type = "header",
-                name = L["Dimensions"],
-            },
-			width = {
-				order = 310,
-				name = L["Width"],
-				desc = L["BarWidth_Desc"],	
-				type = "range",
-				min = 50,
-				max = 300,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["ShieldBar"].width = val 
-					self.shieldbar.bar:SetWidth(val)
-					self.shieldbar.bar.border:SetWidth(val+9)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["ShieldBar"].width
-				end,
-			},
-			height = {
-				order = 320,
-				name = L["Height"],
-				desc = L["BarHeight_Desc"],
-				type = "range",
-				min = 10,
-				max = 30,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["ShieldBar"].height = val 
-					self.shieldbar.bar:SetHeight(val)
-					self.shieldbar.bar.border:SetHeight(val + 8)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["ShieldBar"].height
-				end,					
-			},
-			scale = {
-				order = 330,
-				name = L["Scale"],
-				desc = L["ScaleDesc"],
-				type = "range",
-				min = 0.1,
-				max = 3,
-				step = 0.1,
-				get = function()
-					return self.db.profile.bars["ShieldBar"].scale
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["ShieldBar"].scale = val
-				    self.shieldbar.bar:SetScale(val)
-				end
-			},
-            position = {
-                order = 400,
-                type = "header",
-                name = L["Position"],
-            },
-			x = {
-				order = 410,
-				name = L["X Offset"],
-				desc = L["XOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenWidth()/2),
-				softMax = floor(_G.GetScreenWidth()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["ShieldBar"].x = val
-					self.shieldbar.bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["ShieldBar"].x, 
-						self.db.profile.bars["ShieldBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["ShieldBar"].x
-				end,
-			},
-			y = {
-				order = 420,
-				name = L["Y Offset"],
-				desc = L["YOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenHeight()/2),
-				softMax = floor(_G.GetScreenHeight()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["ShieldBar"].y = val
-					self.shieldbar.bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["ShieldBar"].x, 
-						self.db.profile.bars["ShieldBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["ShieldBar"].y
-				end,
-			},
-            colors = {
-                order = 500,
-                type = "header",
-                name = L["Colors"],
-            },
-			textcolor = {
-				order = 510,
-				name = L["Text Color"],
-				desc = L["BloodShieldBarTextColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["ShieldBar"].textcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.shieldbar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["ShieldBar"].textcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			color = {
-				order = 520,
-				name = L["Bar Color"],
-				desc = L["BloodShieldBarColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["ShieldBar"].color
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.shieldbar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["ShieldBar"].color
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			bgcolor = {
-				order = 530,
-				name = L["Bar Depleted Color"],
-				desc = L["BloodShieldDepletedBarColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["ShieldBar"].bgcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.shieldbar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["ShieldBar"].bgcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-            appearance = {
-                order = 600,
-                type = "header",
-                name = L["Appearance"],
-            },
-			texture_opt = {
-				order = 610,
-				name = L["Texture"],
-				desc = L["BarTexture_OptionDesc"],
-				type = "select",
-				values = LSM:HashTable("statusbar"),
-				dialogControl = 'LSM30_Statusbar',
-				get = function()
-				    return self.db.profile.bars["ShieldBar"].texture
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["ShieldBar"].texture = val
-				    self.shieldbar:UpdateTexture()
-				end,
-				disabled = function()
-				    return not self.db.profile.bars["ShieldBar"].shown
-				end,
-			},
-			border_visible_opt = {
-				order = 620,
-				name = L["ShowBorder"],
-				desc = L["ShowBorderDesc"],
-				type = "toggle",
-				get = function()
-				    return self.db.profile.bars["ShieldBar"].border
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["ShieldBar"].border = val
-				    self.shieldbar:UpdateBorder()
-				end,
-			},
-			visible_opt = {
-				order = 630,
-				name = L["ShowBar"],
-				desc = L["ShowBarDesc"],
-				type = "toggle",
-				get = function()
-					return self.db.profile.bars["ShieldBar"].shown
-				end,
-				set = function(info,val) 
-			        self.db.profile.bars["ShieldBar"].shown = val
-			        self.shieldbar:UpdateUI()
-			    end,
-			},
 		},
 	}
-
+	self:AddDimensionOptions(shieldBarOpts, "ShieldBar")
+	self:AddPositionOptions(shieldBarOpts, "ShieldBar")
+	self:AddColorsOptions(shieldBarOpts, "ShieldBar")
+	self:AddAppearanceOptions(shieldBarOpts, "ShieldBar")
 	self:AddAdvancedPositioning(shieldBarOpts, "ShieldBar")
 	return shieldBarOpts
 end
@@ -1739,209 +1760,12 @@ function BloodShieldTracker:GetBloodChargeBarOptions()
                     return not self.db.profile.bars["BloodChargeBar"].show_time
                 end,
 			},
-            dimensions = {
-                order = 300,
-                type = "header",
-                name = L["Dimensions"],
-            },
-			width = {
-				order = 310,
-				name = L["Width"],
-				desc = L["BarWidth_Desc"],	
-				type = "range",
-				min = 50,
-				max = 300,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["BloodChargeBar"].width = val 
-					self.bars["BloodChargeBar"].bar:SetWidth(val)
-					self.bars["BloodChargeBar"].bar.border:SetWidth(val+9)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["BloodChargeBar"].width
-				end,
-			},
-			height = {
-				order = 320,
-				name = L["Height"],
-				desc = L["BarHeight_Desc"],
-				type = "range",
-				min = 10,
-				max = 30,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["BloodChargeBar"].height = val 
-					self.bars["BloodChargeBar"].bar:SetHeight(val)
-					self.bars["BloodChargeBar"].bar.border:SetHeight(val + 8)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["BloodChargeBar"].height
-				end,					
-			},
-			scale = {
-				order = 330,
-				name = L["Scale"],
-				desc = L["ScaleDesc"],
-				type = "range",
-				min = 0.1,
-				max = 3,
-				step = 0.1,
-				get = function()
-					return self.db.profile.bars["BloodChargeBar"].scale
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["BloodChargeBar"].scale = val
-				    self.bars["BloodChargeBar"].bar:SetScale(val)
-				end
-			},
-            position = {
-                order = 400,
-                type = "header",
-                name = L["Position"],
-            },
-			x = {
-				order = 410,
-				name = L["X Offset"],
-				desc = L["XOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenWidth()/2),
-				softMax = floor(_G.GetScreenWidth()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["BloodChargeBar"].x = val
-					self.bars["BloodChargeBar"].bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["BloodChargeBar"].x, 
-						self.db.profile.bars["BloodChargeBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["BloodChargeBar"].x
-				end,
-			},
-			y = {
-				order = 420,
-				name = L["Y Offset"],
-				desc = L["YOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenHeight()/2),
-				softMax = floor(_G.GetScreenHeight()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["BloodChargeBar"].y = val
-					self.bars["BloodChargeBar"].bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["BloodChargeBar"].x, 
-						self.db.profile.bars["BloodChargeBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["BloodChargeBar"].y
-				end,
-			},
-            colors = {
-                order = 500,
-                type = "header",
-                name = L["Colors"],
-            },
-			textcolor = {
-				order = 510,
-				name = L["Text Color"],
-				desc = L["BarTextColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["BloodChargeBar"].textcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["BloodChargeBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["BloodChargeBar"].textcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			color = {
-				order = 520,
-				name = L["Bar Color"],
-				desc = L["BarColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["BloodChargeBar"].color
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["BloodChargeBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["BloodChargeBar"].color
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			bgcolor = {
-				order = 530,
-				name = L["Bar Background Color"],
-				desc = L["BarBackgroundColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["BloodChargeBar"].bgcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["BloodChargeBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["BloodChargeBar"].bgcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-            appearance = {
-                order = 600,
-                type = "header",
-                name = L["Appearance"],
-            },
-			texture_opt = {
-				order = 610,
-				name = L["Texture"],
-				desc = L["BarTexture_OptionDesc"],
-				type = "select",
-				values = LSM:HashTable("statusbar"),
-				dialogControl = 'LSM30_Statusbar',
-				get = function()
-				    return self.db.profile.bars["BloodChargeBar"].texture
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["BloodChargeBar"].texture = val
-				    self.bars["BloodChargeBar"]:UpdateTexture()
-				end,
-				disabled = function()
-				    return not self.db.profile.bars["BloodChargeBar"].shown
-				end,
-			},
-			border_visible_opt = {
-				order = 620,
-				name = L["ShowBorder"],
-				desc = L["ShowBorderDesc"],
-				type = "toggle",
-				get = function()
-				    return self.db.profile.bars["BloodChargeBar"].border
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["BloodChargeBar"].border = val
-				    self.bars["BloodChargeBar"]:UpdateBorder()
-				end,
-			},
-			visible_opt = {
-				order = 630,
-				name = L["ShowBar"],
-				desc = L["ShowBarDesc"],
-				type = "toggle",
-				get = function()
-					return self.db.profile.bars["BloodChargeBar"].shown
-				end,
-				set = function(info,val) 
-			        self.db.profile.bars["BloodChargeBar"].shown = val
-			        self.bars["BloodChargeBar"]:UpdateUI()
-			    end,
-			},
 		},
 	}
-
+	self:AddDimensionOptions(bloodChargeOpts, "BloodChargeBar")
+	self:AddPositionOptions(bloodChargeOpts, "BloodChargeBar")
+	self:AddColorsOptions(bloodChargeOpts, "BloodChargeBar")
+	self:AddAppearanceOptions(bloodChargeOpts, "BloodChargeBar")
 	self:AddAdvancedPositioning(bloodChargeOpts, "BloodChargeBar")
 	return bloodChargeOpts
 end
@@ -2074,209 +1898,12 @@ function BloodShieldTracker:GetBoneShieldBarOptions()
                     return not self.db.profile.bars["BoneShieldBar"].show_time
                 end,
 			},
-            dimensions = {
-                order = 300,
-                type = "header",
-                name = L["Dimensions"],
-            },
-			width = {
-				order = 310,
-				name = L["Width"],
-				desc = L["BarWidth_Desc"],	
-				type = "range",
-				min = 50,
-				max = 300,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["BoneShieldBar"].width = val 
-					self.bars["BoneShieldBar"].bar:SetWidth(val)
-					self.bars["BoneShieldBar"].bar.border:SetWidth(val+9)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["BoneShieldBar"].width
-				end,
-			},
-			height = {
-				order = 320,
-				name = L["Height"],
-				desc = L["BarHeight_Desc"],
-				type = "range",
-				min = 10,
-				max = 30,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["BoneShieldBar"].height = val 
-					self.bars["BoneShieldBar"].bar:SetHeight(val)
-					self.bars["BoneShieldBar"].bar.border:SetHeight(val + 8)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["BoneShieldBar"].height
-				end,					
-			},
-			scale = {
-				order = 330,
-				name = L["Scale"],
-				desc = L["ScaleDesc"],
-				type = "range",
-				min = 0.1,
-				max = 3,
-				step = 0.1,
-				get = function()
-					return self.db.profile.bars["BoneShieldBar"].scale
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["BoneShieldBar"].scale = val
-				    self.bars["BoneShieldBar"].bar:SetScale(val)
-				end
-			},
-            position = {
-                order = 400,
-                type = "header",
-                name = L["Position"],
-            },
-			x = {
-				order = 410,
-				name = L["X Offset"],
-				desc = L["XOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenWidth()/2),
-				softMax = floor(_G.GetScreenWidth()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["BoneShieldBar"].x = val
-					self.bars["BoneShieldBar"].bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["BoneShieldBar"].x, 
-						self.db.profile.bars["BoneShieldBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["BoneShieldBar"].x
-				end,
-			},
-			y = {
-				order = 420,
-				name = L["Y Offset"],
-				desc = L["YOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenHeight()/2),
-				softMax = floor(_G.GetScreenHeight()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["BoneShieldBar"].y = val
-					self.bars["BoneShieldBar"].bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["BoneShieldBar"].x, 
-						self.db.profile.bars["BoneShieldBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["BoneShieldBar"].y
-				end,
-			},
-            colors = {
-                order = 500,
-                type = "header",
-                name = L["Colors"],
-            },
-			textcolor = {
-				order = 510,
-				name = L["Text Color"],
-				desc = L["BarTextColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["BoneShieldBar"].textcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["BoneShieldBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["BoneShieldBar"].textcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			color = {
-				order = 520,
-				name = L["Bar Color"],
-				desc = L["BarColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["BoneShieldBar"].color
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["BoneShieldBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["BoneShieldBar"].color
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			bgcolor = {
-				order = 530,
-				name = L["Bar Background Color"],
-				desc = L["BarBackgroundColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["BoneShieldBar"].bgcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["BoneShieldBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["BoneShieldBar"].bgcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-            appearance = {
-                order = 600,
-                type = "header",
-                name = L["Appearance"],
-            },
-			texture_opt = {
-				order = 610,
-				name = L["Texture"],
-				desc = L["BarTexture_OptionDesc"],
-				type = "select",
-				values = LSM:HashTable("statusbar"),
-				dialogControl = 'LSM30_Statusbar',
-				get = function()
-				    return self.db.profile.bars["BoneShieldBar"].texture
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["BoneShieldBar"].texture = val
-				    self.bars["BoneShieldBar"]:UpdateTexture()
-				end,
-				disabled = function()
-				    return not self.db.profile.bars["BoneShieldBar"].shown
-				end,
-			},
-			border_visible_opt = {
-				order = 620,
-				name = L["ShowBorder"],
-				desc = L["ShowBorderDesc"],
-				type = "toggle",
-				get = function()
-				    return self.db.profile.bars["BoneShieldBar"].border
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["BoneShieldBar"].border = val
-				    self.bars["BoneShieldBar"]:UpdateBorder()
-				end,
-			},
-			visible_opt = {
-				order = 630,
-				name = L["ShowBar"],
-				desc = L["ShowBarDesc"],
-				type = "toggle",
-				get = function()
-					return self.db.profile.bars["BoneShieldBar"].shown
-				end,
-				set = function(info,val) 
-			        self.db.profile.bars["BoneShieldBar"].shown = val
-			        self.bars["BoneShieldBar"]:UpdateUI()
-			    end,
-			},
 		},
 	}
-
+	self:AddDimensionOptions(boneShieldOpts, "BoneShieldBar")
+	self:AddPositionOptions(boneShieldOpts, "BoneShieldBar")
+	self:AddColorsOptions(boneShieldOpts, "BoneShieldBar")
+	self:AddAppearanceOptions(boneShieldOpts, "BoneShieldBar")
 	self:AddAdvancedPositioning(boneShieldOpts, "BoneShieldBar")
 	return boneShieldOpts
 end
@@ -2439,103 +2066,6 @@ function BloodShieldTracker:GetEstimateBarOptions()
                     return not self.db.profile.bars["EstimateBar"].show_stacks
                 end,
 			},
-            dimensions = {
-                order = 200,
-                type = "header",
-                name = L["Dimensions"],
-            },
-			bar_width = {
-				order = 210,
-				name = L["Width"],
-				desc = L["Change the width of the estimated healing bar."],	
-				type = "range",
-				min = 10,
-				max = 200,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].width = val 
-					self.estimatebar.bar:SetWidth(val)
-					self.estimatebar.bar.border:SetWidth(val+9)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["EstimateBar"].width
-				end,
-			},
-			bar_height = {
-				order = 220,
-				name = L["Height"],
-				desc = L["Change the height of the estimated healing bar."],	
-				type = "range",
-				min = 8,
-				max = 30,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].height = val 
-					self.estimatebar.bar:SetHeight(val)
-					self.estimatebar.bar.border:SetHeight(val + 8)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["EstimateBar"].height
-				end,
-			},
-			bar_scaling = {
-				order = 230,
-				name = L["Scale"],
-				desc = L["ScaleDesc"],
-				type = "range",
-				min = 0.1,
-				max = 3,
-				step = 0.1,
-				get = function()
-				    return self.db.profile.bars["EstimateBar"].scale
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].scale = val
-				    self.estimatebar.bar:SetScale(val)
-				end
-			},
-            position = {
-                order = 300,
-                type = "header",
-                name = L["Position"],
-            },
-			x = {
-				order = 310,
-				name = L["X Offset"],
-				desc = L["XOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenWidth()/2),
-				softMax = floor(_G.GetScreenWidth()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].x = val
-					self.estimatebar.bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["EstimateBar"].x, 
-						self.db.profile.bars["EstimateBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["EstimateBar"].x
-				end,
-			},
-			y = {
-				order = 320,
-				name = L["Y Offset"],
-				desc = L["YOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenHeight()/2),
-				softMax = floor(_G.GetScreenHeight()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].y = val
-					self.estimatebar.bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["EstimateBar"].x, 
-						self.db.profile.bars["EstimateBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["EstimateBar"].y
-				end,
-			},
             colorsMinimum = {
                 order = 400,
                 type = "header",
@@ -2626,55 +2156,6 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				    return c.r, c.g, c.b, c.a
 				end,					
 			},
-            appearance = {
-                order = 600,
-                type = "header",
-                name = L["Appearance"],
-            },
-			texture_opt = {
-				order = 610,
-				name = L["Texture"],
-				desc = L["BarTexture_OptionDesc"],
-				type = "select",
-				values = LSM:HashTable("statusbar"),
-				dialogControl = 'LSM30_Statusbar',
-				get = function()
-				    return self.db.profile.bars["EstimateBar"].texture
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].texture = val
-				    self.estimatebar:UpdateTexture()
-				end,
-				disabled = function()
-				    return not self.db.profile.bars["EstimateBar"].shown
-				end,
-			},
-			border_visible_opt = {
-				order = 620,
-				name = L["ShowBorder"],
-				desc = L["ShowBorderDesc"],
-				type = "toggle",
-				get = function()
-				    return self.db.profile.bars["EstimateBar"].border
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].border = val
-				    self.estimatebar:UpdateBorder()
-				end,
-			},
-			visible_opt = {
-				order = 630,
-				name = L["ShowBar"],
-				desc = L["ShowBarDesc"],
-				type = "toggle",
-				get = function()
-				    return self.db.profile.bars["EstimateBar"].shown
-				end,
-				set = function(info,val)
-				    self.db.profile.bars["EstimateBar"].shown = val
-				    self.estimatebar:UpdateUI()
-				end,
-			},
             latencyOptions = {
                 order = 700,
                 type = "header",
@@ -2714,6 +2195,10 @@ function BloodShieldTracker:GetEstimateBarOptions()
 			},
 		}
 	}
+
+	self:AddDimensionOptions(estimateBarOpts, "EstimateBar", 200)
+	self:AddPositionOptions(estimateBarOpts, "EstimateBar", 300)
+	self:AddAppearanceOptions(estimateBarOpts, "EstimateBar")
 	self:AddAdvancedPositioning(estimateBarOpts, "EstimateBar")
 	return estimateBarOpts
 end
@@ -2766,191 +2251,6 @@ function BloodShieldTracker:GetPWSBarOptions()
                 type = "header",
                 name = L["Included Absorbs"],
             },
-
-            dimensions = {
-                order = 300,
-                type = "header",
-                name = L["Dimensions"],
-            },
-			width = {
-				order = 310,
-				name = L["Width"],
-				desc = L["BarWidth_Desc"],	
-				type = "range",
-				min = 50,
-				max = 300,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["PWSBar"].width = val 
-					self.bars["PWSBar"].bar:SetWidth(val)
-					self.bars["PWSBar"].bar.border:SetWidth(val+9)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["PWSBar"].width
-				end,
-			},
-			height = {
-				order = 320,
-				name = L["Height"],
-				desc = L["BarHeight_Desc"],
-				type = "range",
-				min = 10,
-				max = 30,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["PWSBar"].height = val 
-					self.bars["PWSBar"].bar:SetHeight(val)
-					self.bars["PWSBar"].bar.border:SetHeight(val + 8)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["PWSBar"].height
-				end,					
-			},
-			scaling = {
-				order = 330,
-				name = L["Scale"],
-				desc = L["ScaleDesc"],
-				type = "range",
-				min = 0.1,
-				max = 3,
-				step = 0.1,
-				get = function()
-					return self.db.profile.bars["PWSBar"].scale
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["PWSBar"].scale = val
-				    self.bars["PWSBar"].bar:SetScale(val)
-				end
-			},
-            position = {
-                order = 390,
-                type = "header",
-                name = L["Position"],
-            },
-			x = {
-				order = 391,
-				name = L["X Offset"],
-				desc = L["XOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenWidth()/2),
-				softMax = floor(_G.GetScreenWidth()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["PWSBar"].x = val
-					self.pwsbar.bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["PWSBar"].x, 
-						self.db.profile.bars["PWSBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["PWSBar"].x
-				end,
-			},
-			y = {
-				order = 392,
-				name = L["Y Offset"],
-				desc = L["YOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenHeight()/2),
-				softMax = floor(_G.GetScreenHeight()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["PWSBar"].y = val
-					self.pwsbar.bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["PWSBar"].x, 
-						self.db.profile.bars["PWSBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["PWSBar"].y
-				end,
-			},
-            colors = {
-                order = 400,
-                type = "header",
-                name = L["Colors"],
-            },
-			textcolor = {
-				order = 410,
-				name = L["Text Color"],
-				desc = L["BarTextColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["PWSBar"].textcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["PWSBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["PWSBar"].textcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			color = {
-				order = 420,
-				name = L["Bar Color"],
-				desc = L["BarColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["PWSBar"].color
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["PWSBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["PWSBar"].color
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-            appearance = {
-                order = 500,
-                type = "header",
-                name = L["Appearance"],
-            },
-			texture_opt = {
-				order = 510,
-				name = L["Texture"],
-				desc = L["BarTexture_OptionDesc"],
-				type = "select",
-				values = LSM:HashTable("statusbar"),
-				dialogControl = 'LSM30_Statusbar',
-				get = function()
-				    return self.db.profile.bars["PWSBar"].texture
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["PWSBar"].texture = val
-				    self.bars["PWSBar"]:UpdateTexture()
-				end,
-				disabled = function()
-				    return not self.db.profile.bars["PWSBar"].shown
-				end,
-			},
-			border_visible_opt = {
-				order = 520,
-				name = L["ShowBorder"],
-				desc = L["ShowBorderDesc"],
-				type = "toggle",
-				get = function()
-				    return self.db.profile.bars["PWSBar"].border
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["PWSBar"].border = val
-				    self.bars["PWSBar"]:UpdateBorder()
-				end,
-			},
-			visible_opt = {
-				order = 530,
-				name = L["ShowBar"],
-				desc = L["ShowBarDesc"],
-				type = "toggle",
-				get = function()
-					return self.db.profile.bars["PWSBar"].shown
-				end,
-				set = function(info,val) 
-			        self.db.profile.bars["PWSBar"].shown = val
-			        self.bars["PWSBar"]:UpdateUI()
-			    end,
-			},
 		},
 	}
 
@@ -2971,7 +2271,10 @@ function BloodShieldTracker:GetPWSBarOptions()
 			end,
 		}
 	end
-
+	self:AddDimensionOptions(pwsBarOpts, "PWSBar")
+	self:AddPositionOptions(pwsBarOpts, "PWSBar")
+	self:AddColorsOptions(pwsBarOpts, "PWSBar")
+	self:AddAppearanceOptions(pwsBarOpts, "PWSBar")
 	self:AddAdvancedPositioning(pwsBarOpts, "PWSBar")
 	return pwsBarOpts
 end
@@ -3019,192 +2322,12 @@ function BloodShieldTracker:GetIllumBarOptions()
 					return self.db.profile.bars["IllumBar"].locked
 				end,
 			},
-            dimensions = {
-                order = 300,
-                type = "header",
-                name = L["Dimensions"],
-            },
-			bar_width = {
-				order = 310,
-				name = L["Width"],
-				desc = L["BarWidth_Desc"],	
-				type = "range",
-				min = 50,
-				max = 300,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["IllumBar"].width = val 
-					self.bars["IllumBar"].bar:SetWidth(val)
-					self.bars["IllumBar"].bar.border:SetWidth(val+9)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["IllumBar"].width
-				end,
-			},
-			bar_height = {
-				order = 320,
-				name = L["Height"],
-				desc = L["BarHeight_Desc"],
-				type = "range",
-				min = 10,
-				max = 30,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["IllumBar"].height = val 
-					self.bars["IllumBar"].bar:SetHeight(val)
-					self.bars["IllumBar"].bar.border:SetHeight(val + 8)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["IllumBar"].height
-				end,					
-			},
-			bar_scaling = {
-				order = 330,
-				name = L["Scale"],
-				desc = L["ScaleDesc"],
-				type = "range",
-				min = 0.1,
-				max = 3,
-				step = 0.1,
-				get = function()
-					return self.db.profile.bars["IllumBar"].scale
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["IllumBar"].scale = val
-				    self.bars["IllumBar"].bar:SetScale(val)
-				end
-			},
-            position = {
-                order = 390,
-                type = "header",
-                name = L["Position"],
-            },
-			x = {
-				order = 391,
-				name = L["X Offset"],
-				desc = L["XOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenWidth()/2),
-				softMax = floor(_G.GetScreenWidth()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["IllumBar"].x = val
-					self.illumbar.bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["IllumBar"].x, 
-						self.db.profile.bars["IllumBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["IllumBar"].x
-				end,
-			},
-			y = {
-				order = 392,
-				name = L["Y Offset"],
-				desc = L["YOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenHeight()/2),
-				softMax = floor(_G.GetScreenHeight()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["IllumBar"].y = val
-					self.illumbar.bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["IllumBar"].x, 
-						self.db.profile.bars["IllumBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["IllumBar"].y
-				end,
-			},
-            colors = {
-                order = 400,
-                type = "header",
-                name = L["Colors"],
-            },
-			bar_textcolor = {
-				order = 410,
-				name = L["Text Color"],
-				desc = L["BarTextColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["IllumBar"].textcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["IllumBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["IllumBar"].textcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			bar_color = {
-				order = 420,
-				name = L["Bar Color"],
-				desc = L["BarColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["IllumBar"].color
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["IllumBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["IllumBar"].color
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-            appearance = {
-                order = 500,
-                type = "header",
-                name = L["Appearance"],
-            },
-			bar_texture_opt = {
-				order = 510,
-				name = L["Texture"],
-				desc = L["BarTexture_OptionDesc"],
-				type = "select",
-				values = LSM:HashTable("statusbar"),
-				dialogControl = 'LSM30_Statusbar',
-				get = function()
-				    return self.db.profile.bars["IllumBar"].texture
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["IllumBar"].texture = val
-				    self.bars["IllumBar"]:UpdateTexture()
-				end,
-				disabled = function()
-				    return not self.db.profile.bars["IllumBar"].shown
-				end,
-			},
-			bar_border_visible_opt = {
-				order = 520,
-				name = L["ShowBorder"],
-				desc = L["ShowBorderDesc"],
-				type = "toggle",
-				get = function()
-				    return self.db.profile.bars["IllumBar"].border
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["IllumBar"].border = val
-				    self.bars["IllumBar"]:UpdateBorder()
-				end,
-			},
-			bar_visible_opt = {
-				order = 530,
-				name = L["ShowBar"],
-				desc = L["ShowBarDesc"],
-				type = "toggle",
-				get = function()
-					return self.db.profile.bars["IllumBar"].shown
-				end,
-				set = function(info,val) 
-			        self.db.profile.bars["IllumBar"].shown = val
-			        self.bars["IllumBar"]:UpdateUI()
-			    end,
-			},
 		},
 	}
+	self:AddDimensionOptions(illumBarOpts, "IllumBar")
+	self:AddPositionOptions(illumBarOpts, "IllumBar")
+	self:AddColorsOptions(illumBarOpts, "IllumBar")
+	self:AddAppearanceOptions(illumBarOpts, "IllumBar")
 	self:AddAdvancedPositioning(illumBarOpts, "IllumBar")
 	return illumBarOpts
 end
@@ -3274,190 +2397,6 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
                     return self.db.profile.bars["TotalAbsorbsBar"].tracked
                 end,
 			},
-            dimensions = {
-                order = 300,
-                type = "header",
-                name = L["Dimensions"],
-            },
-			bar_width = {
-				order = 310,
-				name = L["Width"],
-				desc = L["BarWidth_Desc"],	
-				type = "range",
-				min = 50,
-				max = 300,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].width = val 
-					self.bars["TotalAbsorbsBar"].bar:SetWidth(val)
-					self.bars["TotalAbsorbsBar"].bar.border:SetWidth(val+9)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["TotalAbsorbsBar"].width
-				end,
-			},
-			bar_height = {
-				order = 320,
-				name = L["Height"],
-				desc = L["BarHeight_Desc"],
-				type = "range",
-				min = 10,
-				max = 30,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].height = val 
-					self.bars["TotalAbsorbsBar"].bar:SetHeight(val)
-					self.bars["TotalAbsorbsBar"].bar.border:SetHeight(val + 8)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["TotalAbsorbsBar"].height
-				end,					
-			},
-			bar_scaling = {
-				order = 330,
-				name = L["Scale"],
-				desc = L["ScaleDesc"],
-				type = "range",
-				min = 0.1,
-				max = 3,
-				step = 0.1,
-				get = function()
-					return self.db.profile.bars["TotalAbsorbsBar"].scale
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].scale = val
-				    self.bars["TotalAbsorbsBar"].bar:SetScale(val)
-				end
-			},
-            position = {
-                order = 390,
-                type = "header",
-                name = L["Position"],
-            },
-			x = {
-				order = 391,
-				name = L["X Offset"],
-				desc = L["XOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenWidth()/2),
-				softMax = floor(_G.GetScreenWidth()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].x = val
-					self.absorbsbar.bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["TotalAbsorbsBar"].x, 
-						self.db.profile.bars["TotalAbsorbsBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["TotalAbsorbsBar"].x
-				end,
-			},
-			y = {
-				order = 392,
-				name = L["Y Offset"],
-				desc = L["YOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenHeight()/2),
-				softMax = floor(_G.GetScreenHeight()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].y = val
-					self.absorbsbar.bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["TotalAbsorbsBar"].x, 
-						self.db.profile.bars["TotalAbsorbsBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["TotalAbsorbsBar"].y
-				end,
-			},
-            colors = {
-                order = 400,
-                type = "header",
-                name = L["Colors"],
-            },
-			bar_textcolor = {
-				order = 410,
-				name = L["Text Color"],
-				desc = L["BarTextColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["TotalAbsorbsBar"].textcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["TotalAbsorbsBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["TotalAbsorbsBar"].textcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			bar_color = {
-				order = 420,
-				name = L["Bar Color"],
-				desc = L["BarColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["TotalAbsorbsBar"].color
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["TotalAbsorbsBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["TotalAbsorbsBar"].color
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-            appearance = {
-                order = 500,
-                type = "header",
-                name = L["Appearance"],
-            },
-			bar_texture_opt = {
-				order = 510,
-				name = L["Texture"],
-				desc = L["BarTexture_OptionDesc"],
-				type = "select",
-				values = LSM:HashTable("statusbar"),
-				dialogControl = 'LSM30_Statusbar',
-				get = function()
-				    return self.db.profile.bars["TotalAbsorbsBar"].texture
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].texture = val
-				    self.bars["TotalAbsorbsBar"]:UpdateTexture()
-				end,
-				disabled = function()
-				    return not self.db.profile.bars["TotalAbsorbsBar"].shown
-				end,
-			},
-			bar_border_visible_opt = {
-				order = 520,
-				name = L["ShowBorder"],
-				desc = L["ShowBorderDesc"],
-				type = "toggle",
-				get = function()
-				    return self.db.profile.bars["TotalAbsorbsBar"].border
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["TotalAbsorbsBar"].border = val
-				    self.bars["TotalAbsorbsBar"]:UpdateBorder()
-				end,
-			},
-			bar_visible_opt = {
-				order = 530,
-				name = L["ShowBar"],
-				desc = L["ShowBarDesc"],
-				type = "toggle",
-				get = function()
-					return self.db.profile.bars["TotalAbsorbsBar"].shown
-				end,
-				set = function(info,val) 
-			        self.db.profile.bars["TotalAbsorbsBar"].shown = val
-			        self.bars["TotalAbsorbsBar"]:UpdateUI()
-			    end,
-			},
 		},
 	}
 
@@ -3481,7 +2420,10 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
 			end,
 		}
 	end
-
+	self:AddDimensionOptions(absorbsBarOpts, "TotalAbsorbsBar")
+	self:AddPositionOptions(absorbsBarOpts, "TotalAbsorbsBar")
+	self:AddColorsOptions(absorbsBarOpts, "TotalAbsorbsBar")
+	self:AddAppearanceOptions(absorbsBarOpts, "TotalAbsorbsBar")
 	self:AddAdvancedPositioning(absorbsBarOpts, "TotalAbsorbsBar")
 	return absorbsBarOpts
 end
@@ -3529,192 +2471,12 @@ function BloodShieldTracker:GetPurgatoryBarOptions()
 					return self.db.profile.bars["PurgatoryBar"].locked
 				end,
 			},
-            dimensions = {
-                order = 300,
-                type = "header",
-                name = L["Dimensions"],
-            },
-			bar_width = {
-				order = 310,
-				name = L["Width"],
-				desc = L["BarWidth_Desc"],	
-				type = "range",
-				min = 50,
-				max = 300,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["PurgatoryBar"].width = val 
-					self.bars["PurgatoryBar"].bar:SetWidth(val)
-					self.bars["PurgatoryBar"].bar.border:SetWidth(val+9)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["PurgatoryBar"].width
-				end,
-			},
-			bar_height = {
-				order = 320,
-				name = L["Height"],
-				desc = L["BarHeight_Desc"],
-				type = "range",
-				min = 10,
-				max = 90,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["PurgatoryBar"].height = val 
-					self.bars["PurgatoryBar"].bar:SetHeight(val)
-					self.bars["PurgatoryBar"].bar.border:SetHeight(val + 8)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["PurgatoryBar"].height
-				end,					
-			},
-			bar_scaling = {
-				order = 330,
-				name = L["Scale"],
-				desc = L["ScaleDesc"],
-				type = "range",
-				min = 0.1,
-				max = 3,
-				step = 0.1,
-				get = function()
-					return self.db.profile.bars["PurgatoryBar"].scale
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["PurgatoryBar"].scale = val
-				    self.bars["PurgatoryBar"].bar:SetScale(val)
-				end
-			},
-            position = {
-                order = 390,
-                type = "header",
-                name = L["Position"],
-            },
-			x = {
-				order = 391,
-				name = L["X Offset"],
-				desc = L["XOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenWidth()/2),
-				softMax = floor(_G.GetScreenWidth()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["PurgatoryBar"].x = val
-					self.bars["PurgatoryBar"].bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["PurgatoryBar"].x, 
-						self.db.profile.bars["PurgatoryBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["PurgatoryBar"].x
-				end,
-			},
-			y = {
-				order = 392,
-				name = L["Y Offset"],
-				desc = L["YOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenHeight()/2),
-				softMax = floor(_G.GetScreenHeight()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["PurgatoryBar"].y = val
-					self.bars["PurgatoryBar"].bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["PurgatoryBar"].x, 
-						self.db.profile.bars["PurgatoryBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["PurgatoryBar"].y
-				end,
-			},
-            colors = {
-                order = 400,
-                type = "header",
-                name = L["Colors"],
-            },
-			bar_textcolor = {
-				order = 410,
-				name = L["Text Color"],
-				desc = L["BarTextColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["PurgatoryBar"].textcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["PurgatoryBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["PurgatoryBar"].textcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			bar_color = {
-				order = 420,
-				name = L["Bar Color"],
-				desc = L["BarColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["PurgatoryBar"].color
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["PurgatoryBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["PurgatoryBar"].color
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-            appearance = {
-                order = 500,
-                type = "header",
-                name = L["Appearance"],
-            },
-			bar_texture_opt = {
-				order = 510,
-				name = L["Texture"],
-				desc = L["BarTexture_OptionDesc"],
-				type = "select",
-				values = LSM:HashTable("statusbar"),
-				dialogControl = 'LSM30_Statusbar',
-				get = function()
-				    return self.db.profile.bars["PurgatoryBar"].texture
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["PurgatoryBar"].texture = val
-				    self.bars["PurgatoryBar"]:UpdateTexture()
-				end,
-				disabled = function()
-				    return not self.db.profile.bars["PurgatoryBar"].shown
-				end,
-			},
-			bar_border_visible_opt = {
-				order = 520,
-				name = L["ShowBorder"],
-				desc = L["ShowBorderDesc"],
-				type = "toggle",
-				get = function()
-				    return self.db.profile.bars["PurgatoryBar"].border
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["PurgatoryBar"].border = val
-				    self.bars["PurgatoryBar"]:UpdateBorder()
-				end,
-			},
-			bar_visible_opt = {
-				order = 530,
-				name = L["ShowBar"],
-				desc = L["ShowBarDesc"],
-				type = "toggle",
-				get = function()
-					return self.db.profile.bars["PurgatoryBar"].shown
-				end,
-				set = function(info,val) 
-			        self.db.profile.bars["PurgatoryBar"].shown = val
-			        self.bars["PurgatoryBar"]:UpdateUI()
-			    end,
-			},
 		},
 	}
+	self:AddDimensionOptions(purgatoryBarOpts, "PurgatoryBar")
+	self:AddPositionOptions(purgatoryBarOpts, "PurgatoryBar")
+	self:AddColorsOptions(purgatoryBarOpts, "PurgatoryBar")
+	self:AddAppearanceOptions(purgatoryBarOpts, "PurgatoryBar")
 	self:AddAdvancedPositioning(purgatoryBarOpts, "PurgatoryBar")
 	return purgatoryBarOpts
 end
@@ -3805,209 +2567,12 @@ function BloodShieldTracker:GetAMSBarOptions()
                     return not self.db.profile.bars["AMSBar"].show_time
                 end,
 			},
-            dimensions = {
-                order = 300,
-                type = "header",
-                name = L["Dimensions"],
-            },
-			width = {
-				order = 310,
-				name = L["Width"],
-				desc = L["BarWidth_Desc"],	
-				type = "range",
-				min = 50,
-				max = 300,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["AMSBar"].width = val 
-					self.bars["AMSBar"].bar:SetWidth(val)
-					self.bars["AMSBar"].bar.border:SetWidth(val+9)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["AMSBar"].width
-				end,
-			},
-			height = {
-				order = 320,
-				name = L["Height"],
-				desc = L["BarHeight_Desc"],
-				type = "range",
-				min = 10,
-				max = 30,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["AMSBar"].height = val 
-					self.bars["AMSBar"].bar:SetHeight(val)
-					self.bars["AMSBar"].bar.border:SetHeight(val + 8)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["AMSBar"].height
-				end,					
-			},
-			scale = {
-				order = 330,
-				name = L["Scale"],
-				desc = L["ScaleDesc"],
-				type = "range",
-				min = 0.1,
-				max = 3,
-				step = 0.1,
-				get = function()
-					return self.db.profile.bars["AMSBar"].scale
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["AMSBar"].scale = val
-				    self.bars["AMSBar"].bar:SetScale(val)
-				end
-			},
-            position = {
-                order = 400,
-                type = "header",
-                name = L["Position"],
-            },
-			x = {
-				order = 410,
-				name = L["X Offset"],
-				desc = L["XOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenWidth()/2),
-				softMax = floor(_G.GetScreenWidth()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["AMSBar"].x = val
-					self.bars["AMSBar"].bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["AMSBar"].x, 
-						self.db.profile.bars["AMSBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["AMSBar"].x
-				end,
-			},
-			y = {
-				order = 420,
-				name = L["Y Offset"],
-				desc = L["YOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenHeight()/2),
-				softMax = floor(_G.GetScreenHeight()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["AMSBar"].y = val
-					self.bars["AMSBar"].bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["AMSBar"].x, 
-						self.db.profile.bars["AMSBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["AMSBar"].y
-				end,
-			},
-            colors = {
-                order = 500,
-                type = "header",
-                name = L["Colors"],
-            },
-			textcolor = {
-				order = 510,
-				name = L["Text Color"],
-				desc = L["BarTextColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["AMSBar"].textcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["AMSBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["AMSBar"].textcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			color = {
-				order = 520,
-				name = L["Bar Color"],
-				desc = L["BarColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["AMSBar"].color
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["AMSBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["AMSBar"].color
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			bgcolor = {
-				order = 530,
-				name = L["Bar Background Color"],
-				desc = L["BarBackgroundColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["AMSBar"].bgcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["AMSBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["AMSBar"].bgcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-            appearance = {
-                order = 600,
-                type = "header",
-                name = L["Appearance"],
-            },
-			texture_opt = {
-				order = 610,
-				name = L["Texture"],
-				desc = L["BarTexture_OptionDesc"],
-				type = "select",
-				values = LSM:HashTable("statusbar"),
-				dialogControl = 'LSM30_Statusbar',
-				get = function()
-				    return self.db.profile.bars["AMSBar"].texture
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["AMSBar"].texture = val
-				    self.bars["AMSBar"]:UpdateTexture()
-				end,
-				disabled = function()
-				    return not self.db.profile.bars["AMSBar"].shown
-				end,
-			},
-			border_visible_opt = {
-				order = 620,
-				name = L["ShowBorder"],
-				desc = L["ShowBorderDesc"],
-				type = "toggle",
-				get = function()
-				    return self.db.profile.bars["AMSBar"].border
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["AMSBar"].border = val
-				    self.bars["AMSBar"]:UpdateBorder()
-				end,
-			},
-			visible_opt = {
-				order = 630,
-				name = L["ShowBar"],
-				desc = L["ShowBarDesc"],
-				type = "toggle",
-				get = function()
-					return self.db.profile.bars["AMSBar"].shown
-				end,
-				set = function(info,val) 
-			        self.db.profile.bars["AMSBar"].shown = val
-			        self.bars["AMSBar"]:UpdateUI()
-			    end,
-			},
 		},
 	}
-
+	self:AddDimensionOptions(amsBarOpts, "AMSBar")
+	self:AddPositionOptions(amsBarOpts, "AMSBar")
+	self:AddColorsOptions(amsBarOpts, "AMSBar")
+	self:AddAppearanceOptions(amsBarOpts, "AMSBar")
 	self:AddAdvancedPositioning(amsBarOpts, "AMSBar")
 	return amsBarOpts
 end
@@ -4116,209 +2681,12 @@ function BloodShieldTracker:GetBoneWallBarOptions()
                     return not self.db.profile.bars["BoneWallBar"].show_time
                 end,
 			},
-            dimensions = {
-                order = 300,
-                type = "header",
-                name = L["Dimensions"],
-            },
-			width = {
-				order = 310,
-				name = L["Width"],
-				desc = L["BarWidth_Desc"],	
-				type = "range",
-				min = 50,
-				max = 300,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["BoneWallBar"].width = val 
-					self.bars["BoneWallBar"].bar:SetWidth(val)
-					self.bars["BoneWallBar"].bar.border:SetWidth(val+9)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["BoneWallBar"].width
-				end,
-			},
-			height = {
-				order = 320,
-				name = L["Height"],
-				desc = L["BarHeight_Desc"],
-				type = "range",
-				min = 10,
-				max = 30,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["BoneWallBar"].height = val 
-					self.bars["BoneWallBar"].bar:SetHeight(val)
-					self.bars["BoneWallBar"].bar.border:SetHeight(val + 8)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["BoneWallBar"].height
-				end,					
-			},
-			scale = {
-				order = 330,
-				name = L["Scale"],
-				desc = L["ScaleDesc"],
-				type = "range",
-				min = 0.1,
-				max = 3,
-				step = 0.1,
-				get = function()
-					return self.db.profile.bars["BoneWallBar"].scale
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["BoneWallBar"].scale = val
-				    self.bars["BoneWallBar"].bar:SetScale(val)
-				end
-			},
-            position = {
-                order = 400,
-                type = "header",
-                name = L["Position"],
-            },
-			x = {
-				order = 410,
-				name = L["X Offset"],
-				desc = L["XOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenWidth()/2),
-				softMax = floor(_G.GetScreenWidth()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["BoneWallBar"].x = val
-					self.bars["BoneWallBar"].bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["BoneWallBar"].x, 
-						self.db.profile.bars["BoneWallBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["BoneWallBar"].x
-				end,
-			},
-			y = {
-				order = 420,
-				name = L["Y Offset"],
-				desc = L["YOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenHeight()/2),
-				softMax = floor(_G.GetScreenHeight()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["BoneWallBar"].y = val
-					self.bars["BoneWallBar"].bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["BoneWallBar"].x, 
-						self.db.profile.bars["BoneWallBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["BoneWallBar"].y
-				end,
-			},
-            colors = {
-                order = 500,
-                type = "header",
-                name = L["Colors"],
-            },
-			textcolor = {
-				order = 510,
-				name = L["Text Color"],
-				desc = L["BarTextColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["BoneWallBar"].textcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["BoneWallBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["BoneWallBar"].textcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			color = {
-				order = 520,
-				name = L["Bar Color"],
-				desc = L["BarColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["BoneWallBar"].color
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["BoneWallBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["BoneWallBar"].color
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			bgcolor = {
-				order = 530,
-				name = L["Bar Background Color"],
-				desc = L["BarBackgroundColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["BoneWallBar"].bgcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-				    self.bars["BoneWallBar"]:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["BoneWallBar"].bgcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-            appearance = {
-                order = 600,
-                type = "header",
-                name = L["Appearance"],
-            },
-			texture_opt = {
-				order = 610,
-				name = L["Texture"],
-				desc = L["BarTexture_OptionDesc"],
-				type = "select",
-				values = LSM:HashTable("statusbar"),
-				dialogControl = 'LSM30_Statusbar',
-				get = function()
-				    return self.db.profile.bars["BoneWallBar"].texture
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["BoneWallBar"].texture = val
-				    self.bars["BoneWallBar"]:UpdateTexture()
-				end,
-				disabled = function()
-				    return not self.db.profile.bars["BoneWallBar"].shown
-				end,
-			},
-			border_visible_opt = {
-				order = 620,
-				name = L["ShowBorder"],
-				desc = L["ShowBorderDesc"],
-				type = "toggle",
-				get = function()
-				    return self.db.profile.bars["BoneWallBar"].border
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["BoneWallBar"].border = val
-				    self.bars["BoneWallBar"]:UpdateBorder()
-				end,
-			},
-			visible_opt = {
-				order = 630,
-				name = L["ShowBar"],
-				desc = L["ShowBarDesc"],
-				type = "toggle",
-				get = function()
-					return self.db.profile.bars["BoneWallBar"].shown
-				end,
-				set = function(info,val) 
-			        self.db.profile.bars["BoneWallBar"].shown = val
-			        self.bars["BoneWallBar"]:UpdateUI()
-			    end,
-			},
 		},
 	}
-
+	self:AddDimensionOptions(boneWallOpts, "BoneWallBar")
+	self:AddPositionOptions(boneWallOpts, "BoneWallBar")
+	self:AddColorsOptions(boneWallOpts, "BoneWallBar")
+	self:AddAppearanceOptions(boneWallOpts, "BoneWallBar")
 	self:AddAdvancedPositioning(boneWallOpts, "BoneWallBar")
 	return boneWallOpts
 end
@@ -4421,110 +2789,13 @@ function BloodShieldTracker:GetHealthBarOptions()
                     return self.db.profile.bars["HealthBar"].text_format
                 end,
 			},
-            dimensions = {
-                order = 100,
-                type = "header",
-                name = L["Dimensions"],
-            },
-			bar_width = {
-				order = 110,
-				name = L["Width"],
-				desc = L["BarWidth_Desc"],	
-				type = "range",
-				min = 10,
-				max = 200,
-				set = function(info, val)
-				    self.db.profile.bars["HealthBar"].width = val 
-					self.healthbar.bar:SetWidth(val)
-					self.healthbar.bar.border:SetWidth(val+9)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["HealthBar"].width
-				end,
-			},
-			bar_height = {
-				order = 120,
-				name = L["Height"],
-				desc = L["BarHeight_Desc"],	
-				type = "range",
-				min = 8,
-				max = 30,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["HealthBar"].height = val 
-					self.healthbar.bar:SetHeight(val)
-					self.healthbar.bar.border:SetHeight(val + 8)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["HealthBar"].height
-				end,
-			},
-			bar_scaling = {
-				order = 130,
-				name = L["Scale"],
-				desc = L["ScaleDesc"],
-				type = "range",
-				min = 0.1,
-				max = 3,
-				step = 0.1,
-				get = function()
-				    return self.db.profile.bars["HealthBar"].scale
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["HealthBar"].scale = val
-				    self.healthbar.bar:SetScale(val)
-				end
-			},
-            position = {
-                order = 190,
-                type = "header",
-                name = L["Position"],
-            },
-			x = {
-				order = 191,
-				name = L["X Offset"],
-				desc = L["XOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenWidth()/2),
-				softMax = floor(_G.GetScreenWidth()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["HealthBar"].x = val
-					self.healthbar.bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["HealthBar"].x, 
-						self.db.profile.bars["HealthBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["HealthBar"].x
-				end,
-			},
-			y = {
-				order = 192,
-				name = L["Y Offset"],
-				desc = L["YOffset_Desc"],	
-				type = "range",
-				softMin = -floor(_G.GetScreenHeight()/2),
-				softMax = floor(_G.GetScreenHeight()/2),
-				bigStep = 1,
-				set = function(info, val)
-				    self.db.profile.bars["HealthBar"].y = val
-					self.healthbar.bar:SetPoint(
-						"CENTER", _G.UIParent, "CENTER", 
-						self.db.profile.bars["HealthBar"].x, 
-						self.db.profile.bars["HealthBar"].y)
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["HealthBar"].y
-				end,
-			},
             colors = {
-                order = 200,
+                order = 500,
                 type = "header",
                 name = L["Colors for Normal Health"],
             },
 			bar_textcolor = {
-				order = 210,
+				order = 510,
 				name = L["Text Color"],
 				desc = L["BarTextColor_OptionDesc"],
 				type = "color",
@@ -4540,7 +2811,7 @@ function BloodShieldTracker:GetHealthBarOptions()
 				end,					
 			},
 			bar_color = {
-				order = 220,
+				order = 520,
 				name = L["Bar Color"],
 				desc = L["BarColor_OptionDesc"],
 				type = "color",
@@ -4556,7 +2827,7 @@ function BloodShieldTracker:GetHealthBarOptions()
 				end,					
 			},
 			bar_bgcolor = {
-				order = 230,
+				order = 530,
 				name = L["Bar Background Color"],
 				desc = L["BarBackgroundColor_OptionDesc"],
 				type = "color",
@@ -4571,14 +2842,13 @@ function BloodShieldTracker:GetHealthBarOptions()
 				    return c.r, c.g, c.b, c.a
 				end,					
 			},
-
             colorsLow = {
-                order = 300,
+                order = 550,
                 type = "header",
                 name = L["Colors for Low Health"],
             },
 			bar_low_textcolor = {
-				order = 310,
+				order = 560,
 				name = L["Low Health Text Color"],
 				desc = L["BarTextColor_OptionDesc"],
 				type = "color",
@@ -4594,7 +2864,7 @@ function BloodShieldTracker:GetHealthBarOptions()
 				end,					
 			},
 			bar_low_color = {
-				order = 320,
+				order = 570,
 				name = L["Low Health Bar Color"],
 				desc = L["BarColor_OptionDesc"],
 				type = "color",
@@ -4610,7 +2880,7 @@ function BloodShieldTracker:GetHealthBarOptions()
 				end,					
 			},
 			bar_low_bgcolor = {
-				order = 330,
+				order = 580,
 				name = L["Low Health Bar Background Color"],
 				desc = L["BarBackgroundColor_LowHealth_OptionDesc"],
 				type = "color",
@@ -4625,59 +2895,11 @@ function BloodShieldTracker:GetHealthBarOptions()
 				    return c.r, c.g, c.b, c.a
 				end,					
 			},
-
-            appearance = {
-                order = 400,
-                type = "header",
-                name = L["Appearance"],
-            },
-			bar_texture_opt = {
-				order = 410,
-				name = L["Texture"],
-				desc = L["BarTexture_OptionDesc"],
-				type = "select",
-				values = LSM:HashTable("statusbar"),
-				dialogControl = 'LSM30_Statusbar',
-				get = function()
-				    return self.db.profile.bars["HealthBar"].texture
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["HealthBar"].texture = val
-				    self.healthbar:UpdateTexture()
-				end,
-				disabled = function()
-				    return not self.db.profile.bars["HealthBar"].shown
-				end,
-			},
-			bar_border_visible_opt = {
-				order = 420,
-				name = L["ShowBorder"],
-				desc = L["ShowBorderDesc"],
-				type = "toggle",
-				get = function()
-				    return self.db.profile.bars["HealthBar"].border
-				end,
-				set = function(info, val)
-				    self.db.profile.bars["HealthBar"].border = val
-				    self.healthbar:UpdateBorder()
-				end,
-			},
-			bar_visible_opt = {
-				order = 430,
-				name = L["ShowBar"],
-				desc = L["ShowBarDesc"],
-				type = "toggle",
-				get = function()
-				    return self.db.profile.bars["HealthBar"].shown
-				end,
-				set = function(info,val)
-				    self.db.profile.bars["HealthBar"].shown = val
-				    self.healthbar:UpdateUI()
-				end,
-			},
-
 		}
 	}
+	self:AddDimensionOptions(healthBarOpts, "HealthBar")
+	self:AddPositionOptions(healthBarOpts, "HealthBar")
+	self:AddAppearanceOptions(healthBarOpts, "HealthBar")
 	self:AddAdvancedPositioning(healthBarOpts, "HealthBar")
 	return healthBarOpts
 end
@@ -6786,7 +5008,7 @@ function BloodShieldTracker:CheckAuras()
 
 			if not PurgatoryActive then
 				if self.db.profile.debug then
-					self:Print("Pugatory! ["..tostring(value or 0).."]")
+					self:Print("Purgatory! ["..tostring(value or 0).."]")
 				end
 				PurgatoryActive = true
 			end
