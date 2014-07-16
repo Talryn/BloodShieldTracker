@@ -11,5 +11,8 @@ embeds.xml
 locale.xml
 
 Core.lua
+Bar.lua
 BloodShieldTracker.lua
+Options.lua
 BoneWallTracker.lua
+Migration.lua
