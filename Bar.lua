@@ -114,7 +114,7 @@ function Bar:Initialize()
 		self:UpdateVisibility()
 	end
 
-    bar:SetMovable()
+    bar:SetMovable(true)
     bar:RegisterForDrag("LeftButton")
     bar:SetScript("OnDragStart",
         function(self, button)

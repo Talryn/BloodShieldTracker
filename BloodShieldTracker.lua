@@ -41,6 +41,11 @@ local UnitAura = _G.UnitAura
 local GetTime = _G.GetTime
 local UnitHealth = _G.UnitHealth
 local UnitHealthMax = _G.UnitHealthMax
+local UnitGetTotalAbsorbs = _G.UnitGetTotalAbsorbs
+local UnitAttackPower = _G.UnitAttackPower
+local UnitStat = _G.UnitStat
+local GetMastery = _G.GetMastery
+local GetSpellCooldown = _G.GetSpellCooldown
 
 BloodShieldTracker.loaded = false
 BloodShieldTracker.playerName = UnitName("player")
@@ -167,16 +172,6 @@ local shieldBarFormatCurrPerc = "%s (%d%%)"
 local estimateBarFormat = "%s%s%s"
 local estBarPercFmt = "%s%%"
 
-local millFmtOne = "%.1fm"
-local thousandFmtOne = "%.1fk"
-local millFmtZero = "%.0fm"
-local thousandFmtZero = "%.0fk"
-local millFmt = millFmtZero
-local thousandFmt = thousandFmtZero
-local baseFmtOne = "%.1f"
-local baseFmtZero = "%.0f"
-local baseFmt = baseFmtZero
-
 local LookupOrKeyMT = {__index = function (t,k) return k end}
 
 local ItemIds = {
@@ -245,6 +240,7 @@ local SpellIds = {
 	["Strength of Wrynn 20"] = 73826,
 	["Strength of Wrynn 25"] = 73827,
 	["Strength of Wrynn 30"] = 73828,
+	["Resolve"] = 158300,
 }
 local SpellNames = {}
 _G.setmetatable(SpellNames, LookupOrKeyMT)
@@ -303,14 +299,11 @@ local ICCBuffs = {
 }
 
 -- Constants
-local BS_DURATION = 10  -- The duration of Blood Shield
-local MAX_BLOOD_CHARGES = 12
 local dsHealModifier = 0.20  -- Percent of the DS Heal from the tooltip.
 local dsMinHealPercent = 0.07
 local dsMinHealPercentSuccor = 0.20
 local shieldPerMasteryPoint = 6.25
 local scentBloodStackBuff = 0.2
-local LUCK_OF_THE_DRAW_MOD = 0.05
 local vbGlyphedHealthInc = 0.0
 local vbGlyphedHealingInc = 0.4
 local vbUnglyphedHealthInc = 0.15
@@ -344,6 +337,12 @@ local healingDebuffMultiplier = 1
 local lastDSSuccess = nil
 local masteryRating = 0
 local shieldPercent = 0
+addon.effectiveAP = 0
+addon.resolve = 0
+addon.resolveDmg = 0
+addon.resolveDmg2 = 0
+addon.playerLevel = _G.UnitLevel("player")
+addon.scaling = addon.ItemScaling[addon.playerLevel]
 
 local HealingDebuffs = {
     -- PvP healing debuffs
@@ -378,83 +377,12 @@ local HealingDebuffs = {
 
 local round = addon.round
 
-local ThousandsDelim = ('%.1f'):format(1/5):match('([^0-9])') == '.' and ',' or '.'
-local BillionDelimFmt = '%s%d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d'
-local MillionDelimFmt = '%s%d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d'
-local ThousandDelimFmt = '%s%d' .. ThousandsDelim..'%03d'
-
-addon.FormatNumberDelimited = function(number)
-    if tonumber(number) == nil then
-        return number
-    end
-
-	local sign = ""
-	if number < 0 then
-		sign = "-"
-		number = abs(number)
-	end
-
-    if number >= 1000000000 then
-      return BillionDelimFmt:format(sign, number / 1000000000, (number / 1000000) % 1000, (number / 1000) % 1000, number % 1000)
-    elseif number >= 1000000 then
-      return MillionDelimFmt:format(sign, number / 1000000, (number / 1000) % 1000, number % 1000)
-    elseif number >= 1000 then
-      return ThousandDelimFmt:format(sign, number / 1000, number % 1000)
-    else
-      return tostring(number)
-    end
-end
-
-addon.FormatNumberAbbreviated = function(number)
-    if tonumber(number) == nil then
-        return number
-    end
-
-    if number > 1000000 then
-        return millFmt:format(number / 1000000)
-    elseif number > 1000 then
-        return thousandFmt:format(number / 1000)
-    end
-
-    return number
-end
-
-addon.FormatNumberRaw = function(number)
-	return tostring(number)
-end
-
-local FormatNumber = FormatNumberAbbreviated
-addon.FormatNumber = FormatNumber
-
-function BloodShieldTracker:SetNumberFormat(format)
-	if format == "Delimited" then
-		FormatNumber = addon.FormatNumberDelimited
-	elseif format == "Raw" then
-		FormatNumber = addon.FormatNumberRaw
-	else
-		FormatNumber = addon.FormatNumberAbbreviated
-	end
-	addon.FormatNumber = FormatNumber
-end
-
-function BloodShieldTracker:SetNumberPrecision()
-    if self.db.profile.precision == "One" then
-        millFmt = millFmtOne
-        thousandFmt = thousandFmtOne
-		baseFmt = baseFmtOne
-    else
-        millFmt = millFmtZero
-        thousandFmt = thousandFmtZero
-		baseFmt = baseFmtZero
-    end
-end
-
 local Broker = _G.CreateFrame("Frame")
-Broker.obj = LDB:NewDataObject(_G.GetAddOnMetadata(ADDON_NAME, "Title"), {
+Broker.obj = LDB:NewDataObject(addon.addonTitle, {
     type = "data source",
     icon = "Interface\\Icons\\Spell_DeathKnight_DeathStrike",
-    label = _G.GetAddOnMetadata(ADDON_NAME, "Title"),
-    text = _G.GetAddOnMetadata(ADDON_NAME, "Title"),
+    label = addon.addonTitle,
+    text = addon.addonTitle,
     barValue = 0,
     barR = 0,
     barG = 0,
@@ -487,15 +415,15 @@ local DataFeed = addon.DataFeed
 
 function addon:UpdateLDBData()
     if DataFeed.display == "LastBS" then
-        Broker.obj.text = FormatNumber(DataFeed.lastBS)
+        Broker.obj.text = addon.FormatNumber(DataFeed.lastBS)
     elseif DataFeed.display == "LastDS" then
-        Broker.obj.text = FormatNumber(DataFeed.lastDS)
+        Broker.obj.text = addon.FormatNumber(DataFeed.lastDS)
     elseif DataFeed.display == "EstimateBar" then
-        Broker.obj.text = FormatNumber(DataFeed.estimateBar)
+        Broker.obj.text = addon.FormatNumber(DataFeed.estimateBar)
 	elseif DataFeed.display == "Vengeance" then
-        Broker.obj.text = FormatNumber(DataFeed.vengeance)
+        Broker.obj.text = addon.FormatNumber(DataFeed.vengeance)
     else
-        Broker.obj.text = _G.GetAddOnMetadata(ADDON_NAME, "Title")
+        Broker.obj.text = addon.addonTitle
     end
 end
 
@@ -503,7 +431,7 @@ function addon:SetBrokerLabel()
     if addon.db.profile.ldb_short_label then
         Broker.obj.label = L["BST"]
     else
-        Broker.obj.label = _G.GetAddOnMetadata(ADDON_NAME, "Title")
+        Broker.obj.label = addon.addonTitle
     end
 end
 
@@ -553,15 +481,15 @@ local function AddStats(tooltip, stats)
             avgShieldMaxValue or 0))
     tooltip:AddLine(shieldUsageLine1, 
         valuesWithPercFmt:format(
-            FormatNumber(stats.totalAbsorbs), 
-            FormatNumber(stats.totalShields), shieldUsagePerc))
+            addon.FormatNumber(stats.totalAbsorbs), 
+            addon.FormatNumber(stats.totalShields), shieldUsagePerc))
 end
 
 function Broker.obj:OnEnter()
 	local tooltip = LibQTip:Acquire("BloodShieldTrackerTooltip", 2, "LEFT", "RIGHT")
 	self.tooltip = tooltip 
 
-    tooltip:AddHeader(addonHdr:format(_G.GetAddOnMetadata(ADDON_NAME,"Title"), addon.addonVersion))
+    tooltip:AddHeader(addonHdr:format(addon.addonTitle, addon.addonVersion))
     tooltip:AddLine()
 
     if addon.isDK then
@@ -772,6 +700,10 @@ addon.defaults = {
 				x = -90,
 				y = -90,
 			},
+			["ResolveBar"] = {
+				enabled = false,
+				x = -125,
+			},
 		},
     }
 }
@@ -866,10 +798,10 @@ function BloodShieldTracker:OnInitialize()
 	DEBUG_OUTPUT = self.db.profile.debug
 
 	-- Set the number format
-	self:SetNumberFormat(self.db.profile.numberFormat)
+	addon:SetNumberFormat(self.db.profile.numberFormat)
 
     -- Set the precision
-	self:SetNumberPrecision()
+	addon:SetNumberPrecision()
 
 	-- Create the bars
 	self.shieldbar = Bar:Create("ShieldBar", "Shield Bar", true)
@@ -884,6 +816,7 @@ function BloodShieldTracker:OnInitialize()
 	self.bloodchargebar = Bar:Create("BloodChargeBar", "Blood Charge Bar", true)
 	self.boneshieldbar = Bar:Create("BoneShieldBar", "Bone Shield Bar", true)
 	self.amsbar = Bar:Create("AMSBar", "Anti-Magic Shell Bar", true)
+	self.resolvebar = Bar:Create("ResolveBar", "Resolve Bar", false)
 
 	-- Register for profile callbacks
 	self.db.RegisterCallback(self, "OnProfileChanged", "Reset")
@@ -1081,13 +1014,53 @@ function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 	end
 end
 
+local resolveFmt = "Resolve: %.1f [%d,%d]"
+function BloodShieldTracker:UpdateResolve()
+	local stamResolve = addon.stamina / (250*addon.scaling)
+	local damageResolve = addon.maxHealth > 0 and 
+		(addon.resolveDmg / addon.maxHealth) or 0
+	addon.resolve = stamResolve + damageResolve
+	if self.db.profile.debug then
+		self:Print(resolveFmt:format(addon.resolve*100, 
+			addon.resolveDmg or 0, addon.resolveDmg2 or 0))
+	end
+	self:UpdateEstimateBar()
+	self:UpdateMinHeal()
+end
+
+function BloodShieldTracker:UpdateStats()
+	local update = false
+	local base, posBuff, negBuff = UnitAttackPower("player")
+	local effAP = base + posBuff - negBuff
+	if effAP ~= addon.effectiveAP then
+		addon.effectiveAP = effAP
+		update = true
+	end
+
+	local stam, effStam, posBuff, negBuff = UnitStat("player", 3)
+	if effStam ~= addon.stamina then
+		addon.stamina = effStam
+		update = true
+	end
+
+	local maxHealth = UnitHealthMax("player")
+	if maxHealth ~= addon.maxHealth then
+		addon.maxHealth = maxHealth or 0
+		update = true
+	end
+
+	if update then
+		self:UpdateResolve()
+	end	
+end
+
 function BloodShieldTracker:OnEnable()
 	-- Try to load the spell and item names one more time.
 	LoadItemNames()
 	LoadSpellNames()
 	if not self.optionsFrame then
 		-- Register Options
-	    local displayName = _G.GetAddOnMetadata(ADDON_NAME, "Title")
+	    local displayName = addon.addonTitle
 		local options = self:GetOptions()
 	    _G.LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(displayName, options)
 
@@ -1113,6 +1086,8 @@ function BloodShieldTracker:OnEnable()
 		    displayName, L["Anti-Magic Shell Bar"], displayName, "amsBarOpts")
 		self.optionsFrame.PurgatoryBar = ACD:AddToBlizOptions(
 		    displayName, L["Purgatory Bar"], displayName, "purgatoryBarOpts")
+		self.optionsFrame.ResolveBar = ACD:AddToBlizOptions(
+		    displayName, L["Resolve Bar"], displayName, "resolveBarOpts")
 		self.optionsFrame.HealthBar = ACD:AddToBlizOptions(
 		    displayName, L["Health Bar"], displayName, "healthBarOpts")
 
@@ -1157,6 +1132,9 @@ local UnitEvents = {
 	["player"] = {
 		"UNIT_AURA",
 		"UNIT_SPELLCAST_SUCCEEDED",
+		"UNIT_ATTACK_POWER",
+		"UNIT_STATS",
+		"UNIT_LEVEL",
 	},
 }
 local function EventFrame_OnEvent(frame, event, ...)
@@ -1164,6 +1142,14 @@ local function EventFrame_OnEvent(frame, event, ...)
 		BloodShieldTracker:UNIT_AURA(event, ...)
 	elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
 		BloodShieldTracker:UNIT_SPELLCAST_SUCCEEDED(event, ...)
+	elseif event == "UNIT_ATTACK_POWER" then
+		BloodShieldTracker:UNIT_ATTACK_POWER(event, ...)
+	elseif event == "UNIT_ATTACK_STATS" then
+		BloodShieldTracker:UNIT_STATS(event, ...)
+	elseif event == "UNIT_LEVEL" then
+		BloodShieldTracker:UNIT_LEVEL(event, ...)
+	elseif event == "UNIT_MAXHEALTH" then
+		BloodShieldTracker:UNIT_MAXHEALTH(event, ...)
 	end
 end
 local EventFrames = {}
@@ -1203,6 +1189,7 @@ function BloodShieldTracker:Load()
 			self:Print("Missing event frame for "..tostring(unit).."!")
 		end
 	end
+	self:UpdateStats()
 
     self:ToggleHealthBar()
     self.shieldbar:UpdateUI()
@@ -1250,7 +1237,7 @@ function BloodShieldTracker:OnDisable()
 end
 
 function BloodShieldTracker:UpdateMastery()
-    masteryRating = _G.GetMastery()
+    masteryRating = GetMastery()
 	shieldPercent = masteryRating*shieldPerMasteryPoint/100
 end
 
@@ -1298,6 +1285,10 @@ function BloodShieldTracker:CheckTalents5()
 			local id, name, desc, texture = _G.GetSpecializationInfo(activeSpecNum)
 	    	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
 	    		addon.IsBloodTank = true
+				-- For WoD, the Mastery spell isn't known, just use level for now
+				if _G.UnitLevel("player") >= 80 then
+		            hasBloodShield = true
+				end
 				-- Check for Mastery so we know if BS is active
 		        if _G.IsSpellKnown(SpellIds["Mastery: Blood Shield"]) then
 		            hasBloodShield = true
@@ -1322,7 +1313,7 @@ end
 
 function addon:IsTrackerEnabled()
     if addon.IsBloodTank or (addon.isDK and 
-		not self.db.profile.enable_only_for_blood) then
+		not addon.db.profile.enable_only_for_blood) then
         return true
     else
         return false
@@ -1516,8 +1507,14 @@ function BloodShieldTracker:UpdateMinHeal(event, unit)
    	        actualDsMinHeal = dsMinHealPercentSuccor
         end
 
-		local baseValue = maxHealth * actualDsMinHeal * Tier14Bonus *
-			(1 + scentBloodStacks * scentBloodStackBuff)
+		local baseValue
+		if addon.WoD then
+			baseValue = addon.effectiveAP * 5 * (1+(addon.resolve)) * 
+				(1 + scentBloodStacks * scentBloodStackBuff)
+		else
+			baseValue = maxHealth * actualDsMinHeal * Tier14Bonus *
+				(1 + scentBloodStacks * scentBloodStackBuff)
+		end
 		dsHealMin = round(baseValue *
 		    self:GetEffectiveHealingBuffModifiers() * 
 		    self:GetEffectiveHealingDebuffModifiers())
@@ -1565,21 +1562,19 @@ function BloodShieldTracker:PLAYER_REGEN_ENABLED()
     if self.estimatebar.db.hide_ooc then
         self.estimatebar.bar:Hide()
     end
-
     if self.healthbar.db.hide_ooc then
         self.healthbar.bar:Hide()
     end
 
     self.estimatebar.bar:SetScript("OnUpdate", nil)
-
     LastFightStats:EndCombat()
 end
 
 function BloodShieldTracker:PLAYER_DEAD()
     -- Just in case, hide the BS bar if the player dies
-    self.shieldbar.expires = 0
+    --self.shieldbar.bar.timer = 0
     self:CheckAuras()
-    self.shieldbar.bar:Hide()
+    --self.shieldbar.bar:Hide()
     -- Hide the estimate bar if configured to do so for OOC
     if self.estimatebar.db.hide_ooc then
         if self.estimatebar.bar:IsVisible() then
@@ -1600,43 +1595,44 @@ end
 
 function BloodShieldTracker:UpdateBars(timestamp)
     -- If we're out of combat and no Blood Shields are present, stop the timer
-    if addon.idle and self.shieldbar.expires <= 0 then
+    if addon.idle then
     	if updateTimer then
             self:CancelTimer(updateTimer)
             updateTimer = nil
         end
     end
-
-    if self.shieldbar.db.enabled then
-        local expires = self.shieldbar.expires
-        local timeleft = 0
-        local timeLeftFmt = "%d"
-        local current = GetTime()
-        if expires > 0 then
-            timeleft = expires - current
-            if timeleft < 0 or timeleft > BS_DURATION then
-                timeleft = 0
-            end
-        
-            timeleft = floor(timeleft)
-        end
-
-        if self.shieldbar.db.progress == "Time" then
-            self.shieldbar.bar:SetValue(timeleft)
-        end
-
-        self.shieldbar.bar.time:SetText(timeLeftFmt:format(timeleft))
-    end
-
     self:UpdateEstimateBar(timestamp)
 end
 
-function BloodShieldTracker:UpdateEstimateBar(timestamp)
+function BloodShieldTracker:UpdateEstimateBarWoD()
+    if not self.estimatebar.db.enabled or addon.idle then return end
+
+	local baseValue = addon.effectiveAP * 5 * (1+(addon.resolve)) * 
+		(1 + scentBloodStacks * scentBloodStackBuff)
+	local estimate
+
+    if self.estimatebar.db.bar_mode == "BS" then
+        estimate = round(baseValue * shieldPercent)
+    else
+        estimate = round(baseValue *
+            self:GetEffectiveHealingBuffModifiers() * 
+            self:GetEffectiveHealingDebuffModifiers())
+    end
+
+    self:UpdateEstimateBarText(estimate)
+    self.estimatebar.bar:SetMinMaxValues(0, estimate)
+    DataFeed.estimateBar = estimate
+    if addon.LDBDataFeed then
+        addon:UpdateLDBData()
+    end
+end
+
+function BloodShieldTracker:UpdateEstimateBarMoP(timestamp)
     if self.estimatebar.db.enabled and not addon.idle then
         local recentDamage = self:GetRecentDamageTaken(timestamp)
 
         local predictedValue, minimumValue = 0, 0
-        local baseValue = recentDamage * dsHealModifier * Tier14Bonus * 
+		local baseValue = recentDamage * dsHealModifier * Tier14Bonus * 
 			(1 + scentBloodStacks * scentBloodStackBuff)
 
         if self.estimatebar.db.bar_mode == "BS" then
@@ -1650,9 +1646,9 @@ function BloodShieldTracker:UpdateEstimateBar(timestamp)
         end
 
         local estimate = minimumValue
-    	if predictedValue > minimumValue then
+	    if predictedValue > minimumValue then
     	    estimate = predictedValue
-    	end
+		end
 
         self:UpdateEstimateBarText(estimate)
         self.estimatebar.bar:SetMinMaxValues(0, minimumValue)
@@ -1677,6 +1673,9 @@ function BloodShieldTracker:UpdateEstimateBar(timestamp)
     end
 end
 
+BloodShieldTracker.UpdateEstimateBar = addon.WoD and 
+ BloodShieldTracker.UpdateEstimateBarWoD or BloodShieldTracker.UpdateEstimateBarMoP
+
 function BloodShieldTracker:UpdateEstimateBarText(estimate)
 	local text = ""
 	local sep = ""
@@ -1692,9 +1691,9 @@ function BloodShieldTracker:UpdateEstimateBarText(estimate)
 	local val
 	if self.estimatebar.db.usePercent then
 		val = estBarPercFmt:format(
-			baseFmt:format(estimate / (maxHealth or 1) * 100))
+			addon.FormatWithPrecision(estimate / (maxHealth or 1) * 100))
 	else
-		val = FormatNumber(estimate)
+		val = addon.FormatNumber(estimate)
 	end
 
     self.estimatebar.bar.value:SetText(
@@ -1713,24 +1712,22 @@ function BloodShieldTracker:UpdateEstimateBarTextWithMin()
 end
 
 function BloodShieldTracker:UpdateShieldBarMode()
-    if self.shieldbar.db.progress == "Time" then
-        self.shieldbar.bar:SetMinMaxValues(0, BS_DURATION)
-        self.shieldbar.bar:SetValue(BS_DURATION)
-    elseif self.shieldbar.db.progress == "None" then
+	local values = {
+		["Time"] = true,
+		["None"] = true,
+	}
+    if values[self.shieldbar.db.progress] then
         self.shieldbar.bar:SetMinMaxValues(0, 1)
-        self.shieldbar.bar:SetValue(1)        
+        self.shieldbar.bar:SetValue(1)
     end
 end
 
 function BloodShieldTracker:UpdateBloodChargeBarMode()
 	local bar = self.bloodchargebar
-    if bar.db.progress == "Time" then
-        bar.bar:SetMinMaxValues(0, BS_DURATION)
-        bar.bar:SetValue(BS_DURATION)
-    elseif bar.db.progress == "Charges" then
-        bar.bar:SetMinMaxValues(0, MAX_BLOOD_CHARGES)
+    if bar.db.progress == "Charges" then
+        bar.bar:SetMinMaxValues(0, addon.MAX_BLOOD_CHARGES)
         bar.bar:SetValue(0)
-    elseif bar.db.progress == "None" then
+    else
         bar.bar:SetMinMaxValues(0, 1)
         bar.bar:SetValue(1)        
     end
@@ -1738,13 +1735,10 @@ end
 
 function BloodShieldTracker:UpdateBoneShieldBarMode()
 	local bar = self.boneshieldbar
-    if bar.db.progress == "Time" then
-        bar.bar:SetMinMaxValues(0, 1)
-        bar.bar:SetValue(1)
-    elseif bar.db.progress == "Charges" then
+    if bar.db.progress == "Charges" then
         bar.bar:SetMinMaxValues(0, 6)
         bar.bar:SetValue(0)
-    elseif bar.db.progress == "None" then
+    else
         bar.bar:SetMinMaxValues(0, 1)
         bar.bar:SetValue(1)        
     end
@@ -1752,13 +1746,10 @@ end
 
 function BloodShieldTracker:ShowShieldBar()
     if self.shieldbar.db.enabled then
-        if self.shieldbar.db.progress == "Time" then
-            self.shieldbar:SetValue(BS_DURATION)
-        elseif self.shieldbar.db.progress == "Current" then
+        if self.shieldbar.db.progress == "Current" then
             self.shieldbar.bar:SetMinMaxValues(0, self.shieldbar.shield_max)
             self.shieldbar.bar:SetValue(self.shieldbar.shield_curr)
         end
-
         self:UpdateShieldBarText(
             self.shieldbar.shield_curr, self.shieldbar.shield_max, 100)
         self.shieldbar.bar:Show()
@@ -1821,19 +1812,19 @@ function BloodShieldTracker:UpdateHealthBar(maxChanged)
             text = percentIntFmt:format(percentHealth * 100)
         elseif self.healthbar.db.text_format == "Full" then
             text = shieldBarFormatFull:format(
-                FormatNumber(currentHealth), 
-                FormatNumber(maxHealth), 
+                addon.FormatNumber(currentHealth), 
+                addon.FormatNumber(maxHealth), 
                 percentHealth * 100)
         elseif self.healthbar.db.text_format == "CurrMax" then
             text = shieldBarFormatNoPer:format(
-                FormatNumber(currentHealth), 
-                FormatNumber(maxHealth))
+                addon.FormatNumber(currentHealth), 
+                addon.FormatNumber(maxHealth))
         elseif self.healthbar.db.text_format == "CurrPerc" then
             text = shieldBarFormatCurrPerc:format(
-                FormatNumber(currentHealth), 
+                addon.FormatNumber(currentHealth), 
                 percentHealth * 100)
         else
-            text = FormatNumber(currentHealth)
+            text = addon.FormatNumber(currentHealth)
         end
 
         self.healthbar.bar.value:SetText(text)
@@ -1844,8 +1835,8 @@ function BloodShieldTracker:UpdateShieldBarText(current, maximum, percent)
     local newText = ""
     local percentFormat = "%d%%"
     
-    local currentTxt = FormatNumber(current)
-    local maximumTxt = FormatNumber(maximum)
+    local currentTxt = addon.FormatNumber(current)
+    local maximumTxt = addon.FormatNumber(maximum)
     
     if self.shieldbar.db.text_format == "Full" then
         newText = shieldBarFormatFull:format(currentTxt, maximumTxt, percent)
@@ -2067,7 +2058,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 	    param9 == SpellIds["Death Strike"] then
 
         if self.db.profile.debug then
-            local dsHealFormat = "Estimated damage of %d will be a heal for %d"
+            local dsHealFormat = "Estimated damage: %d will be a heal for: %d"
             local recentDmg = self:GetRecentDamageTaken(timestamp)
             local predictedHeal = 0
             if healingDebuffMultiplier ~= 1 then 
@@ -2121,7 +2112,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                 isMinimum = true
                 shieldValue = bsMinimum
             end
-            predictedHeal = round(
+            predictedHeal = addon.WoD and dsHealMin or round(
                 recentDmg * dsHealModifier * Tier14Bonus * 
 					(1 + scentBloodStacks * scentBloodStackBuff) *
                     self:GetEffectiveHealingBuffModifiers() * 
@@ -2132,7 +2123,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d, Mast: %0.2f%%, SoB: %0.2f%%, MinBS: %d]"
 			local sobValue = scentBloodStacks * scentBloodStackBuff
             self:Print(dsHealFormat:format(
-                totalHeal,actualHeal,overheal,recentDmg,predictedHeal,shieldPercent*100,sobValue,bsMinimum))
+				totalHeal,actualHeal,overheal,recentDmg,
+				predictedHeal,shieldPercent*100,sobValue,bsMinimum))
         end
         
         if DEBUG_OUTPUT == true then
@@ -2158,7 +2150,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
 
             if self.db.profile.useAuraForShield == false then
-                self:NewBloodShield(timestamp, spellAbsorb, GetTime() + BS_DURATION)
+                self:NewBloodShield(timestamp, spellAbsorb, 
+					GetTime() + addon.BS_DURATION)
             end
         elseif param9 == SpellIds["Shroud of Purgatory"] then
             if self.db.profile.debug then
@@ -2186,7 +2179,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                 end
 
                 if self.db.profile.useAuraForShield == false then
-                    self:BloodShieldUpdated("refreshed", timestamp, spellAbsorb or 0, GetTime() + BS_DURATION)
+                    self:BloodShieldUpdated("refreshed", timestamp, 
+						spellAbsorb or 0, GetTime() + addon.BS_DURATION)
                 end
 	        elseif param9 == SpellIds["Shroud of Purgatory"] then
 	            if self.db.profile.debug then
@@ -2395,27 +2389,54 @@ function BloodShieldTracker:ResetStats()
     LastFightStats:Reset()
 end
 
-local function onUpdateBloodCharge(self, elapsed)
+local function onUpdateShieldBar(self, elapsed)
 	self.lastUpdate = (self.lastUpdate or 0) + elapsed
 	self.timer = self.timer - elapsed
 	if self.lastUpdate >= 0.1 then
 		if self.active then
-			local profile = BloodShieldTracker.db.profile.bars["BloodChargeBar"]
 			if self.timer < 0 then
 				self.timer = 0
 				self.active = false
 				self:SetScript("OnUpdate", nil)
 				self:Hide()
 			else
+				local profile = BloodShieldTracker.db.profile.bars["ShieldBar"]
 				if profile.show_time then
 					self.time:SetText(tostring(round(self.timer)))
 				end
+				if profile.progress == "Time" then
+					self:SetValue(self.timer)
+				end
 				self:Show()
+			end
+		else
+			self:Hide()
+		end
+		self.lastUpdate = 0
+	end
+end
+
+local function onUpdateBloodCharge(self, elapsed)
+	self.lastUpdate = (self.lastUpdate or 0) + elapsed
+	self.timer = self.timer - elapsed
+	if self.lastUpdate >= 0.1 then
+		if self.active then
+			if self.timer < 0 then
+				self.timer = 0
+				self.active = false
+				self:SetScript("OnUpdate", nil)
+				self:Hide()
+			else
+				local profile = BloodShieldTracker.db.profile.bars["BloodChargeBar"]
+				if profile.show_time then
+					self.time:SetText(tostring(round(self.timer)))
+				end
 				if profile.progress == "Time" then
 					self:SetValue(self.timer)
 				elseif profile.progress == "Charges" then
 					self:SetValue(self.count)
 				end
+				self:Show()
 			end
 		else
 			self:Hide()
@@ -2500,6 +2521,32 @@ local function onUpdateAMS(self, elapsed)
 	end
 end
 
+function BloodShieldTracker:UNIT_ATTACK_POWER(event, unit)
+	if unit == "player" then
+		if addon.WoD then
+			self:UpdateStats()
+		end
+	end
+end
+
+function BloodShieldTracker:UNIT_STATS(event, unit)
+	if unit == "player" then
+		if addon.WoD then
+			self:UpdateStats()
+		end
+	end
+end
+
+function BloodShieldTracker:UNIT_LEVEL(event, unit)
+	if unit == "player" then
+		addon.playerLevel = _G.UNIT_LEVEL("player")
+		addon.scaling = addon.ItemScaling[addon.playerLevel] or 1
+		if addon.WoD then
+			self:UpdateStats()
+		end
+	end
+end
+
 function BloodShieldTracker:UNIT_AURA(event, unit, ...)
     if unit == "player" then
         self:CheckAuras()
@@ -2528,6 +2575,8 @@ local OtherShields = {}
 local PreviousShieldValues = {}
 local PurgatoryAbsorb = 0
 local PurgatoryActive = false
+local lastResolveDmg = nil
+local lastResolveDmg2 = nil
 
 local errorReadingFmt = "Error reading the %s value."
 function BloodShieldTracker:CheckAuras()
@@ -2583,6 +2632,18 @@ function BloodShieldTracker:CheckAuras()
                 self:Print(errorReadingFmt:format(SpellNames[tracked]))
             end
 
+		elseif spellId == SpellIds["Resolve"] then
+			AurasFound["Resolve"] = true
+			addon.resolveDmg = value2 or 0
+			addon.resolveDmg2 = value3 or 0
+			if lastResolveDmg ~= addon.resolveDmg or 
+				lastResolveDmg2 ~= addon.resolveDmg2 then
+				self:UpdateResolve()
+				lastResolveDmg = addon.resolveDmg
+				lastResolveDmg2 = addon.resolveDmg2
+			end
+			--addon:UpdateLDBData()
+
 		elseif spellId == SpellIds["Vengeance"] then
 			AurasFound["Vengeance"] = true
 			DataFeed.vengeance = value or 0
@@ -2605,7 +2666,7 @@ function BloodShieldTracker:CheckAuras()
     	    if not count or count == 0 then
     	        count = 1
             end
-            luckOfTheDrawAmt = LUCK_OF_THE_DRAW_MOD * count
+            luckOfTheDrawAmt = addon.LUCK_OF_THE_DRAW_MOD * count
 
         elseif name == SpellNames["Hellscream's Warsong 30"] then
             iccBuffFound = true
@@ -2677,6 +2738,16 @@ function BloodShieldTracker:CheckAuras()
         i = i + 1
     until name == nil
 
+	if AurasFound["Resolve"] then
+		local fmt = "%.1f%%"
+		self.resolvebar:SetValue(fmt:format(addon.resolve*100))
+		if self.resolvebar.db.enabled then
+			self.resolvebar.bar:Show()
+		end
+	else
+		self.resolvebar.bar:Hide()
+	end
+
 	if not AurasFound["Vengeance"] then
 		if DataFeed.vengeance > 0 then
 			DataFeed.vengeance = 0
@@ -2732,9 +2803,9 @@ function BloodShieldTracker:CheckAuras()
 		end
 
 		if tracked == "All" then
-			shields = _G.UnitGetTotalAbsorbs("player") or 0
+			shields = UnitGetTotalAbsorbs("player") or 0
 		elseif tracked == "Excluding" then
-			shields = (_G.UnitGetTotalAbsorbs("player") or 0) - shields
+			shields = (UnitGetTotalAbsorbs("player") or 0) - shields
 		end
 
 		if shields > 0 then
@@ -2787,7 +2858,7 @@ function BloodShieldTracker:CheckAuras()
 			local data = AuraData["Blood Charge"]
 			bcBar.bar.timer = data.expires - GetTime()
 			if bcBar.db.progress == "Charges" then
-				bcBar.bar:SetMinMaxValues(0, MAX_BLOOD_CHARGES)
+				bcBar.bar:SetMinMaxValues(0, addon.MAX_BLOOD_CHARGES)
 			elseif bcBar.db.progress == "Time" then
 				bcBar.bar:SetMinMaxValues(0, data.duration)
 			else
@@ -2828,11 +2899,11 @@ function BloodShieldTracker:CheckAuras()
 			--bar.bar:Hide()
 
 			local start, duration, enabled = 
-				_G.GetSpellCooldown(SpellIds["Bone Shield"])
+				GetSpellCooldown(SpellIds["Bone Shield"])
 			if duration > 0 then
 				state = 1
 				bar.bar.recharging = true
-				bar.bar.recharge = duration - (_G.GetTime() - start)
+				bar.bar.recharge = duration - (GetTime() - start)
 			else
 				state = 2
 				bar.bar.recharging = false
@@ -2860,7 +2931,7 @@ function BloodShieldTracker:CheckAuras()
 				bar.bar.time:SetText("")
 				if bar.db.showCooldown then
 					bar.bar:SetAlpha(0.5)
-					bar.bar:SetValue(_G.select(2, bar.bar:GetMinMaxValues()))
+					bar.bar:SetValue(select(2, bar.bar:GetMinMaxValues()))
 					bar.bar:SetScript("OnUpdate", onUpdateBoneShield)
 					bar.bar:Show()
 				else
@@ -2872,7 +2943,7 @@ function BloodShieldTracker:CheckAuras()
 				bar.bar.value:SetText("-")
 				if bar.db.showReady then
 					bar.bar:SetAlpha(0.5)
-					bar.bar:SetValue(_G.select(2, bar.bar:GetMinMaxValues()))
+					bar.bar:SetValue(select(2, bar.bar:GetMinMaxValues()))
 					bar.bar:SetScript("OnUpdate", nil)
 					bar.bar:Show()
 				else
@@ -2925,9 +2996,20 @@ function BloodShieldTracker:CheckAuras()
 						data.value, data.expires)
 	            end
 	        end
-
 	        BSAuraValue = data.value
 	        BSAuraExpires = data.expires
+
+			local bar = self.shieldbar.bar
+			local db = self.shieldbar.db
+			if db.enabled then
+				bar.timer = data.expires - GetTime()
+				bar.active = true
+				if db.progress == "Time" then
+					bar:SetMinMaxValues(0, data.duration)
+				end
+				bar:Show()
+				bar:SetScript("OnUpdate", onUpdateShieldBar)
+			end
 		else
 			if self.db.profile.debug == true then
 				self:Print("Error reading the Blood Shield value.")
@@ -2940,12 +3022,16 @@ function BloodShieldTracker:CheckAuras()
             if self.db.profile.debug == true then
                 self:Print("AURA: Blood Shield removed. "..BSAuraValue)
             end
-
             self:BloodShieldUpdated("removed", GetTime(), BSAuraValue, 0)
         end
-            
         BSAuraPresent = false
         BSAuraValue = 0
+
+		local bar = self.shieldbar.bar
+		bar.active = false
+		bar.timer = 0
+		bar:SetScript("OnUpdate", nil)
+		bar:Hide()
     end
 
 	addon:FireCallback("Auras")

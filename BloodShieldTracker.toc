@@ -11,6 +11,7 @@ embeds.xml
 locale.xml
 
 Core.lua
+Constants.lua
 Bar.lua
 BloodShieldTracker.lua
 Options.lua

@@ -45,6 +45,7 @@ function BloodShieldTracker:GetOptions()
 				absorbsBarOpts = self:GetAbsorbsBarOptions(),
 				purgatoryBarOpts = self:GetPurgatoryBarOptions(),
 				amsBarOpts = self:GetAMSBarOptions(),
+				resolveBarOpts = self:GetResolveBarOptions(),
 				healthBarOpts = self:GetHealthBarOptions(),
 				skinningOpts = self:GetSkinningOptions(),
             }
@@ -497,7 +498,7 @@ function BloodShieldTracker:GetGeneralOptions()
 				order = 34,
 				set = function(info, val)
 				    self.db.profile.numberFormat = val
-					self:SetNumberFormat(val)
+					addon:SetNumberFormat(val)
 				end,
                 get = function(info)
                     return self.db.profile.numberFormat
@@ -514,7 +515,7 @@ function BloodShieldTracker:GetGeneralOptions()
 				order = 35,
 				set = function(info, val)
 				    self.db.profile.precision = val
-					self:SetNumberPrecision()
+					addon:SetNumberPrecision()
 				end,
                 get = function(info)
                     return self.db.profile.precision
@@ -532,24 +533,16 @@ function BloodShieldTracker:GetGeneralOptions()
 							bar.bar:Show()
 						end
 					else
-						self.shieldbar.bar:Hide()
-						if self.estimatebar.db.hide_ooc and 
-							not _G.InCombatLockdown() then
-						    self.estimatebar.bar:Hide()
-                        end
-						self.bloodchargebar.bar:Hide()
-						self.boneshieldbar.bar:Hide()
-						self.pwsbar.bar:Hide()
-						self.illumbar.bar:Hide()
-						self.absorbsbar.bar:Hide()
-						self.purgatorybar.bar:Hide()
-						self.amsbar.bar:Hide()
-						self.bonewallbar.bar:Hide()
-						if not self.healthbar.db.enabled or 
-							(self.healthbar.db.hide_ooc and 
-							not _G.InCombatLockdown()) then
-						    self.healthbar.bar:Hide()
-                        end
+						for name, bar in pairs(self.bars) do
+							if bar.db.hide_ooc ~= nil then
+								if bar.db.hide_ooc and 
+									not _G.InCombatLockdown() then
+									bar.bar:Hide()
+								end
+							else
+								bar.bar:Hide()
+							end
+						end
 					end
 				end,
 			},
@@ -1992,6 +1985,59 @@ function BloodShieldTracker:GetHealthBarOptions()
 	self:AddAppearanceOptions(healthBarOpts, "HealthBar")
 	self:AddAdvancedPositioning(healthBarOpts, "HealthBar")
 	return healthBarOpts
+end
+
+function BloodShieldTracker:GetResolveBarOptions()
+	local resolveBarOpts = {
+		order = 2,
+		type = "group",
+		name = L["Resolve Bar"],
+		desc = L["Resolve Bar"],
+		args = {
+		    description = {
+		        order = 1,
+		        type = "description",
+		        name = L["ResolveBar_Desc"],
+		    },
+            generalOptions = {
+                order = 2,
+                type = "header",
+                name = L["General Options"],
+            },
+    		status_bar_enabled = {
+				name = L["Enabled"],
+				desc = L["EnableBarDesc"],
+				type = "toggle",
+				order = 10,
+				set = function(info, val)
+				    self.db.profile.bars["ResolveBar"].enabled = val
+					self.bars["ResolveBar"]:UpdateVisibility()
+				end,
+                get = function(info)
+					return self.db.profile.bars["ResolveBar"].enabled
+				end,
+			},
+			lock_bar = {
+				name = L["Lock bar"],
+				desc = L["LockBarDesc"],
+				type = "toggle",
+				order = 20,
+				set = function(info, val)
+				    self.db.profile.bars["ResolveBar"].locked = val 
+					self.bars["ResolveBar"]:Lock()
+				end,
+                get = function(info)
+					return self.db.profile.bars["ResolveBar"].locked
+				end,
+			},
+		},
+	}
+	self:AddDimensionOptions(resolveBarOpts, "ResolveBar")
+	self:AddPositionOptions(resolveBarOpts, "ResolveBar")
+	self:AddColorsOptions(resolveBarOpts, "ResolveBar")
+	self:AddAppearanceOptions(resolveBarOpts, "ResolveBar")
+	self:AddAdvancedPositioning(resolveBarOpts, "ResolveBar")
+	return resolveBarOpts
 end
 
 function BloodShieldTracker:GetSkinningOptions()

@@ -110,7 +110,7 @@ function BWTracker:OnDisable()
 	local bar = self.bonewallbar
 	if bar then
 		bar.bar:SetScript("OnUpdate", nil)
-		bar:Hide()
+		bar.bar:Hide()
 	end
 end
 
