@@ -526,6 +526,11 @@ function Broker.obj:OnLeave()
 	self.tooltip = nil
 end
 
+addon.ResolveModes = {
+	["Actual"] = true,
+	["Estimated"] = true,
+}
+
 addon.defaults = {
     profile = {
 		minimap = {
@@ -537,6 +542,7 @@ addon.defaults = {
         precision = "Zero",
 		numberFormat = "Abbreviated",
 		useAuraForShield = true,
+		resolveMode = "Actual",
 		-- Font Settings
 		font_size = 12,
 		font_face = "Friz Quadrata TT",
@@ -781,6 +787,26 @@ function BloodShieldTracker:ChatCommand(input)
 			else
 				self:Print("useAura = " .. tostring(self.db.profile.useAuraForShield))
 			end
+        elseif cmds[1] and cmds[1] == "resolveMode" then
+			local isSet = false
+			if cmds[2] and addon.ResolveModes[cmds[2]] then
+				self.db.profile.resolveMode = cmds[2]
+				isSet = true
+			end
+			self:Print("Resolve Mode: "..tostring(self.db.profile.resolveMode))
+			if not isSet then
+				local availModes = "Available Modes: "
+				local first = true
+				for k,v in pairs(addon.ResolveModes) do
+					if not first then
+						availModes = availModes .. ", "
+					else
+						first = false
+					end
+					availModes = availModes .. tostring(k)
+				end
+				self:Print(availModes)
+			end
         end
         --_G.LibStub("AceConfigCmd-3.0").HandleCommand(BloodShieldTracker, "bst", "BloodShieldTracker", input)
     end
@@ -1014,15 +1040,15 @@ function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 	end
 end
 
-local resolveFmt = "Resolve: %.1f [%d,%d]"
+local resolveFmt = "Resolve: %.1f [%d,%d,%d]"
 function BloodShieldTracker:UpdateResolve()
 	local stamResolve = addon.stamina / (250*addon.scaling)
-	local damageResolve = addon.maxHealth > 0 and 
-		(addon.resolveDmg / addon.maxHealth) or 0
+	local damageResolve = (addon.maxHealth > 0 and 
+		(addon.resolveDmg / addon.maxHealth) or 0) * 0.25
 	addon.resolve = stamResolve + damageResolve
 	if self.db.profile.debug then
 		self:Print(resolveFmt:format(addon.resolve*100, 
-			addon.resolveDmg or 0, addon.resolveDmg2 or 0))
+			addon.resolveInt or 0, addon.resolveDmg or 0, addon.resolveDmg2 or 0))
 	end
 	self:UpdateEstimateBar()
 	self:UpdateMinHeal()
@@ -1605,9 +1631,12 @@ function BloodShieldTracker:UpdateBars(timestamp)
 end
 
 function BloodShieldTracker:UpdateEstimateBarWoD()
-    if not self.estimatebar.db.enabled or addon.idle then return end
+	local db = self.estimatebar.db
+    if not db.enabled or addon.idle then return end
 
-	local baseValue = addon.effectiveAP * 5 * (1+(addon.resolve)) * 
+	local resolve = self.db.profile.resolveMode == "Actual" 
+		and (addon.resolveInt/100) or addon.resolve
+	local baseValue = addon.effectiveAP * 5 * (1+resolve) * 
 		(1 + scentBloodStacks * scentBloodStackBuff)
 	local estimate
 
@@ -2634,6 +2663,7 @@ function BloodShieldTracker:CheckAuras()
 
 		elseif spellId == SpellIds["Resolve"] then
 			AurasFound["Resolve"] = true
+			addon.resolveInt = value or 0
 			addon.resolveDmg = value2 or 0
 			addon.resolveDmg2 = value3 or 0
 			if lastResolveDmg ~= addon.resolveDmg or 
@@ -2740,7 +2770,9 @@ function BloodShieldTracker:CheckAuras()
 
 	if AurasFound["Resolve"] then
 		local fmt = "%.1f%%"
-		self.resolvebar:SetValue(fmt:format(addon.resolve*100))
+		local resolve = self.db.profile.resolveMode == "Actual" and 
+			addon.resolveInt or (addon.resolve * 100)
+		self.resolvebar:SetValue(fmt:format(resolve))
 		if self.resolvebar.db.enabled then
 			self.resolvebar.bar:Show()
 		end

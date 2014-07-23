@@ -2004,7 +2004,7 @@ function BloodShieldTracker:GetResolveBarOptions()
                 type = "header",
                 name = L["General Options"],
             },
-    		status_bar_enabled = {
+    		enabled = {
 				name = L["Enabled"],
 				desc = L["EnableBarDesc"],
 				type = "toggle",
