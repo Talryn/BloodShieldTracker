@@ -339,6 +339,7 @@ local masteryRating = 0
 local shieldPercent = 0
 addon.effectiveAP = 0
 addon.resolve = 0
+addon.resolveInt = 0
 addon.resolveDmg = 0
 addon.resolveDmg2 = 0
 addon.playerLevel = _G.UnitLevel("player")
@@ -529,6 +530,7 @@ end
 addon.ResolveModes = {
 	["Actual"] = true,
 	["Estimated"] = true,
+	["Rounded"] = true,
 }
 
 addon.defaults = {
@@ -829,6 +831,9 @@ function BloodShieldTracker:OnInitialize()
     -- Set the precision
 	addon:SetNumberPrecision()
 
+	-- Set Resolve Mode
+	addon.SetResolveMode()
+
 	-- Create the bars
 	self.shieldbar = Bar:Create("ShieldBar", "Shield Bar", true)
 	self:UpdateShieldBarMode()
@@ -1040,16 +1045,37 @@ function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 	end
 end
 
-local resolveFmt = "Resolve: %.1f [%d,%d,%d]"
-function BloodShieldTracker:UpdateResolve()
-	local stamResolve = addon.stamina / (250*addon.scaling)
+function addon.SetResolveActual()
+	addon.resolve = addon.resolveInt / 100.0
+end
+function addon.SetResolveRounded()
+	addon.resolve = (addon.resolveInt / 100.0) + 0.5
+end
+function addon.SetResolveEstimated()
+	local stamResolve = addon.stamina / (250 * addon.scaling)
 	local damageResolve = (addon.maxHealth > 0 and 
 		(addon.resolveDmg / addon.maxHealth) or 0) * 0.25
 	addon.resolve = stamResolve + damageResolve
-	if self.db.profile.debug then
-		self:Print(resolveFmt:format(addon.resolve*100, 
-			addon.resolveInt or 0, addon.resolveDmg or 0, addon.resolveDmg2 or 0))
+end
+function addon.SetResolveMode()
+	local mode = addon.db.profile.resolveMode
+	if mode == "Estimated" then
+		addon.SetResolve = addon.SetResolveEstimated
+	elseif mode == "Rounded" then
+		addon.SetResolve = addon.SetResolveRounded
+	else
+		addon.SetResolve = addon.SetResolveActual
 	end
+end
+addon.SetResolve = addon.SetResolveActual
+
+local resolveFmt = "Resolve: %.1f [%d,%d,%d]"
+function BloodShieldTracker:UpdateResolve()
+	addon.SetResolve()
+	--if self.db.profile.debug then
+	--	self:Print(resolveFmt:format(addon.resolve*100, 
+	--		addon.resolveInt or 0, addon.resolveDmg or 0, addon.resolveDmg2 or 0))
+	--end
 	self:UpdateEstimateBar()
 	self:UpdateMinHeal()
 end
@@ -1634,9 +1660,7 @@ function BloodShieldTracker:UpdateEstimateBarWoD()
 	local db = self.estimatebar.db
     if not db.enabled or addon.idle then return end
 
-	local resolve = self.db.profile.resolveMode == "Actual" 
-		and (addon.resolveInt/100) or addon.resolve
-	local baseValue = addon.effectiveAP * 5 * (1+resolve) * 
+	local baseValue = addon.effectiveAP * 5 * (1+addon.resolve) * 
 		(1 + scentBloodStacks * scentBloodStackBuff)
 	local estimate
 
@@ -1649,7 +1673,7 @@ function BloodShieldTracker:UpdateEstimateBarWoD()
     end
 
     self:UpdateEstimateBarText(estimate)
-    self.estimatebar.bar:SetMinMaxValues(0, estimate)
+    --self.estimatebar.bar:SetMinMaxValues(0, estimate)
     DataFeed.estimateBar = estimate
     if addon.LDBDataFeed then
         addon:UpdateLDBData()
@@ -1973,7 +1997,7 @@ function BloodShieldTracker:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, ran
 	            local diff = succeededTime - DS_SentTime
 	            if diff > 0 then
 	                DS_Latency = diff
-	                if self.db.profile.debug then
+	                if self.db.profile.debug and not addon.WoD then
 	                    self:Print("DS Latency: "..DS_Latency)
 	                end
 	                -- If the latency appears overly large then cap it at 2 seconds.
@@ -2086,7 +2110,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 	if eventtype == "SPELL_CAST_SUCCESS" and srcName == self.playerName and 
 	    param9 == SpellIds["Death Strike"] then
 
-        if self.db.profile.debug then
+        if self.db.profile.debug and not addon.WoD then
             local dsHealFormat = "Estimated damage: %d will be a heal for: %d"
             local recentDmg = self:GetRecentDamageTaken(timestamp)
             local predictedHeal = 0
@@ -2170,7 +2194,7 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         if param13 then spellAbsorb = param13 end
 
         if param9 == SpellIds["Blood Shield"] then
-            if self.db.profile.debug then
+            if self.db.profile.debug and not addon.WoD then
                 if spellAbsorb and spellAbsorb ~= "" then
                     self:Print("Blood Shield applied.  Value = "..spellAbsorb)
                 else
@@ -2203,7 +2227,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
         if param9 then
             if param9 == SpellIds["Blood Shield"] then
-                if self.db.profile.debug and spellAbsorb and spellAbsorb ~= "" then
+                if self.db.profile.debug and not addon.WoD and
+					spellAbsorb and spellAbsorb ~= "" then
                     self:Print("Blood Shield refresh.  New value = "..spellAbsorb)
                 end
 
@@ -2229,7 +2254,8 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
                 self:BloodShieldUpdated("removed", timestamp, spellAbsorb or 0, 0)
             end
 
-            if self.db.profile.debug and spellAbsorb and spellAbsorb ~= "" then
+            if self.db.profile.debug and not addon.WoD and
+			 	spellAbsorb and spellAbsorb ~= "" then
                 self:Print("Blood Shield removed.  Remaining = "..spellAbsorb)
             end
         elseif param9 == SpellIds["Shroud of Purgatory"] then
@@ -2280,7 +2306,7 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, expires)
         end
 
         local shieldFormat = "Blood Shield Amount: %d%s"
-        if self.db.profile.debug then
+        if self.db.profile.debug and not addon.WoD then
             self:Print(shieldFormat:format(shieldValue,shieldInd))
         end
 
@@ -2604,8 +2630,6 @@ local OtherShields = {}
 local PreviousShieldValues = {}
 local PurgatoryAbsorb = 0
 local PurgatoryActive = false
-local lastResolveDmg = nil
-local lastResolveDmg2 = nil
 
 local errorReadingFmt = "Error reading the %s value."
 function BloodShieldTracker:CheckAuras()
@@ -2663,14 +2687,12 @@ function BloodShieldTracker:CheckAuras()
 
 		elseif spellId == SpellIds["Resolve"] then
 			AurasFound["Resolve"] = true
-			addon.resolveInt = value or 0
-			addon.resolveDmg = value2 or 0
-			addon.resolveDmg2 = value3 or 0
-			if lastResolveDmg ~= addon.resolveDmg or 
-				lastResolveDmg2 ~= addon.resolveDmg2 then
+			if value ~= addon.resolveInt or value2 ~= addon.resolveDmg or 
+				value3 ~= addon.resolveDmg2 then
+				addon.resolveInt = value or 0
+				addon.resolveDmg = value2 or 0
+				addon.resolveDmg2 = value3 or 0
 				self:UpdateResolve()
-				lastResolveDmg = addon.resolveDmg
-				lastResolveDmg2 = addon.resolveDmg2
 			end
 			--addon:UpdateLDBData()
 
@@ -2769,11 +2791,9 @@ function BloodShieldTracker:CheckAuras()
     until name == nil
 
 	if AurasFound["Resolve"] then
-		local fmt = "%.1f%%"
-		local resolve = self.db.profile.resolveMode == "Actual" and 
-			addon.resolveInt or (addon.resolve * 100)
-		self.resolvebar:SetValue(fmt:format(resolve))
 		if self.resolvebar.db.enabled then
+			local fmt = "%.1f%%"
+			self.resolvebar:SetValue(fmt:format(addon.resolve*100))
 			self.resolvebar.bar:Show()
 		end
 	else
