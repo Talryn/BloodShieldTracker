@@ -16,4 +16,5 @@ Bar.lua
 BloodShieldTracker.lua
 Options.lua
 BoneWallTracker.lua
+HealthBar.lua
 Migration.lua

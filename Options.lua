@@ -30,11 +30,11 @@ function BloodShieldTracker:ShowOptions()
 end
 
 function BloodShieldTracker:GetOptions()
-    if not addon.options then
-        addon.options = {
-            type = "group",
-            name = _G.GetAddOnMetadata(ADDON_NAME, "Title"),
-            args = {
+	if not addon.options then
+  	addon.options = {
+    	type = "group",
+      name = _G.GetAddOnMetadata(ADDON_NAME, "Title"),
+      args = {
 				core = self:GetGeneralOptions(),
 				shieldBarOpts = self:GetShieldBarOptions(),
 				estimateBarOpts = self:GetEstimateBarOptions(),
@@ -46,10 +46,9 @@ function BloodShieldTracker:GetOptions()
 				purgatoryBarOpts = self:GetPurgatoryBarOptions(),
 				amsBarOpts = self:GetAMSBarOptions(),
 				resolveBarOpts = self:GetResolveBarOptions(),
-				healthBarOpts = self:GetHealthBarOptions(),
 				skinningOpts = self:GetSkinningOptions(),
-            }
-        }
+    	}
+  	}
 		addon.options.args.profile = 
 			_G.LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
 
@@ -60,8 +59,8 @@ function BloodShieldTracker:GetOptions()
 				addon.options.args[name] = opts
 			end
 		end
-    end
-    return addon.options
+  end
+  return addon.options
 end
 
 function BloodShieldTracker:AddDimensionOptions(opts, barName, order)
@@ -281,6 +280,27 @@ function BloodShieldTracker:AddAppearanceOptions(opts, barName, order)
 	}
 end
 
+local function GetAnchorFrames(frames, barName)
+	_G.wipe(frames)
+	frames["None"] = L["None"]
+	frames["Custom"] = L["Custom"]
+
+	for k, v in pairs(addon.FrameNames) do
+		if k and v and k ~= "Compact Runes" and 
+			addon.bars[barName] and
+			k ~= addon.bars[barName].friendlyName then
+			frames[k] = L[k]
+		end
+	end
+
+	if select(6, _G.GetAddOnInfo("CompactRunes")) ~= "MISSING" or 
+		BloodShieldTracker.db.profile.bars[barName].anchorFrame == "Compact Runes" then
+		frames["Compact Runes"] = L["Compact Runes"]
+	end
+
+	return frames
+end
+
 function BloodShieldTracker:AddAdvancedPositioning(options, barName)
     options.args.advPos = {
         order = 1000,
@@ -294,36 +314,42 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
         name = L["Anchor_Desc"],
     }
 
+	local frames = {}
 	options.args.anchorFrame = {
 		name = L["Anchor"],
 		desc = L["Anchor_OptDesc"],
 		type = "select",
-		values = {
-		    ["None"] = L["None"],
-		    ["Custom"] = L["Custom"],
-		    --["Compact Runes"] = L["Compact Runes"],
-			["Shield Bar"] = L["Shield Bar"],
-			["Estimate Bar"] = L["Estimate Bar"],
-			["Health Bar"] = L["Health Bar"],
-			["PW:S Bar"] = L["PW:S Bar"],
-			["Illuminated Healing Bar"] = L["Illuminated Healing Bar"],
-			["Total Absorbs Bar"] = L["Total Absorbs Bar"],
-			["Anti-Magic Shell Bar"] = L["Anti-Magic Shell Bar"],
-		},
+		values = GetAnchorFrames(frames, barName),
+		--values = {
+		--	["None"] = L["None"],
+		--	["Custom"] = L["Custom"],
+		--	["Shield Bar"] = L["Shield Bar"],
+		--	["Estimate Bar"] = L["Estimate Bar"],
+		--	["Health Bar"] = L["Health Bar"],
+		--	["PW:S Bar"] = L["PW:S Bar"],
+		--	["Illuminated Healing Bar"] = L["Illuminated Healing Bar"],
+		--	["Total Absorbs Bar"] = L["Total Absorbs Bar"],
+		--	["Anti-Magic Shell Bar"] = L["Anti-Magic Shell Bar"],
+		--	["Blood Charge Bar"] = L["Blood Charge Bar"],
+		--	["Bone Shield Bar"] = L["Bone Shield Bar"],
+		--	["Bone Wall Bar"] = L["Bone Wall Bar"],
+		--	["Purgatory Bar"] = L["Purgatory Bar"],
+		--	["Resolve Bar"] = L["Resolve Bar"],
+		--},
 		order = 1010,
 		set = function(info, val)
-		    self.db.profile.bars[barName].anchorFrame = val
+			self.db.profile.bars[barName].anchorFrame = val
 			self.bars[barName]:UpdatePosition()
 		end,
-        get = function(info)
-            return self.db.profile.bars[barName].anchorFrame
-        end,
+			get = function(info)
+      	return self.db.profile.bars[barName].anchorFrame
+    	end,
 	}
-	if select(6, _G.GetAddOnInfo("CompactRunes")) ~= "MISSING" or 
-		self.db.profile.bars[barName].anchorFrame == "Compact Runes" then
-		options.args.anchorFrame.values["Compact Runes"] = 
-			L["Compact Runes"]
-	end
+	--if select(6, _G.GetAddOnInfo("CompactRunes")) ~= "MISSING" or 
+	--	self.db.profile.bars[barName].anchorFrame == "Compact Runes" then
+	--	options.args.anchorFrame.values["Compact Runes"] = 
+	--		L["Compact Runes"]
+	--end
 
 	options.args.anchorFrameCustom = {
 		name = L["Frame"],
@@ -1771,220 +1797,6 @@ function BloodShieldTracker:GetAMSBarOptions()
 	self:AddAppearanceOptions(amsBarOpts, "AMSBar")
 	self:AddAdvancedPositioning(amsBarOpts, "AMSBar")
 	return amsBarOpts
-end
-
-function BloodShieldTracker:GetHealthBarOptions()
-	local healthBarOpts = {
-	    order = 8,
-	    type = "group",
-	    name = L["Health Bar"],
-	    desc = L["Health Bar"],
-	    args = {
-		    description = {
-		        order = 1,
-		        type = "description",
-		        name = L["HealthBar_Desc"],
-		    },
-            generalOptions = {
-                order = 2,
-                type = "header",
-                name = L["General Options"],
-            },
-    		bar_enabled = {
-				name = L["Enabled"],
-				desc = L["EnableBarDesc"],
-				type = "toggle",
-				order = 10,
-				set = function(info, val)
-				    self.db.profile.bars["HealthBar"].enabled = val
-			        self:ToggleHealthBar()
-				end,
-                get = function(info)
-                    return self.db.profile.bars["HealthBar"].enabled
-                end,
-			},
-			lock_bar = {
-				name = L["Lock bar"],
-				desc = L["LockBarDesc"],
-				type = "toggle",
-				order = 20,
-				set = function(info, val)
-				    self.db.profile.bars["HealthBar"].locked = val 
-					self.bars["HealthBar"]:Lock(val)
-				end,
-                get = function(info)
-                    return self.db.profile.bars["HealthBar"].locked
-                end,
-			},
-			hide_ooc = {
-				name = L["Hide out of combat"],
-				desc = L["HideOutOfCombat_OptionDesc"],
-				type = "toggle",
-				order = 30,
-				set = function(info, val)
-				    self.db.profile.bars["HealthBar"].hide_ooc = val
-					if not _G.InCombatLockdown() then
-					    if val then
-					        self.healthbar.bar:Hide()
-				        elseif addon:IsTrackerEnabled() and
-							self.db.profile.bars["HealthBar"].enabled then
-				            self.healthbar.bar:Show()
-			            end
-			        end
-				end,
-                get = function(info)
-                    return self.db.profile.bars["HealthBar"].hide_ooc
-                end,
-			},
-			low_percent = {
-				order = 40,
-				name = L["Low Health Threshold"],
-				desc = L["LowHealthThreshold_OptionDesc"],	
-				type = "range",
-				isPercent = true,
-				min = 0.05,
-				max = 0.95,
-				bigStep = 0.05,
-				set = function(info, val)
-				    self.db.profile.bars["HealthBar"].low_percent = val
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["HealthBar"].low_percent
-				end,
-			},
-			text_format = {
-				name = L["Text Format"],
-				desc = L["TextFormat_OptionDesc"],
-				type = "select",
-				values = {
-				    ["Full"] = L["Full"],
-				    ["OnlyPerc"] = L["Only Percent"],
-				    ["OnlyCurrent"] = L["Only Current"],
-				    ["CurrMax"] = L["Current and Maximum"],
-				    ["CurrPerc"] = L["Current and Percent"]
-				},
-				order = 50,
-				set = function(info, val)
-				    self.db.profile.bars["HealthBar"].text_format = val
-			        self:UpdateHealthBar(false)
-				end,
-                get = function(info)
-                    return self.db.profile.bars["HealthBar"].text_format
-                end,
-			},
-            colors = {
-                order = 500,
-                type = "header",
-                name = L["Colors for Normal Health"],
-            },
-			bar_textcolor = {
-				order = 510,
-				name = L["Text Color"],
-				desc = L["BarTextColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["HealthBar"].textcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.healthbar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["HealthBar"].textcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			bar_color = {
-				order = 520,
-				name = L["Bar Color"],
-				desc = L["BarColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["HealthBar"].color
-				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.healthbar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["HealthBar"].color
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			bar_bgcolor = {
-				order = 530,
-				name = L["Bar Background Color"],
-				desc = L["BarBackgroundColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["HealthBar"].bgcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.healthbar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["HealthBar"].bgcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-            colorsLow = {
-                order = 550,
-                type = "header",
-                name = L["Colors for Low Health"],
-            },
-			bar_low_textcolor = {
-				order = 560,
-				name = L["Low Health Text Color"],
-				desc = L["BarTextColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["HealthBar"].alt_textcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.healthbar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["HealthBar"].alt_textcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			bar_low_color = {
-				order = 570,
-				name = L["Low Health Bar Color"],
-				desc = L["BarColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["HealthBar"].alt_color
-				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.healthbar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["HealthBar"].alt_color
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			bar_low_bgcolor = {
-				order = 580,
-				name = L["Low Health Bar Background Color"],
-				desc = L["BarBackgroundColor_LowHealth_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["HealthBar"].alt_bgcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.healthbar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["HealthBar"].alt_bgcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-		}
-	}
-	self:AddDimensionOptions(healthBarOpts, "HealthBar")
-	self:AddPositionOptions(healthBarOpts, "HealthBar")
-	self:AddAppearanceOptions(healthBarOpts, "HealthBar")
-	self:AddAdvancedPositioning(healthBarOpts, "HealthBar")
-	return healthBarOpts
 end
 
 function BloodShieldTracker:GetResolveBarOptions()

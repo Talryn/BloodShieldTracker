@@ -39,7 +39,6 @@ local type = _G.type
 -- Local versions of WoW API calls
 local UnitAura = _G.UnitAura
 local GetTime = _G.GetTime
-local UnitHealth = _G.UnitHealth
 local UnitHealthMax = _G.UnitHealthMax
 local UnitGetTotalAbsorbs = _G.UnitGetTotalAbsorbs
 local UnitAttackPower = _G.UnitAttackPower
@@ -55,7 +54,6 @@ BloodShieldTracker.shieldbar = nil
 BloodShieldTracker.estimatebar = nil
 BloodShieldTracker.pwsbar = nil
 BloodShieldTracker.illumbar = nil
-BloodShieldTracker.healthbar = nil
 
 -- Player class, talent, and spec info
 addon.isDK = nil
@@ -318,8 +316,6 @@ local DS_Latency = nil
 -- The actual minimum DS heal percent, based on spec, glyphs, and presence.
 local actualDsMinHeal = dsMinHealPercent
 local maxHealth = 0
-local currentHealth = 0
-local percentHealth = 0
 local dsHealMin = 0
 local bsMinimum = 0
 local scentBloodStacks = 0
@@ -636,18 +632,6 @@ addon.defaults = {
 				x = 0, 
 				y = -120,
 			},
-			["HealthBar"] = {
-				hide_ooc = false,
-				low_percent = 0.3,
-				text_format = "OnlyCurrent",
-				color = {r = 0.0, g = 0.5, b = 0.8, a = 1},
-				bgcolor = {r = 0.0, g = 0.3, b = 0.6, a = 0.8},
-				alt_color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
-				alt_bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
-				alt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-				x = 0, 
-				y = -150,
-			},
 			["PWSBar"] = {
 				color = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
@@ -698,9 +682,9 @@ addon.defaults = {
 			},
 			["BoneShieldBar"] = {
 				enabled = false,
-		        progress = "Charges",
-		        show_time = false,
-		        time_pos = "RIGHT",
+		    progress = "Charges",
+		    show_time = false,
+		    time_pos = "RIGHT",
 				showCooldown = "true",
 				showReady = "true",
 				color = {r = 0.03, g = 0.54, b = 0.03, a = 1},
@@ -753,33 +737,33 @@ local function splitWords(str)
 end
 
 function BloodShieldTracker:ChatCommand(input)
-    if not input or input:trim() == "" then
-        self:ShowOptions()
-    else
+	if not input or input:trim() == "" then
+  	self:ShowOptions()
+  else
 		local cmds = splitWords(input)
-        if cmds[1] and cmds[1] == "debug" then
+    if cmds[1] and cmds[1] == "debug" then
 			if cmds[2] and cmds[2] == "on" then
 				self.db.profile.debug = true
-	            self:Print("Debugging on.  Use '/bst debug off' to disable.")
-		    elseif cmds[2] and cmds[2] == "off" then
+	      self:Print("Debugging on.  Use '/bst debug off' to disable.")
+		  elseif cmds[2] and cmds[2] == "off" then
 				self.db.profile.debug = false
-	            self:Print("Debugging off.")
+	      self:Print("Debugging off.")
 			else
 				self:Print("Debugging is "..(self.db.profile.debug and "on." or "off."))
 			end
-        elseif cmds[1] and cmds[1] == "log" then
+    elseif cmds[1] and cmds[1] == "log" then
 			if cmds[2] and cmds[2] == "on" then
-	            DEBUG_OUTPUT = true
-	            self:Print("Logging on.")
-	        elseif cmds[2] and cmds[2] == "off" then
-	            DEBUG_OUTPUT = false
-	            self:Print("Logging off.")
-	        elseif cmds[2] and cmds[2] == "show" then
-	            self:ShowDebugOutput()
+	      DEBUG_OUTPUT = true
+	      self:Print("Logging on.")
+	    elseif cmds[2] and cmds[2] == "off" then
+	      DEBUG_OUTPUT = false
+	      self:Print("Logging off.")
+	    elseif cmds[2] and cmds[2] == "show" then
+	      self:ShowDebugOutput()
 			else
 				self:Print("Logging is "..(DEBUG_OUTPUT and "on." or "off."))
 			end
-        elseif cmds[1] and cmds[1] == "useAura" then
+		elseif cmds[1] and cmds[1] == "useAura" then
 			if cmds[2] and cmds[2] == "false" then
 				self.db.profile.useAuraForShield = false
 				self:Print("Not using the aura.")
@@ -789,7 +773,7 @@ function BloodShieldTracker:ChatCommand(input)
 			else
 				self:Print("useAura = " .. tostring(self.db.profile.useAuraForShield))
 			end
-        elseif cmds[1] and cmds[1] == "resolveMode" then
+    elseif cmds[1] and cmds[1] == "resolveMode" then
 			local isSet = false
 			if cmds[2] and addon.ResolveModes[cmds[2]] then
 				self.db.profile.resolveMode = cmds[2]
@@ -815,8 +799,8 @@ function BloodShieldTracker:ChatCommand(input)
 end
 
 function BloodShieldTracker:OnInitialize()
-    -- Load the settings
-    self.db = _G.LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", 
+  -- Load the settings
+  self.db = _G.LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", 
 		addon.defaults, "Default")
 	addon.db = self.db
 
@@ -837,11 +821,10 @@ function BloodShieldTracker:OnInitialize()
 	-- Create the bars
 	self.shieldbar = Bar:Create("ShieldBar", "Shield Bar", true)
 	self:UpdateShieldBarMode()
-    self:UpdateShieldBarText(0, 0, 0)
-    self.estimatebar = Bar:Create("EstimateBar", "Estimate Bar", false)
+  self:UpdateShieldBarText(0, 0, 0)
+  self.estimatebar = Bar:Create("EstimateBar", "Estimate Bar", false)
 	self.pwsbar = Bar:Create("PWSBar", "PW:S Bar", false)
 	self.illumbar = Bar:Create("IllumBar", "Illuminated Healing Bar", false)
-	self.healthbar = Bar:Create("HealthBar", "Health Bar", false)
 	self.absorbsbar = Bar:Create("TotalAbsorbsBar", "Total Absorbs Bar", false)
 	self.purgatorybar = Bar:Create("PurgatoryBar", "Purgatory Bar", false)
 	self.bloodchargebar = Bar:Create("BloodChargeBar", "Blood Charge Bar", true)
@@ -1140,8 +1123,6 @@ function BloodShieldTracker:OnEnable()
 		    displayName, L["Purgatory Bar"], displayName, "purgatoryBarOpts")
 		self.optionsFrame.ResolveBar = ACD:AddToBlizOptions(
 		    displayName, L["Resolve Bar"], displayName, "resolveBarOpts")
-		self.optionsFrame.HealthBar = ACD:AddToBlizOptions(
-		    displayName, L["Health Bar"], displayName, "healthBarOpts")
 
 		-- Add options for modules
 		for name, obj in pairs(addon.modules) do
@@ -1162,7 +1143,7 @@ function BloodShieldTracker:OnEnable()
 	    self:RegisterChatCommand("bloodshield", "ChatCommand")
 	end
 
-    self:CheckClass()
+	self:CheckClass()
 	self:CheckGear()
 	self:UpdateMastery()
 	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
@@ -1182,33 +1163,47 @@ end
 
 local UnitEvents = {
 	["player"] = {
-		"UNIT_AURA",
-		"UNIT_SPELLCAST_SUCCEEDED",
-		"UNIT_ATTACK_POWER",
-		"UNIT_STATS",
-		"UNIT_LEVEL",
+		["UNIT_AURA"] = true,
+		["UNIT_SPELLCAST_SUCCEEDED"] = true,
+		["UNIT_ATTACK_POWER"] = true,
+		["UNIT_STATS"] = true,
+		["UNIT_LEVEL"] = true,
+		["UNIT_MAXHEALTH"] = true,
 	},
 }
 local function EventFrame_OnEvent(frame, event, ...)
-	if event == "UNIT_AURA" then
-		BloodShieldTracker:UNIT_AURA(event, ...)
-	elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
-		BloodShieldTracker:UNIT_SPELLCAST_SUCCEEDED(event, ...)
-	elseif event == "UNIT_ATTACK_POWER" then
-		BloodShieldTracker:UNIT_ATTACK_POWER(event, ...)
-	elseif event == "UNIT_ATTACK_STATS" then
-		BloodShieldTracker:UNIT_STATS(event, ...)
-	elseif event == "UNIT_LEVEL" then
-		BloodShieldTracker:UNIT_LEVEL(event, ...)
-	elseif event == "UNIT_MAXHEALTH" then
-		BloodShieldTracker:UNIT_MAXHEALTH(event, ...)
-	end
+	BloodShieldTracker[event](BloodShieldTracker, event, ...)
 end
 local EventFrames = {}
-for unit, events in pairs(UnitEvents) do
-	local frame = _G.CreateFrame("Frame", ADDON_NAME.."_EventFrame_"..unit)
-	frame:SetScript("OnEvent", EventFrame_OnEvent)
-	EventFrames[unit] = frame
+function addon.CreateEventFrames()
+	for unit, events in pairs(UnitEvents) do
+		local frame = _G.CreateFrame("Frame", ADDON_NAME.."_EventFrame_"..unit)
+		frame:SetScript("OnEvent", EventFrame_OnEvent)
+		EventFrames[unit] = frame
+	end
+end
+addon.CreateEventFrames()
+function addon.RegisterUnitEvents(frames, events)
+	for unit, events in pairs(events) do
+		local frame = frames[unit]
+		if frame then
+			for event, val in pairs(events) do
+				frame:RegisterUnitEvent(event, unit)
+			end
+		else
+			BST:Print("Missing event frame for "..tostring(unit).."!")
+		end
+	end
+end
+function addon.UnregisterUnitEvents(frames, events)
+	for unit, events in pairs(events) do
+		local frame = frames[unit]
+		if frame then
+			for event, val in pairs(events) do
+				frame:UnregisterEvent(event, unit)
+			end
+		end
+	end
 end
 
 function BloodShieldTracker:Load()
@@ -1224,27 +1219,16 @@ function BloodShieldTracker:Load()
 	self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 	self:RegisterEvent("COMBAT_RATING_UPDATE","UpdateMastery")
 	self:RegisterEvent("MASTERY_UPDATE","UpdateMastery")
-	self:RegisterEvent("UNIT_MAXHEALTH","UpdateMinHeal")
 	self:RegisterEvent("PLAYER_DEAD")
-    self:RegisterEvent("PLAYER_ENTERING_WORLD", "CheckAuras")
-    self:RegisterEvent("PLAYER_ALIVE", "CheckAuras")
-    self:RegisterEvent("UNIT_SPELLCAST_SENT")
-    self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
+	self:RegisterEvent("PLAYER_ENTERING_WORLD", "CheckAuras")
+	self:RegisterEvent("PLAYER_ALIVE", "CheckAuras")
+	self:RegisterEvent("UNIT_SPELLCAST_SENT")
+	self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 
-	for unit, events in pairs(UnitEvents) do
-		local eventFrame = EventFrames[unit]
-		if eventFrame then
-			for i, event in ipairs(events) do
-				eventFrame:RegisterUnitEvent(event, unit)
-			end
-		else
-			self:Print("Missing event frame for "..tostring(unit).."!")
-		end
-	end
+	addon.RegisterUnitEvents(EventFrames, UnitEvents)
 	self:UpdateStats()
 
-    self:ToggleHealthBar()
-    self.shieldbar:UpdateUI()
+	self.shieldbar:UpdateUI()
 	self.estimatebar:UpdateUI()
 	self.estimatebar:UpdateVisibility()
 end
@@ -1261,22 +1245,13 @@ function BloodShieldTracker:Unload()
     self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 	self:UnregisterEvent("COMBAT_RATING_UPDATE")
 	self:UnregisterEvent("MASTERY_UPDATE")
-	self:UnregisterEvent("UNIT_MAXHEALTH")
 	self:UnregisterEvent("PLAYER_DEAD")
     self:UnregisterEvent("PLAYER_ENTERING_WORLD")
     self:UnregisterEvent("PLAYER_ALIVE")
     self:UnregisterEvent("UNIT_SPELLCAST_SENT")
-    self:UnregisterEvent("UNIT_HEALTH")
     self:UnregisterEvent("PLAYER_EQUIPMENT_CHANGED")
 
-	for unit, events in pairs(UnitEvents) do
-		local eventFrame = EventFrames[unit]
-		if eventFrame then
-			for i, event in ipairs(events) do
-				eventFrame:UnregisterEvent(event, unit)
-			end
-		end
-	end
+	addon.UnregisterUnitEvents(EventFrames, UnitEvents)
 
 	for k, v in pairs(self.bars) do
 		if v then
@@ -1521,36 +1496,15 @@ function BloodShieldTracker:GetEffectiveHealingDebuffModifiers()
     return (1-healingDebuffMultiplier)
 end
 
-function BloodShieldTracker:UNIT_HEALTH(event, unit)
-    if unit and unit == "player" then
-        local oldHealth = currentHealth
-        currentHealth = UnitHealth("player")
-        if oldHealth ~= currentHealth then
-            if maxHealth > 0 then
-                percentHealth = currentHealth / maxHealth
-            else
-                percentHealth = 0
-            end
-            self:UpdateHealthBar(false)
-        end
-    end
+function BloodShieldTracker:UNIT_MAXHEALTH(event, unit)
+	if unit == "player" then
+		self:UpdateMinHeal(event, unit)
+	end
 end
 
 function BloodShieldTracker:UpdateMinHeal(event, unit)
 	if unit == "player" then
-	    local oldHealth = maxHealth
-	    maxHealth = UnitHealthMax("player")
-	    if currentHealth <= 0 then
-    	    currentHealth = UnitHealth("player")
-        end
-        if oldHealth ~= maxHealth then
-            if maxHealth > 0 then
-                percentHealth = currentHealth / maxHealth
-            else
-                percentHealth = 0
-            end
-            self:UpdateHealthBar(true)
-        end
+	    local maxHealth = UnitHealthMax("player")
 	    actualDsMinHeal = dsMinHealPercent
 
         -- Check for Dark Succor
@@ -1561,7 +1515,7 @@ function BloodShieldTracker:UpdateMinHeal(event, unit)
 
 		local baseValue
 		if addon.WoD then
-			baseValue = addon.effectiveAP * 5 * (1+(addon.resolve)) * 
+			baseValue = addon.effectiveAP * 5 * (1+addon.resolve) * 
 				(1 + scentBloodStacks * scentBloodStackBuff)
 		else
 			baseValue = maxHealth * actualDsMinHeal * Tier14Bonus *
@@ -1590,9 +1544,6 @@ function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 	        self.estimatebar.bar:Show()
 	        self.estimatebar.bar:SetScript("OnUpdate", UpdateTime)
         end
-        if self.healthbar.db.enabled then
-            self.healthbar.bar:Show()
-        end
     end
     -- Reset the per fight stats
     LastFightStats:Reset()
@@ -1614,9 +1565,6 @@ function BloodShieldTracker:PLAYER_REGEN_ENABLED()
     if self.estimatebar.db.hide_ooc then
         self.estimatebar.bar:Hide()
     end
-    if self.healthbar.db.hide_ooc then
-        self.healthbar.bar:Hide()
-    end
 
     self.estimatebar.bar:SetScript("OnUpdate", nil)
     LastFightStats:EndCombat()
@@ -1631,12 +1579,6 @@ function BloodShieldTracker:PLAYER_DEAD()
     if self.estimatebar.db.hide_ooc then
         if self.estimatebar.bar:IsVisible() then
             self.estimatebar.bar:Hide()
-        end
-    end
-    -- Hide the health bar if configured to do so for OOC
-    if self.healthbar.db.hide_ooc then
-        if self.healthbar.bar:IsVisible() then
-            self.healthbar.bar:Hide()
         end
     end
 	if DataFeed.vengeance > 0 then
@@ -1830,58 +1772,6 @@ function BloodShieldTracker:UpdateShieldBar()
         diff = 0
     end
     self:UpdateShieldBarText(self.shieldbar.shield_curr, self.shieldbar.shield_max, diff)
-end
-
-function BloodShieldTracker:ToggleHealthBar()
-    if self.db.profile.bars["HealthBar"].enabled then
-        self:RegisterEvent("UNIT_HEALTH")
-		self:UNIT_HEALTH("ToggleHealthBar", "player")
-		self:UpdateHealthBar(true)
-    else
-        self:UnregisterEvent("UNIT_HEALTH")
-    end
-	self.bars["HealthBar"]:UpdateVisibility()
-end
-
-local percentIntFmt = "%d%%"
-function BloodShieldTracker:UpdateHealthBar(maxChanged)
-    if self.healthbar.db.enabled then
-        if maxChanged then
-            self.healthbar.bar:SetMinMaxValues(0, maxHealth)
-        end
-
-        local low = (percentHealth <= self.healthbar.db.low_percent)
-		local changed = (low ~= self.healthbar.altcolor)
-        self.healthbar.altcolor = low
-        if changed or maxChanged then
-            self.healthbar:UpdateGraphics()
-        end
-
-        self.healthbar.bar:SetValue(currentHealth)
-
-        local text = ""
-    
-        if self.healthbar.db.text_format == "OnlyPerc" then
-            text = percentIntFmt:format(percentHealth * 100)
-        elseif self.healthbar.db.text_format == "Full" then
-            text = shieldBarFormatFull:format(
-                addon.FormatNumber(currentHealth), 
-                addon.FormatNumber(maxHealth), 
-                percentHealth * 100)
-        elseif self.healthbar.db.text_format == "CurrMax" then
-            text = shieldBarFormatNoPer:format(
-                addon.FormatNumber(currentHealth), 
-                addon.FormatNumber(maxHealth))
-        elseif self.healthbar.db.text_format == "CurrPerc" then
-            text = shieldBarFormatCurrPerc:format(
-                addon.FormatNumber(currentHealth), 
-                percentHealth * 100)
-        else
-            text = addon.FormatNumber(currentHealth)
-        end
-
-        self.healthbar.bar.value:SetText(text)
-    end
 end
 
 function BloodShieldTracker:UpdateShieldBarText(current, maximum, percent)

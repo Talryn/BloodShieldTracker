@@ -26,7 +26,7 @@ Bar.__index = Bar
 addon.Bar = Bar
 
 function Bar:Create(name, friendlyName, hasTimeRemaining, disableAnchor)
-    local object = _G.setmetatable({}, Bar)
+  local object = _G.setmetatable({}, Bar)
 	object.name = name
 	object.friendlyName = friendlyName or name
 	object.anchorTries = 0
@@ -34,7 +34,7 @@ function Bar:Create(name, friendlyName, hasTimeRemaining, disableAnchor)
 	object:Initialize()
 	-- Add the bar to the addon's table of bars
 	addon.bars[name] = object
-	if not disableAnchor then
+	if disableAnchor ~= false then
 		addon.FrameNames[object.friendlyName] = object.bar:GetName()
 	end
 	object:UpdatePosition()
@@ -43,31 +43,31 @@ end
 
 function Bar:Initialize()
 	self.db = addon.db.profile.bars[self.name]
-
-    local bar = _G.CreateFrame("StatusBar", ADDON_NAME.."_"..self.name, _G.UIParent)
+  self.frameName = ADDON_NAME.."_"..self.name
+  local bar = _G.CreateFrame("StatusBar", self.frameName, _G.UIParent)
 	self.bar = bar
 	bar.object = self
-    --bar:SetPoint("CENTER", _G.UIParent, "CENTER", self.db.x, self.db.y)
+  --bar:SetPoint("CENTER", _G.UIParent, "CENTER", self.db.x, self.db.y)
 	bar:SetScale(self.db.scale)
-    bar:SetOrientation("HORIZONTAL")
-    bar:SetWidth(self.db.width)
-    bar:SetHeight(self.db.height)
+  bar:SetOrientation("HORIZONTAL")
+  bar:SetWidth(self.db.width)
+  bar:SetHeight(self.db.height)
 	local bt = LSM:Fetch("statusbar", self.db.texture)
-    bar:SetStatusBarTexture(bt)
-    bar:GetStatusBarTexture():SetHorizTile(false)
-    bar:GetStatusBarTexture():SetVertTile(false)
-    local bc = self.db.color
-    bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-    bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-    bar.bg:SetTexture(bt)
-    bar.bg:SetAllPoints(true)
-    local bgc = self.db.bgcolor
-    bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-    bar.border = bar:CreateTexture(nil, "BACKGROUND")
-    bar.border:SetPoint("CENTER")
-    bar.border:SetWidth(bar:GetWidth()+9)
-    bar.border:SetHeight(bar:GetHeight()+8)
-    bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
+  bar:SetStatusBarTexture(bt)
+  bar:GetStatusBarTexture():SetHorizTile(false)
+  bar:GetStatusBarTexture():SetVertTile(false)
+  local bc = self.db.color
+  bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+  bar.bg = bar:CreateTexture(nil, "BACKGROUND")
+  bar.bg:SetTexture(bt)
+  bar.bg:SetAllPoints(true)
+  local bgc = self.db.bgcolor
+  bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+  bar.border = bar:CreateTexture(nil, "BACKGROUND")
+  bar.border:SetPoint("CENTER")
+  bar.border:SetWidth(bar:GetWidth()+9)
+  bar.border:SetHeight(bar:GetHeight()+8)
+  bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
 	if not self.db.border then
 		bar.border:Hide()
 	end
