@@ -308,6 +308,7 @@ local vbUnglyphedHealthInc = 0.15
 local vbUnglyphedHealingInc = 0.25
 local guardianSpiritHealBuff = 0.40
 local T14BonusAmt = 0.1
+local versatilityPerPercent = 130
 
 -- Curent state information
 local DarkSuccorBuff = false
@@ -332,6 +333,8 @@ local gsHealModifier = 0.0
 local healingDebuffMultiplier = 1
 local lastDSSuccess = nil
 local masteryRating = 0
+local versatilityRating = 0
+local versatilityPercent = 0
 local shieldPercent = 0
 addon.effectiveAP = 0
 addon.resolve = 0
@@ -1145,7 +1148,7 @@ function BloodShieldTracker:OnEnable()
 
 	self:CheckClass()
 	self:CheckGear()
-	self:UpdateMastery()
+	self:UpdateRatings()
 	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 	self:CheckTalents()
 	self:RegisterEvent("PLAYER_TALENT_UPDATE", "CheckTalents")
@@ -1217,8 +1220,8 @@ function BloodShieldTracker:Load()
 	self:RegisterEvent("PLAYER_REGEN_ENABLED")
 	self:RegisterEvent("PLAYER_REGEN_DISABLED")
 	self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-	self:RegisterEvent("COMBAT_RATING_UPDATE","UpdateMastery")
-	self:RegisterEvent("MASTERY_UPDATE","UpdateMastery")
+	self:RegisterEvent("COMBAT_RATING_UPDATE","UpdateRatings")
+	self:RegisterEvent("MASTERY_UPDATE","UpdateRatings")
 	self:RegisterEvent("PLAYER_DEAD")
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "CheckAuras")
 	self:RegisterEvent("PLAYER_ALIVE", "CheckAuras")
@@ -1263,9 +1266,11 @@ end
 function BloodShieldTracker:OnDisable()
 end
 
-function BloodShieldTracker:UpdateMastery()
-    masteryRating = GetMastery()
+function BloodShieldTracker:UpdateRatings()
+	masteryRating = GetMastery()
 	shieldPercent = masteryRating*shieldPerMasteryPoint/100
+	versatilityRating = GetVersatility()
+	versatilityPercent = versatilityRating/versatilityPerPercent/100
 end
 
 function BloodShieldTracker:CheckClass()
@@ -1516,7 +1521,7 @@ function BloodShieldTracker:UpdateMinHeal(event, unit)
 		local baseValue
 		if addon.WoD then
 			baseValue = addon.effectiveAP * 5 * (1+addon.resolve) * 
-				(1 + scentBloodStacks * scentBloodStackBuff)
+				(1 + scentBloodStacks * scentBloodStackBuff) * (1+versatilityPercent)
 		else
 			baseValue = maxHealth * actualDsMinHeal * Tier14Bonus *
 				(1 + scentBloodStacks * scentBloodStackBuff)
@@ -1603,7 +1608,7 @@ function BloodShieldTracker:UpdateEstimateBarWoD()
     if not db.enabled or addon.idle then return end
 
 	local baseValue = addon.effectiveAP * 5 * (1+addon.resolve) * 
-		(1 + scentBloodStacks * scentBloodStackBuff)
+		(1 + scentBloodStacks * scentBloodStackBuff) * (1+versatilityPercent)
 	local estimate
 
     if self.estimatebar.db.bar_mode == "BS" then
