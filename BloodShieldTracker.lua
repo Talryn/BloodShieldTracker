@@ -43,7 +43,8 @@ local UnitHealthMax = _G.UnitHealthMax
 local UnitGetTotalAbsorbs = _G.UnitGetTotalAbsorbs
 local UnitAttackPower = _G.UnitAttackPower
 local UnitStat = _G.UnitStat
-local GetMastery = _G.GetMastery
+local GetMasteryEffect = _G.GetMasteryEffect
+local GetVersatility = _G.GetVersatility
 local GetSpellCooldown = _G.GetSpellCooldown
 
 BloodShieldTracker.loaded = false
@@ -300,7 +301,7 @@ local ICCBuffs = {
 local dsHealModifier = 0.20  -- Percent of the DS Heal from the tooltip.
 local dsMinHealPercent = 0.07
 local dsMinHealPercentSuccor = 0.20
-local shieldPerMasteryPoint = 6.25
+--local shieldPerMasteryPoint = 6.25
 local scentBloodStackBuff = 0.2
 local vbGlyphedHealthInc = 0.0
 local vbGlyphedHealingInc = 0.4
@@ -1267,10 +1268,12 @@ function BloodShieldTracker:OnDisable()
 end
 
 function BloodShieldTracker:UpdateRatings()
-	masteryRating = GetMastery()
-	shieldPercent = masteryRating*shieldPerMasteryPoint/100
-	versatilityRating = GetVersatility()
-	versatilityPercent = versatilityRating/versatilityPerPercent/100
+	masteryRating = GetMasteryEffect()
+	shieldPercent = masteryRating/100
+	if addon.WoD then
+		versatilityRating = GetVersatility()
+		versatilityPercent = versatilityRating/versatilityPerPercent/100
+	end
 end
 
 function BloodShieldTracker:CheckClass()
