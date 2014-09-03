@@ -293,7 +293,7 @@ local function GetAnchorFrames(frames, barName)
 		end
 	end
 
-	if select(6, _G.GetAddOnInfo("CompactRunes")) ~= "MISSING" or 
+	if addon.GetAddOnInfoByName("CompactRunes") or 
 		BloodShieldTracker.db.profile.bars[barName].anchorFrame == "Compact Runes" then
 		frames["Compact Runes"] = L["Compact Runes"]
 	end
@@ -345,7 +345,7 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
       	return self.db.profile.bars[barName].anchorFrame
     	end,
 	}
-	--if select(6, _G.GetAddOnInfo("CompactRunes")) ~= "MISSING" or 
+	--if addon.GetAddOnInfoByName("CompactRunes") or 
 	--	self.db.profile.bars[barName].anchorFrame == "Compact Runes" then
 	--	options.args.anchorFrame.values["Compact Runes"] = 
 	--		L["Compact Runes"]

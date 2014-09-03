@@ -34,6 +34,17 @@ local function round(number)
 end
 addon.round = round
 
+function addon.GetAddOnInfoByName(name)
+	local addonName, title, notes, enabled, loadable, reason, security
+	for i = 1, _G.GetNumAddOns() do
+		addonName, title, notes, enabled, loadable, reason, security = 
+			_G.GetAddOnInfo(i)
+		if addonName == name then
+			return addonName, title, notes, enabled, loadable, reason, security
+		end
+	end
+end
+
 addon.callbacks = {
 	["Auras"] = {},
 	["GearUpdate"] = {},
