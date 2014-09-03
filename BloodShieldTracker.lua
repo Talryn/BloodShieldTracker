@@ -44,7 +44,8 @@ local UnitGetTotalAbsorbs = _G.UnitGetTotalAbsorbs
 local UnitAttackPower = _G.UnitAttackPower
 local UnitStat = _G.UnitStat
 local GetMasteryEffect = _G.GetMasteryEffect
-local GetVersatility = _G.GetVersatility
+local GetVersatilityBonus = _G.GetVersatilityBonus
+local GetCombatRatingBonus = _G.GetCombatRatingBonus
 local GetSpellCooldown = _G.GetSpellCooldown
 
 BloodShieldTracker.loaded = false
@@ -309,7 +310,7 @@ local vbUnglyphedHealthInc = 0.15
 local vbUnglyphedHealingInc = 0.25
 local guardianSpiritHealBuff = 0.40
 local T14BonusAmt = 0.1
-local versatilityPerPercent = 130
+--local versatilityPerPercent = 130
 
 -- Curent state information
 local DarkSuccorBuff = false
@@ -334,7 +335,7 @@ local gsHealModifier = 0.0
 local healingDebuffMultiplier = 1
 local lastDSSuccess = nil
 local masteryRating = 0
-local versatilityRating = 0
+local versatilityBonus = 0
 local versatilityPercent = 0
 local shieldPercent = 0
 addon.effectiveAP = 0
@@ -1267,12 +1268,14 @@ end
 function BloodShieldTracker:OnDisable()
 end
 
+local CR_VERSATILITY_DAMAGE_DONE = _G.CR_VERSATILITY_DAMAGE_DONE or 29
 function BloodShieldTracker:UpdateRatings()
 	masteryRating = GetMasteryEffect()
 	shieldPercent = masteryRating/100
 	if addon.WoD then
-		versatilityRating = GetVersatility()
-		versatilityPercent = versatilityRating/versatilityPerPercent/100
+		versatilityBonus = GetCombatRatingBonus(CR_VERSATILITY_DAMAGE_DONE) + 
+			GetVersatilityBonus(CR_VERSATILITY_DAMAGE_DONE)
+		versatilityPercent = versatilityBonus/100
 	end
 end
 
@@ -2071,19 +2074,20 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         end
 
         if self.db.profile.debug then
-            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d, Mast: %0.2f%%, SoB: %0.2f%%, MinBS: %d]"
+            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%, SoB: %0.2f%%, MinBS: %d]"
 			local sobValue = scentBloodStacks * scentBloodStackBuff
             self:Print(dsHealFormat:format(
 				totalHeal,actualHeal,overheal,recentDmg,
-				predictedHeal,shieldPercent*100,sobValue,bsMinimum))
+				predictedHeal,shieldPercent*100,versatilityBonus,sobValue,bsMinimum))
         end
         
         if DEBUG_OUTPUT == true then
-            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d, Mast: %0.2f%%, SoB: %0.2f%%, MinBS: %d]"
+            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%, SoB: %0.2f%%, MinBS: %d]"
 			local sobValue = scentBloodStacks * scentBloodStackBuff
             DEBUG_BUFFER = DEBUG_BUFFER .. timestamp .. "   " .. 
                 dsHealFormat:format(totalHeal,actualHeal,overheal,
-                recentDmg,predictedHeal,shieldPercent*100,sobValue,bsMinimum) .. "\n"
+                recentDmg,predictedHeal,shieldPercent*100,
+								versatilityBonus, sobValue,bsMinimum) .. "\n"
         end
     end
 
