@@ -30,6 +30,7 @@ local Bar = addon.Bar
 local tinsert, tremove, tgetn = table.insert, table.remove, table.getn
 local tconcat = table.concat
 local floor, ceil, abs = math.floor, math.ceil, math.abs
+local max, exp = math.max, math.exp
 local unpack = _G.unpack
 local tostring = _G.tostring
 local tonumber = _G.tonumber
@@ -344,7 +345,7 @@ addon.resolveInt = 0
 addon.resolveDmg = 0
 addon.resolveDmg2 = 0
 addon.playerLevel = _G.UnitLevel("player")
-addon.scaling = addon.ItemScaling[addon.playerLevel]
+addon.baselineDPS = addon.BaselineDPSScaling[addon.playerLevel] or 1
 
 local HealingDebuffs = {
     -- PvP healing debuffs
@@ -531,7 +532,6 @@ end
 addon.ResolveModes = {
 	["Actual"] = true,
 	["Estimated"] = true,
-	["Rounded"] = true,
 }
 
 addon.defaults = {
@@ -1036,21 +1036,14 @@ end
 function addon.SetResolveActual()
 	addon.resolve = addon.resolveInt / 100.0
 end
-function addon.SetResolveRounded()
-	addon.resolve = (addon.resolveInt / 100.0) + 0.5
-end
 function addon.SetResolveEstimated()
-	local stamResolve = addon.stamina / (250 * addon.scaling)
-	local damageResolve = (addon.maxHealth > 0 and 
-		(addon.resolveDmg / addon.maxHealth) or 0) * 0.25
-	addon.resolve = stamResolve + damageResolve
+	local dmgMod = addon.resolveDmg2 / (addon.baselineDPS * 10)
+	addon.resolve = max(0, 8.5 * (1 - exp(-0.045*dmgMod)) - 1)
 end
 function addon.SetResolveMode()
 	local mode = addon.db.profile.resolveMode
 	if mode == "Estimated" then
 		addon.SetResolve = addon.SetResolveEstimated
-	elseif mode == "Rounded" then
-		addon.SetResolve = addon.SetResolveRounded
 	else
 		addon.SetResolve = addon.SetResolveActual
 	end
@@ -1526,7 +1519,7 @@ function BloodShieldTracker:UpdateMinHeal(event, unit)
 
 		local baseValue
 		if addon.WoD then
-			baseValue = addon.effectiveAP * 5 * (1+addon.resolve) * 
+			baseValue = addon.effectiveAP * addon.DS_HEAL_AP_MOD * (1+addon.resolve) * 
 				(1 + scentBloodStacks * scentBloodStackBuff) * (1+versatilityPercent)
 		else
 			baseValue = maxHealth * actualDsMinHeal * Tier14Bonus *
@@ -1613,7 +1606,7 @@ function BloodShieldTracker:UpdateEstimateBarWoD()
 	local db = self.estimatebar.db
     if not db.enabled or addon.idle then return end
 
-	local baseValue = addon.effectiveAP * 5 * (1+addon.resolve) * 
+	local baseValue = addon.effectiveAP * addon.DS_HEAL_AP_MOD * (1+addon.resolve) * 
 		(1 + scentBloodStacks * scentBloodStackBuff) * (1+versatilityPercent)
 	local estimate
 
@@ -2497,7 +2490,7 @@ end
 function BloodShieldTracker:UNIT_LEVEL(event, unit)
 	if unit == "player" then
 		addon.playerLevel = _G.UNIT_LEVEL("player")
-		addon.scaling = addon.ItemScaling[addon.playerLevel] or 1
+		addon.baselineDPS = addon.BaselineDPSScaling[addon.playerLevel] or 1
 		if addon.WoD then
 			self:UpdateStats()
 		end
