@@ -64,7 +64,6 @@ addon.IsBloodTank = false
 local hasBloodShield = false
 local HasVampBlood = false
 local hasVBGlyphed = false
-local HasSuccorGlyphed = false
 local Tier14Count = 0
 local Tier14Bonus = 1
 BloodShieldTracker.tierCount = {
@@ -309,6 +308,11 @@ local vbGlyphedHealthInc = 0.0
 local vbGlyphedHealingInc = 0.4
 local vbUnglyphedHealthInc = 0.15
 local vbUnglyphedHealingInc = 0.25
+if addon.WoD then
+	vbGlyphedHealingInc = 0.25
+	vbUnglyphedHealingInc = 0.15
+end
+
 local guardianSpiritHealBuff = 0.40
 local T14BonusAmt = 0.1
 --local versatilityPerPercent = 130
@@ -1365,25 +1369,21 @@ function addon:IsTrackerEnabled()
 end
 
 function BloodShieldTracker:CheckGlyphs()
-    hasVBGlyphed = false
-    HasSuccorGlyphed = false
+	hasVBGlyphed = false
 	--if not HasVampBlood then return end -- Dont bother with glyph check if he doesnt have the talent
-    for id = 1, _G.GetNumGlyphSockets() do
-        local enabled, glyphType, glyphTooltipIndex, 
-            glyphSpell, iconFilename = _G.GetGlyphSocketInfo(id, nil)
-        if enabled then
-            if glyphSpell == GlyphIds["Vampiric Blood"] then
-                hasVBGlyphed = true
-            elseif glyphSpell == GlyphIds["Dark Succor"] then
-                HasSuccorGlyphed = true
-            end
-        end
-    end
+	for id = 1, _G.GetNumGlyphSockets() do
+		local enabled, glyphType, glyphTooltipIndex, 
+		glyphSpell, iconFilename = _G.GetGlyphSocketInfo(id, nil)
+		if enabled then
+			if glyphSpell == GlyphIds["Vampiric Blood"] then
+				hasVBGlyphed = true
+			end
+		end
+	end
 
 	if self.db.profile.debug then
-		local trackerOutputFmt = "Check Glyphs [VB=%s,DSuccor=%s]"
-		self:Print(trackerOutputFmt:format(
-			tostring(hasVBGlyphed), tostring(HasSuccorGlyphed)))
+		local trackerOutputFmt = "Check Glyphs [VB=%s]"
+		self:Print(trackerOutputFmt:format(tostring(hasVBGlyphed)))
 	end
 end
 
