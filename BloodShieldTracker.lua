@@ -339,6 +339,7 @@ local masteryRating = 0
 local versatilityBonus = 0
 local versatilityPercent = 0
 local shieldPercent = 0
+addon.currentSpec = ""
 addon.effectiveAP = 0
 addon.resolve = 0
 addon.resolveInt = 0
@@ -346,6 +347,7 @@ addon.resolveDmg = 0
 addon.resolveDmg2 = 0
 addon.playerLevel = _G.UnitLevel("player")
 addon.baselineDPS = addon.BaselineDPSScaling[addon.playerLevel] or 1
+local dsHealAPMod = 1
 
 local HealingDebuffs = {
     -- PvP healing debuffs
@@ -1314,16 +1316,26 @@ function BloodShieldTracker:CheckTalents5()
 		local activeSpecNum = _G.GetSpecialization()
 		if activeSpecNum and activeSpecNum > 0 then
 			local id, name, desc, texture = _G.GetSpecializationInfo(activeSpecNum)
-	    	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
-	    		addon.IsBloodTank = true
+    	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
+				addon.currentSpec = "Blood"
+			elseif texture == "Interface\\Icons\\Spell_Deathknight_FrostPresence" then
+				addon.currentSpec = "Frost"
+			elseif texture == "Interface\\Icons\\Spell_Deathknight_UnholyPresence" then
+				addon.currentSpec = "Unholy"
+			else
+				self:Print("Error detecing player spec.")
+				addon.currentSpec = "Blood"
+			end
+			if addon.currentSpec == "Blood" then
+				addon.IsBloodTank = true
 				-- For WoD, the Mastery spell isn't known, just use level for now
 				if _G.UnitLevel("player") >= 80 then
-		            hasBloodShield = true
+					hasBloodShield = true
 				end
 				-- Check for Mastery so we know if BS is active
-		        if _G.IsSpellKnown(SpellIds["Mastery: Blood Shield"]) then
-		            hasBloodShield = true
-		        end
+				if _G.IsSpellKnown(SpellIds["Mastery: Blood Shield"]) then
+					hasBloodShield = true
+				end
 				-- Check for VB
 				if _G.IsSpellKnown(SpellIds["Vampiric Blood"]) then
 					HasVampBlood = true
@@ -1332,14 +1344,15 @@ function BloodShieldTracker:CheckTalents5()
 				addon.IsBloodTank = false
 			end
 		end
-       	self:CheckGlyphs()
+		dsHealAPMod = addon.DsHealAPModifiers[addon.currentSpec] or 1 
+		self:CheckGlyphs()
 	end
 
 	if addon:IsTrackerEnabled() then
-	    self:Load()
-    else
-        self:Unload()
-    end
+		self:Load()
+	else
+		self:Unload()
+	end
 end
 
 function addon:IsTrackerEnabled()
@@ -1508,29 +1521,29 @@ end
 
 function BloodShieldTracker:UpdateMinHeal(event, unit)
 	if unit == "player" then
-	    local maxHealth = UnitHealthMax("player")
-	    actualDsMinHeal = dsMinHealPercent
-
-        -- Check for Dark Succor
-        if DarkSuccorBuff == true and 
-			(CurrentPresence == "Unholy" or CurrentPresence == "Frost") then
-   	        actualDsMinHeal = dsMinHealPercentSuccor
-        end
-
 		local baseValue
 		if addon.WoD then
-			baseValue = addon.effectiveAP * addon.DS_HEAL_AP_MOD * (1+addon.resolve) * 
+			baseValue = addon.effectiveAP * dsHealAPMod * (1+addon.resolve) * 
 				(1 + scentBloodStacks * scentBloodStackBuff) * (1+versatilityPercent)
+				if DarkSuccorBuff then
+					baseValue = baseValue * addon.DarkSuccorBuffValue
+				end
 		else
+			local maxHealth = UnitHealthMax("player")
+			actualDsMinHeal = dsMinHealPercent
+			if DarkSuccorBuff == true and 
+				(CurrentPresence == "Unholy" or CurrentPresence == "Frost") then
+				actualDsMinHeal = dsMinHealPercentSuccor
+			end
 			baseValue = maxHealth * actualDsMinHeal * Tier14Bonus *
 				(1 + scentBloodStacks * scentBloodStackBuff)
 		end
 		dsHealMin = round(baseValue *
-		    self:GetEffectiveHealingBuffModifiers() * 
-		    self:GetEffectiveHealingDebuffModifiers())
+			self:GetEffectiveHealingBuffModifiers() * 
+			self:GetEffectiveHealingDebuffModifiers())
 		bsMinimum = round(baseValue * shieldPercent)
 		if addon.idle then
-		    self:UpdateEstimateBarTextWithMin()
+			self:UpdateEstimateBarTextWithMin()
 		end
 	end
 end
@@ -1606,7 +1619,7 @@ function BloodShieldTracker:UpdateEstimateBarWoD()
 	local db = self.estimatebar.db
     if not db.enabled or addon.idle then return end
 
-	local baseValue = addon.effectiveAP * addon.DS_HEAL_AP_MOD * (1+addon.resolve) * 
+	local baseValue = addon.effectiveAP * dsHealAPMod * (1+addon.resolve) * 
 		(1 + scentBloodStacks * scentBloodStackBuff) * (1+versatilityPercent)
 	local estimate
 

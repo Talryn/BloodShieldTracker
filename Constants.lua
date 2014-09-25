@@ -1,10 +1,16 @@
 local _G = getfenv(0)
 local ADDON_NAME, addon = ...
 
-addon.DS_HEAL_AP_MOD = 1.6
+addon.DsHealAPModifiers = {
+	["Blood"] = 1.6,
+	["Frost"] = 4,
+	["Unholy"] = 4,
+}
+
 addon.BS_DURATION = 10  -- The duration of Blood Shield
 addon.MAX_BLOOD_CHARGES = 12
 addon.LUCK_OF_THE_DRAW_MOD = 0.05
+addon.DarkSuccorBuffValue = 2.0
 
 addon.BaselineDPSScaling = {
 	[90] = 847.125,
