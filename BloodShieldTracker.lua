@@ -60,6 +60,7 @@ BloodShieldTracker.illumbar = nil
 
 -- Player class, talent, and spec info
 addon.isDK = nil
+addon.currentSpec = ""
 addon.IsBloodTank = false
 local hasBloodShield = false
 local HasVampBlood = false
@@ -276,7 +277,6 @@ addon.AbsorbShields = AbsorbShields
 
 local GlyphIds = {
 	["Vampiric Blood"] = 58676,
-	["Dark Succor"] = 96279,
 }
 
 local ICCBuffs = {
@@ -314,6 +314,10 @@ if addon.WoD then
 end
 
 local guardianSpiritHealBuff = 0.40
+if addon.WoD then
+	guardianSpiritHealBuff = 0.60
+end
+
 local T14BonusAmt = 0.1
 --local versatilityPerPercent = 130
 
@@ -343,7 +347,6 @@ local masteryRating = 0
 local versatilityBonus = 0
 local versatilityPercent = 0
 local shieldPercent = 0
-addon.currentSpec = ""
 addon.effectiveAP = 0
 addon.resolve = 0
 addon.resolveInt = 0
