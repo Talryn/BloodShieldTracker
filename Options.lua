@@ -671,6 +671,7 @@ function BloodShieldTracker:GetGeneralOptions()
 				    ["LastBS"] = L["Last Blood Shield Value"],
 				    ["EstimateBar"] = L["Estimate Bar Value"],
 					["Vengeance"] = SpellNames["Vengeance"],
+					["Resolve"] = SpellNames["Resolve"],
 				},
 				order = 320,
 				set = function(info, val)

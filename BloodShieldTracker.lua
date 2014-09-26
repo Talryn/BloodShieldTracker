@@ -298,11 +298,11 @@ local ICCBuffs = {
 	}
 }
 
--- Constants
+-- MoP Constants
 local dsHealModifier = 0.20  -- Percent of the DS Heal from the tooltip.
 local dsMinHealPercent = 0.07
 local dsMinHealPercentSuccor = 0.20
---local shieldPerMasteryPoint = 6.25
+
 local scentBloodStackBuff = 0.2
 local vbGlyphedHealthInc = 0.0
 local vbGlyphedHealingInc = 0.4
@@ -319,17 +319,19 @@ if addon.WoD then
 end
 
 local T14BonusAmt = 0.1
---local versatilityPerPercent = 130
 
 -- Curent state information
 local DarkSuccorBuff = false
 local DS_SentTime = nil
 local DS_Latency = nil
+
+-- MoP Variables --
 -- The actual minimum DS heal percent, based on spec, glyphs, and presence.
 local actualDsMinHeal = dsMinHealPercent
-local maxHealth = 0
 local dsHealMin = 0
 local bsMinimum = 0
+-- End --
+
 local scentBloodStacks = 0
 local dsScentBloodStacks = 0 -- Have to track SoB stacks as of last DS
 local CurrentPresence = nil
@@ -417,34 +419,39 @@ Broker.obj = LDB:NewDataObject(addon.addonTitle, {
 -- Track stats that are used for the LDB data feed.
 addon.LDBDataFeed = false
 addon.DataFeed = {
-    display = "",
-    lastDS = 0,
-    lastBS = 0,
-    estimateBar = 0,
+	display = "",
+	lastDS = 0,
+	lastBS = 0,
+	estimateBar = 0,
 	vengeance = 0,
+	resolve = 0,
 }
 local DataFeed = addon.DataFeed
 
+local percentFormat = "%.1f%%"
+
 function addon:UpdateLDBData()
-    if DataFeed.display == "LastBS" then
-        Broker.obj.text = addon.FormatNumber(DataFeed.lastBS)
-    elseif DataFeed.display == "LastDS" then
-        Broker.obj.text = addon.FormatNumber(DataFeed.lastDS)
-    elseif DataFeed.display == "EstimateBar" then
-        Broker.obj.text = addon.FormatNumber(DataFeed.estimateBar)
+	if DataFeed.display == "LastBS" then
+		Broker.obj.text = addon.FormatNumber(DataFeed.lastBS)
+	elseif DataFeed.display == "LastDS" then
+		Broker.obj.text = addon.FormatNumber(DataFeed.lastDS)
+	elseif DataFeed.display == "EstimateBar" then
+		Broker.obj.text = addon.FormatNumber(DataFeed.estimateBar)
 	elseif DataFeed.display == "Vengeance" then
-        Broker.obj.text = addon.FormatNumber(DataFeed.vengeance)
-    else
-        Broker.obj.text = addon.addonTitle
-    end
+		Broker.obj.text = addon.FormatNumber(DataFeed.vengeance)
+	elseif DataFeed.display == "Resolve" then
+		Broker.obj.text = addon.FormatNumber(percentFormat:format(addon.resolve))
+	else
+		Broker.obj.text = addon.addonTitle
+	end
 end
 
 function addon:SetBrokerLabel()
-    if addon.db.profile.ldb_short_label then
-        Broker.obj.label = L["BST"]
-    else
-        Broker.obj.label = addon.addonTitle
-    end
+	if addon.db.profile.ldb_short_label then
+		Broker.obj.label = L["BST"]
+	else
+		Broker.obj.label = addon.addonTitle
+	end
 end
 
 local addonHdr = GREEN.."%s %s"
@@ -457,7 +464,6 @@ local shieldMaxValueLine1 = YELLOW..L["Min - Max / Avg:"]
 local rangeWithAvgFmt = "%d - %d / %d"
 local valuesWithPercFmt = "%s / %s - %.1f%%"
 local shieldUsageLine1 = YELLOW..L["Absorbed/Total Shields/Percent:"]
-local percentFormat = "%.1f%%"
 local secondsFormat = "%.1f " .. L["seconds"]
 local durationLine = YELLOW..L["Fight Duration:"]
 local shieldFreqLine = YELLOW..L["Shield Frequency:"]
@@ -1068,6 +1074,9 @@ function BloodShieldTracker:UpdateResolve()
 	--end
 	self:UpdateEstimateBar()
 	self:UpdateMinHeal()
+  if addon.LDBDataFeed then
+      addon:UpdateLDBData()
+  end
 end
 
 function BloodShieldTracker:UpdateStats()
@@ -1082,12 +1091,6 @@ function BloodShieldTracker:UpdateStats()
 	local stam, effStam, posBuff, negBuff = UnitStat("player", 3)
 	if effStam ~= addon.stamina then
 		addon.stamina = effStam
-		update = true
-	end
-
-	local maxHealth = UnitHealthMax("player")
-	if maxHealth ~= addon.maxHealth then
-		addon.maxHealth = maxHealth or 0
 		update = true
 	end
 
@@ -1153,7 +1156,8 @@ function BloodShieldTracker:OnEnable()
 	self:CheckClass()
 	self:CheckGear()
 	self:UpdateRatings()
-	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
+	-- Force update to max health and update the estimated heal
+	self:UNIT_MAXHEALTH("UNIT_MAXHEALTH", "player")
 	self:CheckTalents()
 	self:RegisterEvent("PLAYER_TALENT_UPDATE", "CheckTalents")
 	self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED","CheckTalents")
@@ -1518,6 +1522,10 @@ end
 
 function BloodShieldTracker:UNIT_MAXHEALTH(event, unit)
 	if unit == "player" then
+		local maxHealth = UnitHealthMax("player")
+		if maxHealth ~= addon.maxHealth then
+			addon.maxHealth = maxHealth or 1
+		end
 		self:UpdateMinHeal(event, unit)
 	end
 end
@@ -1706,7 +1714,7 @@ function BloodShieldTracker:UpdateEstimateBarText(estimate)
 	local val
 	if self.estimatebar.db.usePercent then
 		val = estBarPercFmt:format(
-			addon.FormatWithPrecision(estimate / (maxHealth or 1) * 100))
+			addon.FormatWithPrecision(estimate / addon.maxHealth * 100))
 	else
 		val = addon.FormatNumber(estimate)
 	end
@@ -2195,7 +2203,7 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, expires)
 
 	local isMinimum = false
 	-- Calculate the minimum shield value.  Use the previous SoB stack value.
-	local minimumBS = round(maxHealth * actualDsMinHeal * Tier14Bonus *
+	local minimumBS = round(addon.maxHealth * actualDsMinHeal * Tier14Bonus *
 		(1 + dsScentBloodStacks * scentBloodStackBuff) * shieldPercent)
 	if shieldValue <= minimumBS then
 		isMinimum = true
@@ -2272,7 +2280,7 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current, expires
         added = current - curr
 
         -- Check if it is a minimum heal.  Use the previous SoB stack value.
-		local minimumBS = round(maxHealth * actualDsMinHeal * Tier14Bonus *
+		local minimumBS = round(addon.maxHealth * actualDsMinHeal * Tier14Bonus *
 			(1 + dsScentBloodStacks * scentBloodStackBuff) * shieldPercent)
         if added <= minimumBS then
             isMinimum = true
