@@ -546,7 +546,7 @@ end
 
 addon.ResolveModes = {
 	["Actual"] = true,
-	["Estimated"] = true,
+	["Calculated"] = true,
 }
 
 addon.defaults = {
@@ -1051,14 +1051,14 @@ end
 function addon.SetResolveActual()
 	addon.resolve = addon.resolveInt / 100.0
 end
-function addon.SetResolveEstimated()
+function addon.SetResolveCalculated()
 	local dmgMod = addon.resolveDmg2 / (addon.baselineDPS * 10)
 	addon.resolve = max(0, 8.5 * (1 - exp(-0.045*dmgMod)) - 1)
 end
 function addon.SetResolveMode()
 	local mode = addon.db.profile.resolveMode
-	if mode == "Estimated" then
-		addon.SetResolve = addon.SetResolveEstimated
+	if mode == "Calculated" then
+		addon.SetResolve = addon.SetResolveCalculated
 	else
 		addon.SetResolve = addon.SetResolveActual
 	end
@@ -2091,20 +2091,20 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         end
 
         if self.db.profile.debug then
-            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%, SoB: %0.2f%%, MinBS: %d]"
+            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%, SoB: %0.2f%%]"
 			local sobValue = scentBloodStacks * scentBloodStackBuff
             self:Print(dsHealFormat:format(
-				totalHeal,actualHeal,overheal,recentDmg,
-				predictedHeal,shieldPercent*100,versatilityBonus,sobValue,bsMinimum))
+				totalHeal,actualHeal,overheal,predictedHeal,shieldPercent*100,
+				versatilityBonus,sobValue))
         end
         
         if DEBUG_OUTPUT == true then
-            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Last5:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%, SoB: %0.2f%%, MinBS: %d]"
+            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%, SoB: %0.2f%%]"
 			local sobValue = scentBloodStacks * scentBloodStackBuff
             DEBUG_BUFFER = DEBUG_BUFFER .. timestamp .. "   " .. 
                 dsHealFormat:format(totalHeal,actualHeal,overheal,
-                recentDmg,predictedHeal,shieldPercent*100,
-								versatilityBonus, sobValue,bsMinimum) .. "\n"
+                predictedHeal,shieldPercent*100,versatilityBonus,
+								sobValue) .. "\n"
         end
     end
 

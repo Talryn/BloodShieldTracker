@@ -469,6 +469,23 @@ function BloodShieldTracker:GetGeneralOptions()
 		        type = "header",
 		        name = L["General Options"],
 		    },
+				resolveMode = {
+					name = L["Resolve Mode"],
+					desc = L["ResolveMode_OptDesc"],
+					type = "select",
+					values = {
+					    ["Actual"] = L["Actual"],
+					    ["Calculated"] = L["Calculated"]
+					},
+					order = 5,
+					set = function(info, val)
+					    self.db.profile.resolveMode = val
+							addon:SetResolveMode()
+					end,
+	        get = function(info)
+	        	return self.db.profile.resolveMode
+	        end,
+				},
             enable_only_for_blood = {
                 name = L["Only for Blood DK"],
 				order = 10,
