@@ -1053,7 +1053,8 @@ function addon.SetResolveActual()
 end
 function addon.SetResolveCalculated()
 	local dmgMod = addon.resolveDmg2 / (addon.baselineDPS * 10)
-	addon.resolve = max(0, 8.5 * (1 - exp(-0.045*dmgMod)) - 1)
+	--addon.resolve = max(0, 8.5 * (1 - exp(-0.045*dmgMod)) - 1)
+	addon.resolve = max(0, 3.4 * (1 - exp(-0.045*dmgMod)) - 1)
 end
 function addon.SetResolveMode()
 	local mode = addon.db.profile.resolveMode
