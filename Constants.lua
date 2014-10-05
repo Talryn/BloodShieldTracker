@@ -2,7 +2,8 @@ local _G = getfenv(0)
 local ADDON_NAME, addon = ...
 
 addon.DsHealAPModifiers = {
-	["Blood"] = 1.6,
+	--["Blood"] = 1.6,
+	["Blood"] = 4,
 	["Frost"] = 4,
 	["Unholy"] = 4,
 }
