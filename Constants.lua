@@ -10,6 +10,7 @@ addon.DsHealAPModifiers = {
 
 addon.BS_DURATION = 10  -- The duration of Blood Shield
 addon.MAX_BLOOD_CHARGES = 12
+addon.MAX_BONESHIELD_CHARGES = 6
 addon.LUCK_OF_THE_DRAW_MOD = 0.05
 addon.DarkSuccorBuffValue = 2.0
 

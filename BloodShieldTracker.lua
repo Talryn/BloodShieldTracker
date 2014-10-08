@@ -1089,6 +1089,7 @@ function BloodShieldTracker:UpdateStats()
 		update = true
 	end
 
+	-- Check on this for WoD
 	local stam, effStam, posBuff, negBuff = UnitStat("player", 3)
 	if effStam ~= addon.stamina then
 		addon.stamina = effStam
@@ -2092,20 +2093,20 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
         end
 
         if self.db.profile.debug then
-            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%, SoB: %0.2f%%]"
+            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%, SoB: %0.2f%%, Res: %0.2f%%]"
 			local sobValue = scentBloodStacks * scentBloodStackBuff
             self:Print(dsHealFormat:format(
 				totalHeal,actualHeal,overheal,predictedHeal,shieldPercent*100,
-				versatilityBonus,sobValue))
+				versatilityBonus,sobValue,addon.resolve))
         end
         
         if DEBUG_OUTPUT == true then
-            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%, SoB: %0.2f%%]"
+            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%, SoB: %0.2f%%, Res: %0.2f%%]"
 			local sobValue = scentBloodStacks * scentBloodStackBuff
             DEBUG_BUFFER = DEBUG_BUFFER .. timestamp .. "   " .. 
                 dsHealFormat:format(totalHeal,actualHeal,overheal,
                 predictedHeal,shieldPercent*100,versatilityBonus,
-								sobValue) .. "\n"
+								sobValue,addon.resolve) .. "\n"
         end
     end
 
@@ -2888,7 +2889,7 @@ function BloodShieldTracker:CheckAuras()
 			if state == 0 then
 				-- Active
 				if bar.db.progress == "Charges" then
-					bar.bar:SetMinMaxValues(0, 6)
+					bar.bar:SetMinMaxValues(0, addon.MAX_BONESHIELD_CHARGES)
 				elseif bar.db.progress == "Time" then
 					bar.bar:SetMinMaxValues(0, data.duration)
 				else
