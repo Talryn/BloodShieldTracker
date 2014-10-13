@@ -320,12 +320,6 @@ function BloodShieldTracker:MigrateEstimateBarSettings2()
 	if self.db.profile.estheal_bar_scale ~= nil then
 		settings.scale = self.db.profile.estheal_bar_scale
 	end
-	if self.db.profile.latencyMethod ~= nil then
-		settings.latencyMethod = self.db.profile.latencyMethod
-	end
-	if self.db.profile.latencyFixed ~= nil then
-		settings.latencyFixed = self.db.profile.latencyFixed
-	end
 
     self.db.profile.damage_bar_enabled = nil
     self.db.profile.hide_damage_bar_ooc = nil
@@ -346,8 +340,6 @@ function BloodShieldTracker:MigrateEstimateBarSettings2()
 	self.db.profile.est_heal_x = nil
 	self.db.profile.est_heal_y = nil
 	self.db.profile.estheal_bar_scale = nil
-	self.db.profile.latencyMethod = nil
-	self.db.profile.latencyFixed = nil
 end
 
 function BloodShieldTracker:MigrateShieldBarSettings2()

@@ -1396,43 +1396,6 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				    return c.r, c.g, c.b, c.a
 				end,					
 			},
-            latencyOptions = {
-                order = 700,
-                type = "header",
-                name = L["Latency"],
-            },
-			latencyMode = {
-				name = L["Mode"],
-				desc = L["Mode"],
-				type = "select",
-				values = {
-				    ["None"] = L["None"],
-				    ["DS"] = L["Death Strike"],
-				    ["Fixed"] = L["Fixed"],
-				},
-				order = 710,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].latencyMethod = val
-				end,
-                get = function(info)
-                    return self.db.profile.bars["EstimateBar"].latencyMethod
-                end,
-			},
-			latencyFixed = {
-				order = 720,
-				name = L["Fixed"],
-				desc = L["Fixed"],
-				type = "range",
-				min = 0,
-				max = 2000,
-				step = 1,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].latencyFixed = val 
-				end,
-				get = function(info, val)
-				    return self.db.profile.bars["EstimateBar"].latencyFixed
-				end,					
-			},
 		}
 	}
 
