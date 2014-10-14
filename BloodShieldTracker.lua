@@ -1485,6 +1485,10 @@ function BloodShieldTracker:PLAYER_REGEN_DISABLED()
 	-- Reset the per fight stats
 	LastFightStats:Reset()
 	LastFightStats:StartCombat()
+	local estbar = self.estimatebar
+	if estbar.db.enabled and estbar.db.hide_ooc then
+		estbar.bar:Show()
+	end
     
 	if DEBUG_OUTPUT == true then
 		DEBUG_BUFFER = ""
@@ -1498,9 +1502,10 @@ function BloodShieldTracker:PLAYER_REGEN_ENABLED()
 	self.estimatebar:UpdateGraphics()
 	self.estimatebar.bar:SetMinMaxValues(0, 1)
 	self.estimatebar.bar:SetValue(1)
-    
-	if self.estimatebar.db.hide_ooc then
-		self.estimatebar.bar:Hide()
+
+	local estbar = self.estimatebar
+	if estbar.db.hide_ooc then
+		estbar.bar:Hide()
 	end
 
 	self.estimatebar.bar:SetScript("OnUpdate", nil)
@@ -1513,9 +1518,10 @@ function BloodShieldTracker:PLAYER_DEAD()
 	self:CheckAuras()
 	--self.shieldbar.bar:Hide()
 	-- Hide the estimate bar if configured to do so for OOC
-	if self.estimatebar.db.hide_ooc then
-		if self.estimatebar.bar:IsVisible() then
-			self.estimatebar.bar:Hide()
+	local estbar = self.estimatebar
+	if estbar.db.hide_ooc then
+		if estbar.bar:IsVisible() then
+			estbar.bar:Hide()
 		end
 	end
 	if DataFeed.resolve > 0 then
