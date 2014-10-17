@@ -61,6 +61,7 @@ BloodShieldTracker.illumbar = nil
 addon.isDK = nil
 addon.currentSpec = ""
 addon.IsBloodTank = false
+addon.maxHealth = 1
 local hasBloodShield = false
 local HasVampBlood = false
 local hasVBGlyphed = false
@@ -1073,6 +1074,7 @@ function BloodShieldTracker:OnEnable()
 
 	self:CheckClass()
 	self:CheckGear()
+	self:UNIT_MAXHEALTH("OnEnabled", "player")
 	self:UpdateRatings()
 	self:UpdateResolve()
 	-- Force update to max health and update the estimated heal
@@ -1150,8 +1152,8 @@ function BloodShieldTracker:Load()
 	self:RegisterEvent("COMBAT_RATING_UPDATE","UpdateRatings")
 	self:RegisterEvent("MASTERY_UPDATE","UpdateRatings")
 	self:RegisterEvent("PLAYER_DEAD")
-	self:RegisterEvent("PLAYER_ENTERING_WORLD", "CheckAuras")
-	self:RegisterEvent("PLAYER_ALIVE", "CheckAuras")
+	self:RegisterEvent("PLAYER_ENTERING_WORLD")
+	self:RegisterEvent("PLAYER_ALIVE")
 	self:RegisterEvent("UNIT_SPELLCAST_SENT")
 	self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 
@@ -1510,6 +1512,16 @@ function BloodShieldTracker:PLAYER_REGEN_ENABLED()
 
 	self.estimatebar.bar:SetScript("OnUpdate", nil)
 	LastFightStats:EndCombat()
+end
+
+function BloodShieldTracker:PLAYER_ENTERING_WORLD()
+	self:UNIT_MAXHEALTH("PLAYER_ENTERING_WORLD", "player")
+	self:CheckAuras()
+end
+
+function BloodShieldTracker:PLAYER_ALIVE()
+	self:UNIT_MAXHEALTH("PLAYER_ENTERING_WORLD", "player")
+	self:CheckAuras()
 end
 
 function BloodShieldTracker:PLAYER_DEAD()
