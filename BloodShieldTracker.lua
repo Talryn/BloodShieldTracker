@@ -2058,14 +2058,15 @@ function BloodShieldTracker:UNIT_AURA(event, unit, ...)
 	end
 end
 
+-- Define auras which require extra data.  Boolean indicates if an absorb.
 local TrackWithDataNames = {
-	"Blood Shield",
-	"Bone Shield",
-	"Anti-Magic Shell",
-	"Blood Charge"
+	["Blood Shield"] = true,
+	["Bone Shield"] = false,
+	["Anti-Magic Shell"] = true,
+	["Blood Charge"] = false,
 }
 local TrackWithData = {}
-for i, k in ipairs(TrackWithDataNames) do
+for k, v in pairs(TrackWithDataNames) do
 	TrackWithData[SpellIds[k]] = k
 end
 local BSAuraPresent = false
@@ -2073,7 +2074,7 @@ local BSAuraValue = 0
 local BSAuraExpires = 0
 local AurasFound = {}
 local AuraData = {}
-for i, k in ipairs(TrackWithDataNames) do
+for k, v in pairs(TrackWithDataNames) do
 	AuraData[k] = {}
 end
 local OtherShields = {}
@@ -2125,12 +2126,17 @@ function BloodShieldTracker:CheckAuras()
 			AuraData[trackedWithData].expires = expires
 			AuraData[trackedWithData].duration = duration
 			AuraData[trackedWithData].count = count
+			if TrackWithDataNames[trackedWithData] then
+				if value then
+					OtherShields[trackedWithData] = 
+						(OtherShields[trackedWithData] or 0) + value
+				end				
+			end
 
 		elseif tracked then
 			AurasFound[tracked] = true
 			if value then
-				OtherShields[tracked] = 
-					(OtherShields[tracked] or 0) + value
+				OtherShields[tracked] = (OtherShields[tracked] or 0) + value
 			elseif self.db.profile.debug == true then
 				self:Print(errorReadingFmt:format(SpellNames[tracked]))
 			end
