@@ -2120,25 +2120,21 @@ function BloodShieldTracker:CheckAuras()
 		if spellId == SpellIds["Scent of Blood"] then
 			scentBloodStacks = count
 
-		elseif trackedWithData then
-			AurasFound[trackedWithData] = true
-			AuraData[trackedWithData].value = value
-			AuraData[trackedWithData].expires = expires
-			AuraData[trackedWithData].duration = duration
-			AuraData[trackedWithData].count = count
-			if TrackWithDataNames[trackedWithData] then
-				if value then
-					OtherShields[trackedWithData] = 
-						(OtherShields[trackedWithData] or 0) + value
-				end				
+		elseif tracked or trackedWithData then
+			if trackedWithData then
+				AurasFound[trackedWithData] = true
+				AuraData[trackedWithData].value = value
+				AuraData[trackedWithData].expires = expires
+				AuraData[trackedWithData].duration = duration
+				AuraData[trackedWithData].count = count
 			end
-
-		elseif tracked then
-			AurasFound[tracked] = true
-			if value then
-				OtherShields[tracked] = (OtherShields[tracked] or 0) + value
-			elseif self.db.profile.debug == true then
-				self:Print(errorReadingFmt:format(SpellNames[tracked]))
+			if tracked then
+				AurasFound[tracked] = true
+				if value then
+					OtherShields[tracked] = (OtherShields[tracked] or 0) + value
+				elseif self.db.profile.debug == true then
+					self:Print(errorReadingFmt:format(SpellNames[tracked]))
+				end
 			end
 
 		elseif spellId == SpellIds["Resolve"] then
