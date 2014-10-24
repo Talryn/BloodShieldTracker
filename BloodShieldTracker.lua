@@ -2245,7 +2245,7 @@ function BloodShieldTracker:CheckAuras()
 			self.resolvebar.bar:Show()
 		end
 	else
-		self.resolvebar.bar:Hide()
+		self.resolvebar:Hide()
 	end
 
 	if self.pwsbar.db.enabled and addon.IsBloodTank then
@@ -2263,7 +2263,7 @@ function BloodShieldTracker:CheckAuras()
 			end
 			self.pwsbar.bar:Show()
 		else
-			self.pwsbar.bar:Hide()
+			self.pwsbar:Hide()
 		end
 		PreviousShieldValues["PWSBar"] = shields
 	end
@@ -2276,7 +2276,7 @@ function BloodShieldTracker:CheckAuras()
 			end
 			self.illumbar.bar:Show()
 		else
-			self.illumbar.bar:Hide()
+			self.illumbar:Hide()
 		end
 		
 		PreviousShieldValues["PaladinBar"] = illumValue
@@ -2306,7 +2306,7 @@ function BloodShieldTracker:CheckAuras()
 			end
 			self.absorbsbar.bar:Show()
 		else
-			self.absorbsbar.bar:Hide()
+			self.absorbsbar:Hide()
 		end
 
 		PreviousShieldValues["TotalAbsorbsBar"] = shields
@@ -2322,7 +2322,7 @@ function BloodShieldTracker:CheckAuras()
 		self.purgatorybar.bar:Show()
 	else
 		PurgatoryActive = false
-		self.purgatorybar.bar:Hide()
+		self.purgatorybar:Hide()
 	end
 
 	-- If the ICC buff isn't present, reset the values
@@ -2366,7 +2366,7 @@ function BloodShieldTracker:CheckAuras()
 			bcBar.bar.active = false
 			bcBar.bar.timer = 0
 			bcBar.bar:SetScript("OnUpdate", nil)
-			bcBar.bar:Hide()
+			bcBar:Hide()
 		end
 	end
 
@@ -2389,7 +2389,7 @@ function BloodShieldTracker:CheckAuras()
 			bar.bar.timer = 0
 			bar.bar.count = 0
 			--bar.bar:SetScript("OnUpdate", nil)
-			--bar.bar:Hide()
+			--bar:Hide()
 
 			local start, duration, enabled = 
 				GetSpellCooldown(SpellIds["Bone Shield"])
@@ -2428,7 +2428,7 @@ function BloodShieldTracker:CheckAuras()
 					bar.bar:SetScript("OnUpdate", onUpdateBoneShield)
 					bar.bar:Show()
 				else
-					bar.bar:Hide()
+					bar:Hide()
 				end
 			else 
 				-- Ready
@@ -2440,7 +2440,7 @@ function BloodShieldTracker:CheckAuras()
 					bar.bar:SetScript("OnUpdate", nil)
 					bar.bar:Show()
 				else
-					bar.bar:Hide()
+					bar:Hide()
 				end
 			end
 		end
@@ -2464,7 +2464,7 @@ function BloodShieldTracker:CheckAuras()
 			bar.bar.active = false
 			bar.bar.timer = 0
 			bar.bar:SetScript("OnUpdate", nil)
-			bar.bar:Hide()
+			bar:Hide()
 		end
 	end
 
@@ -2516,7 +2516,7 @@ function BloodShieldTracker:CheckAuras()
 		bar.active = false
 		bar.timer = 0
 		bar:SetScript("OnUpdate", nil)
-		bar:Hide()
+		bar.object:Hide()
 	end
 
 	addon:FireCallback("Auras")

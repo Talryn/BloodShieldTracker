@@ -14,7 +14,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale(addon.addonName)
 local LSM = _G.LibStub:GetLibrary("LibSharedMedia-3.0")
 local icon = _G.LibStub("LibDBIcon-1.0")
 
-local configMode = false
+addon.configMode = false
 
 local PriestAbsorbsOrdered = {
 	"Power Word: Shield",
@@ -570,14 +570,14 @@ function BloodShieldTracker:GetGeneralOptions()
 				type = "execute",
 				order = 50,
 				func = function()
-				    configMode = not configMode
-					if configMode then
+				    addon.configMode = not addon.configMode
+					if addon.configMode then
 						for name, bar in pairs(self.bars) do
 							bar.bar:Show()
 						end
 					else
 						for name, bar in pairs(self.bars) do
-							if bar.db.hide_ooc ~= nil then
+							if bar.db.enabled and bar.db.hide_ooc ~= nil then
 								if bar.db.hide_ooc and 
 									not _G.InCombatLockdown() then
 									bar.bar:Hide()

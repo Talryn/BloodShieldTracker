@@ -202,6 +202,12 @@ function Bar:UpdateVisibility()
 	end
 end
 
+function Bar:Hide()
+	if addon.configMode then return end
+	
+	self.bar:Hide()
+end
+
 function Bar:Lock(locked)
 	if locked == nil then
 		locked = self.db.locked
