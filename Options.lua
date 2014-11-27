@@ -20,6 +20,7 @@ local PriestAbsorbsOrdered = {
 	"Power Word: Shield",
 	"Divine Aegis",
 	"Spirit Shell",
+	"Clarity of Will",
 }
 
 local AbsorbShieldsOrdered = addon.AbsorbShieldsOrdered

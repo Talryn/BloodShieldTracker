@@ -229,6 +229,7 @@ local SpellIds = {
 	["Strength of Wrynn 25"] = 73827,
 	["Strength of Wrynn 30"] = 73828,
 	["Resolve"] = 158300,
+	["Clarity of Will"] = 152118,
 }
 local SpellNames = {}
 _G.setmetatable(SpellNames, LookupOrKeyMT)
@@ -247,6 +248,7 @@ local AbsorbShieldsOrdered = {
 	"Blood Shield",
 	"Power Word: Shield",
 	"Illuminated Healing",
+	"Clarity of Will",
 	"Divine Aegis",
 	"Life Cocoon",
 	"Spirit Shell",
@@ -611,6 +613,7 @@ addon.defaults = {
 					["Power Word: Shield"] = true,
 					["Divine Aegis"] = true,
 					["Spirit Shell"] = true,
+					["Clarity of Will"] = true,
 				},
 				x = 100, 
 				y = -120,
@@ -636,6 +639,7 @@ addon.defaults = {
 					["Spirit Shell"] = true,
 					["Sacred Shield"] = true,
 					["Anti-Magic Shell"] = false,
+					["Clarity of Will"] = true,
 				},
 				x = 100, 
 				y = -90,
