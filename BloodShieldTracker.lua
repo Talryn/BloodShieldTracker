@@ -230,6 +230,7 @@ local SpellIds = {
 	["Strength of Wrynn 30"] = 73828,
 	["Resolve"] = 158300,
 	["Clarity of Will"] = 152118,
+	["Saved by the Light"] = 157047,
 }
 local SpellNames = {}
 _G.setmetatable(SpellNames, LookupOrKeyMT)
@@ -253,9 +254,10 @@ local AbsorbShieldsOrdered = {
 	"Life Cocoon",
 	"Spirit Shell",
 	"Guard",
-	"Indomitable Pride",
+	"Saved by the Light",
 	"Sacred Shield",
 	"Anti-Magic Shell",
+	"Indomitable Pride",
 }
 local AbsorbShields = {}
 for i, k in ipairs(AbsorbShieldsOrdered) do
@@ -640,6 +642,7 @@ addon.defaults = {
 					["Sacred Shield"] = true,
 					["Anti-Magic Shell"] = false,
 					["Clarity of Will"] = true,
+					["Saved by the Light"] = true,
 				},
 				x = 100, 
 				y = -90,
