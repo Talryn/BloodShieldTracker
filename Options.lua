@@ -1218,7 +1218,7 @@ function BloodShieldTracker:GetEstimateBarOptions()
 				order = 50,
 				set = function(info, val)
 				    self.db.profile.bars["EstimateBar"].show_text = val
-				    self:UpdateMinHeal("UpdateShowText", "player")
+				    self:UpdateEstimateBar()
 				end,
                 get = function(info)
 					return self.db.profile.bars["EstimateBar"].show_text
