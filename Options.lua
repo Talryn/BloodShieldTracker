@@ -41,7 +41,6 @@ function BloodShieldTracker:GetOptions()
 				bloodChargeOpts = self:GetBloodChargeBarOptions(),
 				boneShieldOpts = self:GetBoneShieldBarOptions(),
 				pwsBarOpts = self:GetPWSBarOptions(),
-				illumBarOpts = self:GetIllumBarOptions(),
 				absorbsBarOpts = self:GetAbsorbsBarOptions(),
 				purgatoryBarOpts = self:GetPurgatoryBarOptions(),
 				amsBarOpts = self:GetAMSBarOptions(),
@@ -324,7 +323,6 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 		--	["Custom"] = L["Custom"],
 		--	["Shield Bar"] = L["Shield Bar"],
 		--	["PW:S Bar"] = L["PW:S Bar"],
-		--	["Illuminated Healing Bar"] = L["Illuminated Healing Bar"],
 		--	["Total Absorbs Bar"] = L["Total Absorbs Bar"],
 		--	["Anti-Magic Shell Bar"] = L["Anti-Magic Shell Bar"],
 		--	["Blood Charge Bar"] = L["Blood Charge Bar"],
@@ -1200,59 +1198,6 @@ function BloodShieldTracker:GetPWSBarOptions()
 	self:AddAppearanceOptions(pwsBarOpts, "PWSBar")
 	self:AddAdvancedPositioning(pwsBarOpts, "PWSBar")
 	return pwsBarOpts
-end
-
-function BloodShieldTracker:GetIllumBarOptions()
-	local illumBarOpts = {
-		order = 5,
-		type = "group",
-		name = L["Illuminated Healing Bar"],
-		desc = L["Illuminated Healing Bar"],
-		args = {
-		    description = {
-		        order = 1,
-		        type = "description",
-		        name = L["IllumBar_Desc"],
-		    },
-            generalOptions = {
-                order = 2,
-                type = "header",
-                name = L["General Options"],
-            },
-    		bar_enabled = {
-				name = L["Enabled"],
-				desc = L["EnableBarDesc"],
-				type = "toggle",
-				order = 10,
-				set = function(info, val)
-				    self.db.profile.bars["IllumBar"].enabled = val
-					self.bars["IllumBar"]:UpdateVisibility()
-				end,
-                get = function(info)
-					return self.db.profile.bars["IllumBar"].enabled
-				end,
-			},
-			lock_bar = {
-				name = L["Lock bar"],
-				desc = L["LockBarDesc"],
-				type = "toggle",
-				order = 20,
-				set = function(info, val)
-				    self.db.profile.bars["IllumBar"].locked = val 
-					self.bars["IllumBar"]:Lock(val)
-				end,
-                get = function(info)
-					return self.db.profile.bars["IllumBar"].locked
-				end,
-			},
-		},
-	}
-	self:AddDimensionOptions(illumBarOpts, "IllumBar")
-	self:AddPositionOptions(illumBarOpts, "IllumBar")
-	self:AddColorsOptions(illumBarOpts, "IllumBar")
-	self:AddAppearanceOptions(illumBarOpts, "IllumBar")
-	self:AddAdvancedPositioning(illumBarOpts, "IllumBar")
-	return illumBarOpts
 end
 
 function BloodShieldTracker:GetAbsorbsBarOptions()

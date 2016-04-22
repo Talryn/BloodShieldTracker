@@ -55,7 +55,6 @@ addon.bars = BloodShieldTracker.bars
 BloodShieldTracker.shieldbar = nil
 BloodShieldTracker.estimatebar = nil
 BloodShieldTracker.pwsbar = nil
-BloodShieldTracker.illumbar = nil
 
 -- Player class, talent, and spec info
 addon.isDK = nil
@@ -175,7 +174,6 @@ addon.ItemNames = ItemNames
 local SpellIds = {
 	["Power Word: Shield"] = 17,
 	["Divine Aegis"] = 47753,
-	["Illuminated Healing"] = 86273,
 	["Indomitable Pride"] = 108008,
 	["Scent of Blood"] = 50421,
 	["Dark Succor"] = 101568,
@@ -241,7 +239,6 @@ addon.SpellNames = SpellNames
 local AbsorbShieldsOrdered = {
 	"Blood Shield",
 	"Power Word: Shield",
-	"Illuminated Healing",
 	"Clarity of Will",
 	"Divine Aegis",
 	"Life Cocoon",
@@ -563,12 +560,6 @@ addon.defaults = {
 				x = 100, 
 				y = -120,
 			},
-			["IllumBar"] = {
-				color = {r = 0.96, g = 0.55, b = 0.73, a = 1},
-				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
-				x = 190, 
-				y = -120,
-			},
 			["TotalAbsorbsBar"] = {
 				color = {r = 0.58, g = 0.51, b = 0.79, a = 1},
 				bgcolor = {r = 0.58, g = 0.51, b = 0.79, a = 0.7},
@@ -577,7 +568,6 @@ addon.defaults = {
 					["Blood Shield"] = false,
 					["Power Word: Shield"] = true,
 					["Divine Aegis"] = true,
-					["Illuminated Healing"] = true,
 					["Life Cocoon"] = true,
 					["Guard"] = true,
 					["Indomitable Pride"] = true,
@@ -707,7 +697,6 @@ function BloodShieldTracker:OnInitialize()
 	self:UpdateShieldBarMode()
   	self:UpdateShieldBarText(0, 0, 0)
 	self.pwsbar = Bar:Create("PWSBar", "PW:S Bar", false)
-	self.illumbar = Bar:Create("IllumBar", "Illuminated Healing Bar", false)
 	self.absorbsbar = Bar:Create("TotalAbsorbsBar", "Total Absorbs Bar", false)
 	self.purgatorybar = Bar:Create("PurgatoryBar", "Purgatory Bar", false)
 	self.bloodchargebar = Bar:Create("BloodChargeBar", "Blood Charge Bar", true)
@@ -932,8 +921,6 @@ function BloodShieldTracker:OnEnable()
 			displayName, L["Bone Shield Bar"], displayName, "boneShieldOpts")
 		self.optionsFrame.PriestBar = ACD:AddToBlizOptions(
 			displayName, L["PW:S Bar"], displayName, "pwsBarOpts")
-		self.optionsFrame.IllumBar = ACD:AddToBlizOptions(
-			displayName, L["Illuminated Healing Bar"], displayName, "illumBarOpts")
 		self.optionsFrame.AbsorbsBar = ACD:AddToBlizOptions(
 			displayName, L["Total Absorbs Bar"], displayName, "absorbsBarOpts")
 		self.optionsFrame.AMSBar = ACD:AddToBlizOptions(
@@ -1863,20 +1850,6 @@ function BloodShieldTracker:CheckAuras()
 			self.pwsbar:Hide()
 		end
 		PreviousShieldValues["PWSBar"] = shields
-	end
-
-	if self.illumbar.db.enabled and addon.IsBloodTank then
-		local illumValue = OtherShields["Illuminated Healing"]
-		if AurasFound["Illuminated Healing"] then
-			if illumValue and illumValue ~= PreviousShieldValues["PaladinBar"] then
-				self.illumbar:SetValue(illumValue)
-			end
-			self.illumbar.bar:Show()
-		else
-			self.illumbar:Hide()
-		end
-		
-		PreviousShieldValues["PaladinBar"] = illumValue
 	end
 
 	if self.absorbsbar.db.enabled and addon.IsBloodTank then

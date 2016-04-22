@@ -67,6 +67,8 @@ local dsHealModifier = 0.30  -- Percent of the DS Heal from the tooltip.
 local dsMinHealPercent = 0.07
 local dsMinHealPercentSuccor = 0.20
 local vbHealingBonus = 0.30
+local guardianSpiritHealBuff = 0.60
+
 local T14BonusAmt = 0.1
 
 -- Curent state information
@@ -157,7 +159,7 @@ local UnitEvents = {
 	["player"] = {
 		"UNIT_SPELLCAST_SUCCEEDED",
 		"UNIT_MAXHEALTH",
-		"UNIT_AURA",
+		-- "UNIT_AURA",
 	},
 }
 local function EventFrame_OnEvent(frame, event, ...)
@@ -175,8 +177,8 @@ local function EventFrame_OnEvent(frame, event, ...)
 		EstimateBar:PLAYER_ENTERING_WORLD(event, ...)
 	elseif event == "UNIT_MAXHEALTH" then
 		EstimateBar:UNIT_MAXHEALTH(event, ...)
-	elseif event == "UNIT_AURA" then
-		EstimateBar:UNIT_AURA(event, ...)
+	-- elseif event == "UNIT_AURA" then
+	-- 	EstimateBar:UNIT_AURA(event, ...)
 	elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
 		EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(event, ...)
 	-- Send directly to particular functions
@@ -480,100 +482,98 @@ function EstimateBar:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, rank, line
     end
 end
 
-function EstimateBar:UNIT_AURA(event, unit)
-	if unit == "player" then
-	    local name, rank, icon, count, dispelType, duration, expires,
-	        caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
-			castByPlayer, value, value2, value3
+function EstimateBar:CheckAuras()
+    local name, rank, icon, count, dispelType, duration, expires,
+        caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
+		castByPlayer, value, value2, value3
 
-	    local iccBuffFound = false
-	    local vampBloodFound = false
-	    local healingDebuff = 0
-		scentBloodStacks = 0
-		DarkSuccorBuff = false
-	    luckOfTheDrawBuff = false
-	    luckOfTheDrawAmt = 0
-		healingDebuffMultiplier = 0
-	    gsHealModifier = 0.0
+    local iccBuffFound = false
+    local vampBloodFound = false
+    local healingDebuff = 0
+	scentBloodStacks = 0
+	DarkSuccorBuff = false
+    luckOfTheDrawBuff = false
+    luckOfTheDrawAmt = 0
+	healingDebuffMultiplier = 0
+    gsHealModifier = 0.0
 
-	    -- Loop through unit auras to find ones of interest.
-	    local i = 1
-	    repeat
-	        name, rank, icon, count, dispelType, duration, expires, caster, 
-				stealable, consolidate, spellId, canApplyAura, isBossDebuff, 
-				castByPlayer, value, value2, value3 = UnitAura("player", i)
-	        if name == nil or spellId == nil then break end
+    -- Loop through unit auras to find ones of interest.
+    local i = 1
+    repeat
+        name, rank, icon, count, dispelType, duration, expires, caster, 
+			stealable, consolidate, spellId, canApplyAura, isBossDebuff, 
+			castByPlayer, value, value2, value3 = UnitAura("player", i)
+        if name == nil or spellId == nil then break end
 
-			if spellId == SpellIds["Scent of Blood"] then
-				scentBloodStacks = count
+		if spellId == SpellIds["Scent of Blood"] then
+			scentBloodStacks = count
 
-	        elseif spellId == SpellIds["Dark Succor"] then
-	            DarkSuccorBuff = true
+        elseif spellId == SpellIds["Dark Succor"] then
+            DarkSuccorBuff = true
 
-	        elseif spellId == SpellIds["Luck of the Draw"] then
-	            luckOfTheDrawBuff = true
-	    	    if not count or count == 0 then
-	    	        count = 1
-	            end
-	            luckOfTheDrawAmt = addon.LUCK_OF_THE_DRAW_MOD * count
+        elseif spellId == SpellIds["Luck of the Draw"] then
+            luckOfTheDrawBuff = true
+    	    if not count or count == 0 then
+    	        count = 1
+            end
+            luckOfTheDrawAmt = addon.LUCK_OF_THE_DRAW_MOD * count
 
-			elseif name == SpellNames["Hellscream's Warsong 30"] then
-				iccBuffFound = true
-				iccBuff = true
-				iccBuffAmt = ICCBuffs.Horde[spellId] or 
-				ICCBuffs.Horde[SpellIds["Hellscream's Warsong 30"]]
+		elseif name == SpellNames["Hellscream's Warsong 30"] then
+			iccBuffFound = true
+			iccBuff = true
+			iccBuffAmt = ICCBuffs.Horde[spellId] or 
+			ICCBuffs.Horde[SpellIds["Hellscream's Warsong 30"]]
 
-			elseif name == SpellNames["Strength of Wrynn 30"] then
-				iccBuffFound = true
-				iccBuff = true
-				iccBuffAmt = ICCBuffs.Alliance[spellId] or 
-				ICCBuffs.Alliance[SpellIds["Strength of Wrynn 30"]]
+		elseif name == SpellNames["Strength of Wrynn 30"] then
+			iccBuffFound = true
+			iccBuff = true
+			iccBuffAmt = ICCBuffs.Alliance[spellId] or 
+			ICCBuffs.Alliance[SpellIds["Strength of Wrynn 30"]]
 
-	        elseif spellId == SpellIds["Vampiric Blood"] then
-				vampBloodFound = true
-	            vbBuff = true
-                vbHealingInc = vbHealingBonus
+        elseif spellId == SpellIds["Vampiric Blood"] then
+			vampBloodFound = true
+            vbBuff = true
+            vbHealingInc = vbHealingBonus
 
-			elseif spellId == SpellIds["Guardian Spirit"] then
-				AurasFound["Guardian Spirit"] = true
-				gsHealModifier = guardianSpiritHealBuff
+		elseif spellId == SpellIds["Guardian Spirit"] then
+			AurasFound["Guardian Spirit"] = true
+			gsHealModifier = guardianSpiritHealBuff
 
-			else
-				-- Check for various healing debuffs
-				for k,v in pairs(addon.HealingDebuffs) do
-					if spellId == k then
-						if not count or count == 0 then
-							count = 1
-						end
-						healingDebuff = v * count
-						if healingDebuff > healingDebuffMultiplier then
-							healingDebuffMultiplier = healingDebuff
-						end
+		else
+			-- Check for various healing debuffs
+			for k,v in pairs(addon.HealingDebuffs) do
+				if spellId == k then
+					if not count or count == 0 then
+						count = 1
+					end
+					healingDebuff = v * count
+					if healingDebuff > healingDebuffMultiplier then
+						healingDebuffMultiplier = healingDebuff
 					end
 				end
 			end
+		end
 
-	        i = i + 1
-		until name == nil
+        i = i + 1
+	until name == nil
 
-	    -- If the ICC buff isn't present, reset the values
-	    if not iccBuffFound then
-	        iccBuff = false
-	        iccBuffAmt = 0.0
-	    end
+    -- If the ICC buff isn't present, reset the values
+    if not iccBuffFound then
+        iccBuff = false
+        iccBuffAmt = 0.0
+    end
 
-	    if not vampBloodFound then
-	        vbBuff = false
-	        vbHealingInc = 0.0
-	    end
+    if not vampBloodFound then
+        vbBuff = false
+        vbHealingInc = 0.0
+    end
 
-		-- Just in case make sure the healing modifier is a sane value
-		if healingDebuffMultiplier > 1 then
-		    healingDebuffMultiplier = 1
-	    end
+	-- Just in case make sure the healing modifier is a sane value
+	if healingDebuffMultiplier > 1 then
+	    healingDebuffMultiplier = 1
+    end
 
-		self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
-	end
+	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 end
 
 local function UpdateTime(self, elapsed)
