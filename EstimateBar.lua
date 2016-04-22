@@ -77,7 +77,7 @@ local DS_Latency = nil
 local Tier14Bonus = 1
 
 -- MoP Variables --
--- The actual minimum DS heal percent, based on spec, glyphs, and presence.
+-- The actual minimum DS heal percent, based on spec.
 addon.maxHealth = 1
 local actualDsMinHeal = dsMinHealPercent
 local dsHealMin = 0
@@ -87,7 +87,6 @@ local bsMinimum = 0
 local scentBloodStackBuff = 0.2
 local scentBloodStacks = 0
 local dsScentBloodStacks = 0 -- Have to track SoB stacks as of last DS
-local CurrentPresence = nil
 local iccBuff = false
 local iccBuffAmt = 0.0
 local vbBuff = false
@@ -301,8 +300,7 @@ function EstimateBar:UpdateMinHeal(event, unit)
 		local baseValue
 		local maxHealth = UnitHealthMax("player")
 		actualDsMinHeal = dsMinHealPercent
-		if DarkSuccorBuff == true and 
-			(CurrentPresence == "Unholy" or CurrentPresence == "Frost") then
+		if DarkSuccorBuff == true then
 			actualDsMinHeal = dsMinHealPercentSuccor
 		end
 		baseValue = maxHealth * actualDsMinHeal * Tier14Bonus *
@@ -491,7 +489,6 @@ function EstimateBar:UNIT_AURA(event, unit)
 	    local iccBuffFound = false
 	    local vampBloodFound = false
 	    local healingDebuff = 0
-		CurrentPresence = nil
 		scentBloodStacks = 0
 		DarkSuccorBuff = false
 	    luckOfTheDrawBuff = false
@@ -536,15 +533,6 @@ function EstimateBar:UNIT_AURA(event, unit)
 				vampBloodFound = true
 	            vbBuff = true
                 vbHealingInc = vbHealingBonus
-
-			elseif spellId == SpellIds["Frost Presence"] then
-				CurrentPresence = "Frost"
-
-			elseif spellId == SpellIds["Unholy Presence"] then
-				CurrentPresence = "Unholy"
-
-			elseif spellId == SpellIds["Blood Presence"] then
-				CurrentPresence = "Blood"
 
 			elseif spellId == SpellIds["Guardian Spirit"] then
 				AurasFound["Guardian Spirit"] = true

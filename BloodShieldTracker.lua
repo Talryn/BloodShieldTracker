@@ -294,7 +294,6 @@ local DarkSuccorBuff = false
 local estimatedDS = 0
 local estimatedBS = 0
 local scentBloodStacks = 0
-local CurrentPresence = nil
 local luckOfTheDrawBuff = false
 local luckOfTheDrawAmt = 0
 local iccBuff = false
