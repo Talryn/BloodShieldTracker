@@ -123,7 +123,7 @@ function BWTracker:AddOptions()
 end
 
 function BWTracker:GearUpdate()
-	boneWall.active = BST.tierCount["T16 Tank"] >= 2 and addon.IsBloodTank
+	boneWall.active = addon.tierCount["T16 Tank"] >= 2 and addon.IsBloodTank
 end
 
 function BWTracker:UpdateBoneWallBarMode()

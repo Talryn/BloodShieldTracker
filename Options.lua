@@ -38,7 +38,6 @@ function BloodShieldTracker:GetOptions()
       args = {
 				core = self:GetGeneralOptions(),
 				shieldBarOpts = self:GetShieldBarOptions(),
-				estimateBarOpts = self:GetEstimateBarOptions(),
 				bloodChargeOpts = self:GetBloodChargeBarOptions(),
 				boneShieldOpts = self:GetBoneShieldBarOptions(),
 				pwsBarOpts = self:GetPWSBarOptions(),
@@ -46,7 +45,6 @@ function BloodShieldTracker:GetOptions()
 				absorbsBarOpts = self:GetAbsorbsBarOptions(),
 				purgatoryBarOpts = self:GetPurgatoryBarOptions(),
 				amsBarOpts = self:GetAMSBarOptions(),
-				resolveBarOpts = self:GetResolveBarOptions(),
 				skinningOpts = self:GetSkinningOptions(),
     	}
   	}
@@ -325,8 +323,6 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 		--	["None"] = L["None"],
 		--	["Custom"] = L["Custom"],
 		--	["Shield Bar"] = L["Shield Bar"],
-		--	["Estimate Bar"] = L["Estimate Bar"],
-		--	["Health Bar"] = L["Health Bar"],
 		--	["PW:S Bar"] = L["PW:S Bar"],
 		--	["Illuminated Healing Bar"] = L["Illuminated Healing Bar"],
 		--	["Total Absorbs Bar"] = L["Total Absorbs Bar"],
@@ -335,7 +331,6 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 		--	["Bone Shield Bar"] = L["Bone Shield Bar"],
 		--	["Bone Wall Bar"] = L["Bone Wall Bar"],
 		--	["Purgatory Bar"] = L["Purgatory Bar"],
-		--	["Resolve Bar"] = L["Resolve Bar"],
 		--},
 		order = 1010,
 		set = function(info, val)
@@ -470,23 +465,6 @@ function BloodShieldTracker:GetGeneralOptions()
 		        type = "header",
 		        name = L["General Options"],
 		    },
-				resolveMode = {
-					name = L["Resolve Mode"],
-					desc = L["ResolveMode_OptDesc"],
-					type = "select",
-					values = {
-					    ["Actual"] = L["Actual"],
-					    ["Calculated"] = L["Calculated"]
-					},
-					order = 5,
-					set = function(info, val)
-					    self.db.profile.resolveMode = val
-							addon:SetResolveMode()
-					end,
-	        get = function(info)
-	        	return self.db.profile.resolveMode
-	        end,
-				},
             enable_only_for_blood = {
                 name = L["Only for Blood DK"],
 				order = 10,
@@ -689,7 +667,6 @@ function BloodShieldTracker:GetGeneralOptions()
 				    ["LastBS"] = L["Last Blood Shield Value"],
 				    ["EstimateBar"] = L["Estimate Bar Value"],
 					["Vengeance"] = SpellNames["Vengeance"],
-					["Resolve"] = SpellNames["Resolve"],
 				},
 				order = 320,
 				set = function(info, val)
@@ -1149,264 +1126,6 @@ function BloodShieldTracker:GetBoneShieldBarOptions()
 	return boneShieldOpts
 end
 
-function BloodShieldTracker:GetEstimateBarOptions()
-	local estimateBarOpts = {
-	    order = 3,
-	    type = "group",
-	    name = L["Estimated Healing Bar"],
-	    desc = L["Estimated Healing Bar"],
-	    args = {
-		    description = {
-		        order = 1,
-		        type = "description",
-		        name = L["EstimatedHealingBar_Desc"],
-		    },
-            generalOptions = {
-                order = 10,
-                type = "header",
-                name = L["General Options"],
-            },
-    		enabled = {
-				name = L["Enabled"],
-				desc = L["Enable the Estimated Healing Bar."],
-				type = "toggle",
-				order = 20,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].enabled = val
-					self.bars["EstimateBar"]:UpdateVisibility()
-				end,
-                get = function(info)
-					return self.db.profile.bars["EstimateBar"].enabled 
-				end,
-			},
-			lock_bar = {
-				name = L["Lock bar"],
-				desc = L["LockBarDesc"],
-				type = "toggle",
-				order = 30,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].locked = val 
-					self.estimatebar:Lock()
-				end,
-                get = function(info)
-					return self.db.profile.bars["EstimateBar"].locked
-				end,
-			},
-			hide_ooc = {
-				name = L["Hide out of combat"],
-				desc = L["HideOOC_OptionDesc"],
-				type = "toggle",
-				order = 40,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].hide_ooc = val
-					if not _G.InCombatLockdown() then
-					    if val then
-					        self.estimatebar.bar:Hide()
-				        elseif addon:IsTrackerEnabled() then
-				            self.estimatebar.bar:Show()
-			            end
-			        end
-				end,
-                get = function(info)
-                    return self.db.profile.bars["EstimateBar"].hide_ooc
-                end,
-			},
-			show_text = {
-				name = L["Show Text"],
-				desc = L["EstHealBarShowText_OptDesc"],
-				type = "toggle",
-				order = 50,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].show_text = val
-				    self:UpdateEstimateBar()
-				end,
-                get = function(info)
-					return self.db.profile.bars["EstimateBar"].show_text
-				end,
-			},
-			bar_mode = {
-				name = L["Mode"],
-				desc = L["Mode"],
-				type = "select",
-				values = {
-				    ["DS"] = L["Death Strike Heal"],
-				    ["BS"] = L["Blood Shield"],
-				},
-				order = 60,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].bar_mode = val
-				end,
-                get = function(info)
-                    return self.db.profile.bars["EstimateBar"].bar_mode
-                end,
-			},
-    		usePercent = {
-				name = L["Percent"],
-				desc = L["Percent_OptDesc"],
-				type = "toggle",
-				order = 70,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].usePercent = val
-				end,
-                get = function(info)
-					return self.db.profile.bars["EstimateBar"].usePercent 
-				end,
-			},
-    		alternateMinimum = {
-				order = 80,
-				name = L["Alternate Minimum"],
-				desc = L["AlternateMinimum_OptDesc"],
-				type = "range",
-				min = 0,
-				max = 1000000,
-				step = 1,
-				bigStep = 1000,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].alternateMinimum = val
-				end,
-                get = function(info)
-					return self.db.profile.bars["EstimateBar"].alternateMinimum 
-				end,
-			},
-            sobStacks = {
-                order = 100,
-                type = "header",
-                name = SpellNames["Scent of Blood"],
-            },
-			show_stacks = {
-				name = L["Enable"],
-				desc = L["SoBStacks_OptionDesc"],
-				type = "toggle",
-				order = 110,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].show_stacks = val
-					self.bars["EstimateBar"]:UpdateVisibility()
-				end,
-                get = function(info)
-                    return self.db.profile.bars["EstimateBar"].show_stacks
-                end,
-			},
-			stacks_pos = {
-				name = L["Position"],
-				desc = L["Position_OptionDesc"],
-				type = "select",
-				values = {
-				    ["RIGHT"] = L["Right"],
-				    ["LEFT"] = L["Left"],
-				},
-				order = 120,
-				set = function(info, val)
-				    self.db.profile.bars["EstimateBar"].stacks_pos = val
-			        self.estimatebar.bar.stacks:SetPoint(val or "LEFT")
-			        self.estimatebar.bar.stacks:SetJustifyH(val or "LEFT")
-				end,
-                get = function(info)
-                    return self.db.profile.bars["EstimateBar"].stacks_pos
-                end,
-                disabled = function()
-                    return not self.db.profile.bars["EstimateBar"].show_stacks
-                end,
-			},
-            colorsMinimum = {
-                order = 400,
-                type = "header",
-                name = L["Colors for Minimum Heal"],
-            },
-			min_textcolor = {
-				order = 410,
-				name = L["Minimum Text Color"],
-				desc = L["EstHealBarMinTextColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["EstimateBar"].textcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-					self.estimatebar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["EstimateBar"].textcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			min_color = {
-				order = 420,
-				name = L["Minimum Bar Color"],
-				desc = L["EstHealBarMinColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["EstimateBar"].color
-				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.estimatebar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["EstimateBar"].color
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			min_bgcolor = {
-				order = 430,
-				name = L["Minimum Bar Background Color"],
-				desc = L["EstHealBarMinBackgroundColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["EstimateBar"].bgcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.estimatebar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["EstimateBar"].bgcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-            colorsOptimal = {
-                order = 500,
-                type = "header",
-                name = L["Colors for Optimal Heal"],
-            },
-			opt_textcolor = {
-				order = 510,
-				name = L["Optimal Text Color"],
-				desc = L["EstHealBarOptTextColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["EstimateBar"].alt_textcolor
-				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.estimatebar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["EstimateBar"].alt_textcolor
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-			opt_color = {
-				order = 520,
-				name = L["Optimal Bar Color"],
-				desc = L["EstHealBarOptColor_OptionDesc"],
-				type = "color",
-				hasAlpha = true,
-				set = function(info, r, g, b, a)
-				    local c = self.db.profile.bars["EstimateBar"].alt_color
-				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.estimatebar:UpdateGraphics()
-				end,
-				get = function(info)
-			        local c = self.db.profile.bars["EstimateBar"].alt_color
-				    return c.r, c.g, c.b, c.a
-				end,					
-			},
-		}
-	}
-
-	self:AddDimensionOptions(estimateBarOpts, "EstimateBar", 200)
-	self:AddPositionOptions(estimateBarOpts, "EstimateBar", 300)
-	self:AddAppearanceOptions(estimateBarOpts, "EstimateBar")
-	self:AddAdvancedPositioning(estimateBarOpts, "EstimateBar")
-	return estimateBarOpts
-end
-
 function BloodShieldTracker:GetPWSBarOptions()
 	local pwsBarOpts = {
 		order = 4,
@@ -1779,59 +1498,6 @@ function BloodShieldTracker:GetAMSBarOptions()
 	self:AddAppearanceOptions(amsBarOpts, "AMSBar")
 	self:AddAdvancedPositioning(amsBarOpts, "AMSBar")
 	return amsBarOpts
-end
-
-function BloodShieldTracker:GetResolveBarOptions()
-	local resolveBarOpts = {
-		order = 2,
-		type = "group",
-		name = L["Resolve Bar"],
-		desc = L["Resolve Bar"],
-		args = {
-		    description = {
-		        order = 1,
-		        type = "description",
-		        name = L["ResolveBar_Desc"],
-		    },
-            generalOptions = {
-                order = 2,
-                type = "header",
-                name = L["General Options"],
-            },
-    		enabled = {
-				name = L["Enabled"],
-				desc = L["EnableBarDesc"],
-				type = "toggle",
-				order = 10,
-				set = function(info, val)
-				    self.db.profile.bars["ResolveBar"].enabled = val
-					self.bars["ResolveBar"]:UpdateVisibility()
-				end,
-                get = function(info)
-					return self.db.profile.bars["ResolveBar"].enabled
-				end,
-			},
-			lock_bar = {
-				name = L["Lock bar"],
-				desc = L["LockBarDesc"],
-				type = "toggle",
-				order = 20,
-				set = function(info, val)
-				    self.db.profile.bars["ResolveBar"].locked = val 
-					self.bars["ResolveBar"]:Lock()
-				end,
-                get = function(info)
-					return self.db.profile.bars["ResolveBar"].locked
-				end,
-			},
-		},
-	}
-	self:AddDimensionOptions(resolveBarOpts, "ResolveBar")
-	self:AddPositionOptions(resolveBarOpts, "ResolveBar")
-	self:AddColorsOptions(resolveBarOpts, "ResolveBar")
-	self:AddAppearanceOptions(resolveBarOpts, "ResolveBar")
-	self:AddAdvancedPositioning(resolveBarOpts, "ResolveBar")
-	return resolveBarOpts
 end
 
 function BloodShieldTracker:GetSkinningOptions()
