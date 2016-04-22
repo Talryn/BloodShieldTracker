@@ -27,6 +27,7 @@ addon.addonVersion = cleanupVersion("@project-version@")
 addon.CURRENT_BUILD, addon.CURRENT_INTERNAL, 
     addon.CURRENT_BUILD_DATE, addon.CURRENT_UI_VERSION = _G.GetBuildInfo()
 addon.WoD = addon.CURRENT_UI_VERSION >= 60000
+addon.Legion = addon.CURRENT_UI_VERSION >= 70000
 
 local function round(number)
     if not number then return 0 end
@@ -163,3 +164,15 @@ function addon.FormatWithPrecision(value)
 	return baseFmt:format(value)
 end
 
+function addon.GetSpellSchool(school)
+    local schools = {
+        [1] = "Physical",
+        [2] = "Holy",
+        [3] = "Fire",
+        [4] = "Nature",
+        [5] = "Frost",
+        [6] = "Shadow",
+        [7] = "Arcane"
+    }
+    return schools[school] or "Special"
+end
