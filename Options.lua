@@ -1047,30 +1047,6 @@ function BloodShieldTracker:GetBoneShieldBarOptions()
                     return self.db.profile.bars["BoneShieldBar"].progress
                 end,
 			},
-			showCooldown = {
-				name = L["Show on Cooldown"],
-				desc = L["ShowCooldownDesc"],
-				type = "toggle",
-				order = 40,
-				set = function(info, val)
-				    self.db.profile.bars["BoneShieldBar"].showCooldown = val
-				end,
-                get = function(info)
-					return self.db.profile.bars["BoneShieldBar"].showCooldown
-				end,
-			},
-			showReady = {
-				name = L["Show when Ready"],
-				desc = L["ShowReadyDesc"],
-				type = "toggle",
-				order = 50,
-				set = function(info, val)
-				    self.db.profile.bars["BoneShieldBar"].showReady = val
-				end,
-                get = function(info)
-					return self.db.profile.bars["BoneShieldBar"].showReady
-				end,
-			},
             timeRemaining = {
                 order = 100,
                 type = "header",

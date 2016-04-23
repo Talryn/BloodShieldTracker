@@ -49,7 +49,7 @@ local GetCombatRatingBonus = _G.GetCombatRatingBonus
 local GetSpellCooldown = _G.GetSpellCooldown
 
 BloodShieldTracker.loaded = false
-BloodShieldTracker.playerName = UnitName("player")
+addon.playerName = UnitName("player")
 BloodShieldTracker.bars = {}
 addon.bars = BloodShieldTracker.bars
 BloodShieldTracker.shieldbar = nil
@@ -597,8 +597,6 @@ addon.defaults = {
 		    progress = "Charges",
 		    show_time = false,
 		    time_pos = "RIGHT",
-				showCooldown = "true",
-				showReady = "true",
 				color = {r = 0.03, g = 0.54, b = 0.03, a = 1},
 				bgcolor = {r = 0.02, g = 0.4, b = 0.01, a = 0.7},
 				x = -90,
@@ -1684,21 +1682,6 @@ local function onUpdateBoneShield(self, elapsed)
 				self:SetScript("OnUpdate", nil)
 				self:Hide()
 			end
-		elseif self.recharging then
-			if self.recharge >= 0 then
-				local remaining = 0
-				if self.recharge > 60 then
-					remaining = tostring(ceil(self.recharge / 60)) .. "m"
-				else
-					remaining = tostring(round(self.recharge))
-				end
-				self.value:SetText(remaining)
-			else
-				self.recharging = false
-				self.recharge = 0
-				self.value:SetText("-")
-				self:SetScript("OnUpdate", nil)			
-			end
 		else
 			self:Hide()
 		end
@@ -1920,79 +1903,33 @@ function BloodShieldTracker:CheckAuras()
 
 	if self.db.profile.bars["BoneShieldBar"].enabled and addon.IsBloodTank then
 		local bar = self.boneshieldbar
-		local state = nil
 		local data = AuraData["Bone Shield"]
 		if AurasFound["Bone Shield"] and data then
-			state = 0
 			bar.bar.timer = data.expires - GetTime()
 			bar.bar.active = true
 			if data.count ~= bar.bar.count then
 				bar.bar.value:SetText(tostring(data.count))
 			end
 			bar.bar.count = data.count
-			bar.bar.recharging = false
-			bar.bar.recharge = 0
+
+			if bar.db.progress == "Charges" then
+				bar.bar:SetMinMaxValues(0, addon.MAX_BONESHIELD_CHARGES)
+			elseif bar.db.progress == "Time" then
+				bar.bar:SetMinMaxValues(0, data.duration)
+			else
+				bar.bar:SetMinMaxValues(0, 1)
+				bar.bar:SetValue(1)
+			end
+			bar.bar:SetAlpha(1)
+			bar.bar:Show()
+			bar.bar:SetScript("OnUpdate", onUpdateBoneShield)
 		else
 			bar.bar.active = false
 			bar.bar.timer = 0
 			bar.bar.count = 0
-			--bar.bar:SetScript("OnUpdate", nil)
-			--bar:Hide()
-
-			local start, duration, enabled = 
-				GetSpellCooldown(SpellIds["Bone Shield"])
-			if duration > 0 then
-				state = 1
-				bar.bar.recharging = true
-				bar.bar.recharge = duration - (GetTime() - start)
-			else
-				state = 2
-				bar.bar.recharging = false
-				bar.bar.recharging = 0
-			end
+			bar.bar:SetScript("OnUpdate", nil)
+			bar:Hide()
 		end
-
-		-- Update the display if state has changed
-		if state ~= bar.bar.state then
-			if state == 0 then
-				-- Active
-				if bar.db.progress == "Charges" then
-					bar.bar:SetMinMaxValues(0, addon.MAX_BONESHIELD_CHARGES)
-				elseif bar.db.progress == "Time" then
-					bar.bar:SetMinMaxValues(0, data.duration)
-				else
-					bar.bar:SetMinMaxValues(0, 1)
-					bar.bar:SetValue(1)
-				end
-				bar.bar:SetAlpha(1)
-				bar.bar:Show()
-				bar.bar:SetScript("OnUpdate", onUpdateBoneShield)
-			elseif state == 1 then
-				-- Recharging
-				bar.bar.time:SetText("")
-				if bar.db.showCooldown then
-					bar.bar:SetAlpha(0.5)
-					bar.bar:SetValue(select(2, bar.bar:GetMinMaxValues()))
-					bar.bar:SetScript("OnUpdate", onUpdateBoneShield)
-					bar.bar:Show()
-				else
-					bar:Hide()
-				end
-			else 
-				-- Ready
-				bar.bar.time:SetText("")
-				bar.bar.value:SetText("-")
-				if bar.db.showReady then
-					bar.bar:SetAlpha(0.5)
-					bar.bar:SetValue(select(2, bar.bar:GetMinMaxValues()))
-					bar.bar:SetScript("OnUpdate", nil)
-					bar.bar:Show()
-				else
-					bar:Hide()
-				end
-			end
-		end
-		bar.bar.state = state
 	end
 
 	if self.db.profile.bars["AMSBar"].enabled then

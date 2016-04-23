@@ -86,9 +86,6 @@ local dsHealMin = 0
 local bsMinimum = 0
 -- End --
 
-local scentBloodStackBuff = 0.2
-local scentBloodStacks = 0
-local dsScentBloodStacks = 0 -- Have to track SoB stacks as of last DS
 local iccBuff = false
 local iccBuffAmt = 0.0
 local vbBuff = false
@@ -216,13 +213,26 @@ function EstimateBar:ToggleEstimateBar()
 	BST.bars["EstimateBar"]:UpdateVisibility()
 end
 
-function EstimateBar:UpdateEstimateBar()
+local function UpdateTime(self, elapsed)
+    currentTime = currentTime + elapsed
+end
+
+function EstimateBar:UpdateBars(timestamp)
+    if addon.idle then
+    	if updateTimer then
+            updateTimer:Cancel()
+            updateTimer = nil
+        end
+    end
+    EstimateBar:UpdateEstimateBar(timestamp)
+end
+
+function EstimateBar:UpdateEstimateBar(timestamp)
     if self.estimatebar.db.enabled and not addon.idle then
         local recentDamage = self:GetRecentDamageTaken(timestamp)
 
         local predictedValue, minimumValue = 0, 0
-		local baseValue = recentDamage * dsHealModifier * Tier14Bonus * 
-			(1 + scentBloodStacks * scentBloodStackBuff)
+		local baseValue = recentDamage * dsHealModifier * Tier14Bonus * (1+versatilityPercent)
 
         if self.estimatebar.db.bar_mode == "BS" then
             predictedValue = round(baseValue * shieldPercent)
@@ -305,8 +315,7 @@ function EstimateBar:UpdateMinHeal(event, unit)
 		if DarkSuccorBuff == true then
 			actualDsMinHeal = dsMinHealPercentSuccor
 		end
-		baseValue = maxHealth * actualDsMinHeal * Tier14Bonus *
-			(1 + scentBloodStacks * scentBloodStackBuff)
+		baseValue = maxHealth * actualDsMinHeal * Tier14Bonus * (1+versatilityPercent)
 		dsHealMin = round(baseValue *
 			self:GetEffectiveHealingBuffModifiers() * 
 			self:GetEffectiveHealingDebuffModifiers())
@@ -327,11 +336,12 @@ end
 
 function EstimateBar:PLAYER_REGEN_DISABLED()
 	addon.idle = false
-	if addon:IsTrackerEnabled() then
-		if self.estimatebar.db.enabled then
-			self.estimatebar.bar:Show()
-		end
-	end
+
+	if addon:IsTrackerEnabled() and self.estimatebar.db.enabled then
+		updateTimer = _G.C_Timer.NewTicker(0.5, EstimateBar.UpdateBars)
+        self.estimatebar.bar:Show()
+        self.estimatebar.bar:SetScript("OnUpdate", UpdateTime)
+    end
 end
 
 function EstimateBar:PLAYER_REGEN_ENABLED()
@@ -418,7 +428,7 @@ function EstimateBar:UpdateRatings()
 		shieldPercent = masteryRating/100
 		update = true
 	end
-	
+
 	local vers = GetCombatRatingBonus(CR_VERSATILITY_DAMAGE_DONE) + 
 		GetVersatilityBonus(CR_VERSATILITY_DAMAGE_DONE)
 	if vers ~= versatilityBonus then
@@ -490,7 +500,6 @@ function EstimateBar:CheckAuras()
     local iccBuffFound = false
     local vampBloodFound = false
     local healingDebuff = 0
-	scentBloodStacks = 0
 	DarkSuccorBuff = false
     luckOfTheDrawBuff = false
     luckOfTheDrawAmt = 0
@@ -505,10 +514,7 @@ function EstimateBar:CheckAuras()
 			castByPlayer, value, value2, value3 = UnitAura("player", i)
         if name == nil or spellId == nil then break end
 
-		if spellId == SpellIds["Scent of Blood"] then
-			scentBloodStacks = count
-
-        elseif spellId == SpellIds["Dark Succor"] then
+        if spellId == SpellIds["Dark Succor"] then
             DarkSuccorBuff = true
 
         elseif spellId == SpellIds["Luck of the Draw"] then
@@ -573,7 +579,7 @@ function EstimateBar:CheckAuras()
 	    healingDebuffMultiplier = 1
     end
 
-	self:UpdateMinHeal("UNIT_MAXHEALTH", "player")
+	EstimateBar:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 end
 
 local function UpdateTime(self, elapsed)
@@ -607,7 +613,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
 
     currentTime = timestamp
 
-    if eventtype:find("_DAMAGE") and destName == self.playerName then
+    if eventtype:find("_DAMAGE") and destName == addon.playerName then
         if eventtype:find("SWING_") and param9 then
             local damage, absorb = param9, param14 or 0
 
@@ -657,7 +663,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
         end
     end    
 
-    if eventtype:find("_MISSED") and destName == self.playerName then
+    if eventtype:find("_MISSED") and destName == addon.playerName then
         if eventtype == "SWING_MISSED" then
             if param9 and param9 == "ABSORB" then
     			local damage = 0
@@ -684,7 +690,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
         end
     end
 
-	if eventtype == "SPELL_CAST_SUCCESS" and srcName == self.playerName and 
+	if eventtype == "SPELL_CAST_SUCCESS" and srcName == addon.playerName and 
 	    param9 == SpellIds["Death Strike"] then
 
         if addon.db.profile.debug then
@@ -693,24 +699,20 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
             local predictedHeal = 0
             if healingDebuffMultiplier ~= 1 then 
                 predictedHeal = round(
-                    recentDmg * dsHealModifier * Tier14Bonus *
-					(1 + scentBloodStacks * scentBloodStackBuff) *
+                    recentDmg * dsHealModifier * Tier14Bonus  *
                     self:GetEffectiveHealingBuffModifiers() * 
                     self:GetEffectiveHealingDebuffModifiers())
             end
     		BST:Print(dsHealFormat:format(recentDmg, predictedHeal))
         end
 	end
-    if eventtype == "SPELL_HEAL" and destName == self.playerName 
+
+    if eventtype == "SPELL_HEAL" and destName == addon.playerName 
         and param9 == SpellIds["Death Strike Heal"] then
         
         local totalHeal = param12 or 0
         local overheal = param13 or 0
         local actualHeal = param12-param13
-
-		-- The SoB stacks are lost once the aura processing occurs
-		-- so save the value here to use later.
-		dsScentBloodStacks = scentBloodStacks
 
         -- Update the LDB data feed
         addon.DataFeed.lastDS = totalHeal
@@ -742,26 +744,22 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
                 isMinimum = true
                 shieldValue = bsMinimum
             end
-            predictedHeal = round(recentDmg * dsHealModifier * Tier14Bonus * 
-				(1 + scentBloodStacks * scentBloodStackBuff) *
+            predictedHeal = round(recentDmg * dsHealModifier * Tier14Bonus *
                 self:GetEffectiveHealingBuffModifiers() * 
                 self:GetEffectiveHealingDebuffModifiers())
         end
 
         if addon.db.profile.debug then
-            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%, SoB: %0.2f%%]"
-			local sobValue = scentBloodStacks * scentBloodStackBuff
+            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%]"
             BST:Print(dsHealFormat:format(
-				totalHeal,actualHeal,overheal,predictedHeal,shieldPercent*100,
-				versatilityBonus,sobValue))
+				totalHeal,actualHeal,overheal,predictedHeal,masteryRating, versatilityBonus))
         end
         
         if addon.DEBUG_OUTPUT == true then
-            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%, SoB: %0.2f%%]"
-			local sobValue = scentBloodStacks * scentBloodStackBuff
+            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%]"
             addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. timestamp .. "   " .. 
                 dsHealFormat:format(totalHeal,actualHeal,overheal, predictedHeal, 
-				shieldPercent*100,versatilityBonus, sobValue) .. "\n"
+				masteryRating, versatilityBonus) .. "\n"
         end
     end
 end
@@ -892,45 +890,6 @@ function EstimateBar:GetEstimateBarOptions()
 	            get = function(info)
 					return addon.db.profile.bars["EstimateBar"].alternateMinimum 
 				end,
-			},
-	        sobStacks = {
-	            order = 100,
-	            type = "header",
-	            name = SpellNames["Scent of Blood"],
-	        },
-			show_stacks = {
-				name = L["Enable"],
-				desc = L["SoBStacks_OptionDesc"],
-				type = "toggle",
-				order = 110,
-				set = function(info, val)
-				    addon.db.profile.bars["EstimateBar"].show_stacks = val
-					addon.bars["EstimateBar"]:UpdateVisibility()
-				end,
-	            get = function(info)
-	                return addon.db.profile.bars["EstimateBar"].show_stacks
-	            end,
-			},
-			stacks_pos = {
-				name = L["Position"],
-				desc = L["Position_OptionDesc"],
-				type = "select",
-				values = {
-				    ["RIGHT"] = L["Right"],
-				    ["LEFT"] = L["Left"],
-				},
-				order = 120,
-				set = function(info, val)
-				    addon.db.profile.bars["EstimateBar"].stacks_pos = val
-			        self.estimatebar.bar.stacks:SetPoint(val or "LEFT")
-			        self.estimatebar.bar.stacks:SetJustifyH(val or "LEFT")
-				end,
-	            get = function(info)
-	                return addon.db.profile.bars["EstimateBar"].stacks_pos
-	            end,
-	            disabled = function()
-	                return not addon.db.profile.bars["EstimateBar"].show_stacks
-	            end,
 			},
 	        colorsMinimum = {
 	            order = 400,
