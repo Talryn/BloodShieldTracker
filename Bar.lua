@@ -101,19 +101,6 @@ function Bar:Initialize()
 	    end
 	end
 
-	if self.name == "EstimateBar" then
-	    bar.stacks = bar:CreateFontString(nil, "OVERLAY")
-	    bar.stacks:SetPoint(self.db.stacks_pos or "LEFT")
-	    bar.stacks:SetFont(font, 
-			addon.db.profile.font_size, 
-			addon:GetFontFlags())
-	    bar.stacks:SetJustifyH(self.db.stacks_pos or "LEFT")
-	    bar.stacks:SetShadowOffset(1, -1)
-	    bar.stacks:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-	    bar.stacks:SetText("0")
-		self:UpdateVisibility()
-	end
-
     bar:SetMovable(true)
     bar:RegisterForDrag("LeftButton")
     bar:SetScript("OnDragStart",
@@ -183,12 +170,6 @@ function Bar:UpdateVisibility()
 			self.bar:Show()
 		else
 			self.bar:Hide()
-		end
-
-		if self.db.enabled and self.db.show_stacks and addon.IsBloodTank then
-		    self.bar.stacks:Show()
-		else
-		    self.bar.stacks:Hide()
 		end
 	elseif self.name == "BoneShieldBar" or self.name == "BoneWallBar" then
 		if not self.db.enabled or not addon.IsBloodTank then
@@ -276,10 +257,6 @@ function Bar:ResetFonts()
 		self.bar.time:SetFont(ff, fh, fontFlags)
 		self.bar.time:SetText(self.bar.time:GetText())
 	end
-	if self.name == "EstimateBar" then
-		self.bar.stacks:SetFont(ff, fh, fontFlags)
-		self.bar.stacks:SetText(self.bar.stacks:GetText())
-	end
 end
 
 function Bar:UpdateUI()
@@ -359,7 +336,5 @@ function Bar:UpdateGraphics()
 	end
 	if self.name == "EstimateBar" then
 		self:UpdateVisibility()
-	    self.bar.stacks:SetPoint(self.db.stacks_pos or "LEFT")
-        self.bar.stacks:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 	end
 end
