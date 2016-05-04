@@ -448,6 +448,7 @@ end
 
 function EstimateBar:PLAYER_ALIVE()
 	self:UNIT_MAXHEALTH("PLAYER_ALIVE", "player")
+	self:UpdateEstimateBar()
 end
 
 function EstimateBar:UNIT_MAXHEALTH(event, unit)
@@ -587,7 +588,7 @@ local function UpdateTime(self, elapsed)
 end
 
 function EstimateBar:GetEffectiveHealingBuffModifiers()
-    return (1+iccBuffAmt) * (1+vbHealingInc) * (1+gsHealModifier) * (1+luckOfTheDrawAmt)
+    return (1+iccBuffAmt) * (1+vbHealingInc) * (1+gsHealModifier) * (1+luckOfTheDrawAmt) * (1+versatilityPercent)
 end
 
 function EstimateBar:GetEffectiveHealingDebuffModifiers()
@@ -612,6 +613,53 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
     local spellName, spellAbsorb = "", ""
 
     currentTime = timestamp
+
+	if eventtype:find("SPELL_ABSORBED") and destName == addon.playerName then
+		local absorbed
+		local absorbId, absorbName
+		if param19 then
+			absorbed = param19
+			absorbId = param16
+			absorbName = param17
+	        local spellName = param10 or "n/a"
+			local school = param11
+	        local schoolName = addon.GetSpellSchool(school) or "N/A"
+	        if addon.db.profile.debug then
+	            local spellAbsFmt = "Spell Absorbed (%s-%s,%d) %d by %s"
+	            BST:Print(spellAbsFmt:format(spellName, schoolName, school, absorbed, absorbName))
+	        end
+		else
+			absorbed = param16
+			absorbId = param13
+			absorbName = param14
+	        if addon.db.profile.debug then
+	            local spellAbsFmt = "Spell Absorbed (None) %d by %s"
+	            BST:Print(spellAbsFmt:format(absorbed, absorbName))
+	        end
+		end
+
+		if absorbed and absorbId ~= SpellIds["Shroud of Purgatory"] then
+			self:AddDamageTaken(timestamp, absorbed)
+		end
+
+		--         if addon.db.profile.debug then
+		-- 	local fmt = "SPELL_ABSORBED %s %s %s %s %s %s %s %s %s %s %s %s"
+		-- 	BST:Print(fmt:format(
+		-- 		_G.tostring(param9),
+		-- 		_G.tostring(param10),
+		-- 		_G.tostring(param11),
+		-- 		_G.tostring(param12),
+		-- 		_G.tostring(param13),
+		-- 		_G.tostring(param14),
+		-- 		_G.tostring(param15),
+		-- 		_G.tostring(param16),
+		-- 		_G.tostring(param17),
+		-- 		_G.tostring(param18),
+		-- 		_G.tostring(param19),
+		-- 		_G.tostring(param20)
+		-- 		))
+		-- end
+	end
 
     if eventtype:find("_DAMAGE") and destName == addon.playerName then
         if eventtype:find("SWING_") and param9 then
