@@ -55,6 +55,7 @@ addon.defaults.profile.bars["EstimateBar"] = {
 
 -- Keep track of time.  Start with current client time
 -- but will use the combat log timestamps after that.
+local UPDATE_TIMER_FREQUENCY = 0.3
 local currentTime = time()
 addon.idle = true
 local updateTimer = nil
@@ -338,7 +339,7 @@ function EstimateBar:PLAYER_REGEN_DISABLED()
 	addon.idle = false
 
 	if addon:IsTrackerEnabled() and self.estimatebar.db.enabled then
-		updateTimer = _G.C_Timer.NewTicker(0.5, EstimateBar.UpdateBars)
+		updateTimer = _G.C_Timer.NewTicker(UPDATE_TIMER_FREQUENCY, EstimateBar.UpdateBars)
         self.estimatebar.bar:Show()
         self.estimatebar.bar:SetScript("OnUpdate", UpdateTime)
     end
