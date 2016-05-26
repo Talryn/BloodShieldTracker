@@ -195,7 +195,8 @@ local SpellIds = {
 	["Shroud of Purgatory"] = 116888,
 	["Blood Charge"] = 114851,
 	["Anti-Magic Shell"] = 48707,
-	["Bone Shield"] = 49222,
+--	["Bone Shield"] = 49222,  -- WoD spell
+	["Bone Shield"] = 195181,
 	["Bone Wall"] = 144948,
 	["Heart Strike"] = 55050,
 	["Death Coil"] = 47541,
@@ -594,9 +595,9 @@ addon.defaults = {
 			},
 			["BoneShieldBar"] = {
 				enabled = false,
-		    progress = "Charges",
-		    show_time = false,
-		    time_pos = "RIGHT",
+			    progress = "Time",
+			    show_time = false,
+			    time_pos = "RIGHT",
 				color = {r = 0.03, g = 0.54, b = 0.03, a = 1},
 				bgcolor = {r = 0.02, g = 0.4, b = 0.01, a = 0.7},
 				x = -90,
@@ -1361,7 +1362,7 @@ end
 function BloodShieldTracker:UpdateBoneShieldBarMode()
 	local bar = self.boneshieldbar
     if bar.db.progress == "Charges" then
-        bar.bar:SetMinMaxValues(0, 6)
+        bar.bar:SetMinMaxValues(0, addon.MAX_BONESHIELD_CHARGES)
         bar.bar:SetValue(0)
     else
         bar.bar:SetMinMaxValues(0, 1)

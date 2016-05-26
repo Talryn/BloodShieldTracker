@@ -9,7 +9,7 @@ addon.DsHealAPModifiers = {
 }
 
 addon.MAX_BLOOD_CHARGES = 12
-addon.MAX_BONESHIELD_CHARGES = 6
+addon.MAX_BONESHIELD_CHARGES = 10
 addon.LUCK_OF_THE_DRAW_MOD = 0.05
 addon.DarkSuccorBuffValue = 2.0
 
