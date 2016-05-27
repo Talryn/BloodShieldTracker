@@ -64,7 +64,7 @@ local damageTaken = {}
 local removeList = {}
 
 -- Constants from abilities / gear.
-local dsHealModifier = 0.30  -- Percent of the DS Heal from the tooltip.
+local dsHealModifier = 0.20  -- Percent of the DS Heal from the tooltip.
 local dsMinHealPercent = 0.07
 local dsMinHealPercentSuccor = 0.20
 local vbHealingBonus = 0.30
