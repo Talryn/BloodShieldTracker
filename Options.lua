@@ -32,21 +32,21 @@ end
 
 function BloodShieldTracker:GetOptions()
 	if not addon.options then
-  	addon.options = {
-    	type = "group",
-      name = _G.GetAddOnMetadata(ADDON_NAME, "Title"),
-      args = {
+		addon.options = {
+	    	type = "group",
+			name = _G.GetAddOnMetadata(ADDON_NAME, "Title"),
+			args = {
 				core = self:GetGeneralOptions(),
 				shieldBarOpts = self:GetShieldBarOptions(),
-				bloodChargeOpts = self:GetBloodChargeBarOptions(),
 				boneShieldOpts = self:GetBoneShieldBarOptions(),
 				pwsBarOpts = self:GetPWSBarOptions(),
 				absorbsBarOpts = self:GetAbsorbsBarOptions(),
 				purgatoryBarOpts = self:GetPurgatoryBarOptions(),
 				amsBarOpts = self:GetAMSBarOptions(),
 				skinningOpts = self:GetSkinningOptions(),
-    	}
-  	}
+	    	}
+	  	}
+
 		addon.options.args.profile = 
 			_G.LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
 
@@ -57,8 +57,8 @@ function BloodShieldTracker:GetOptions()
 				addon.options.args[name] = opts
 			end
 		end
-  end
-  return addon.options
+	end
+	return addon.options
 end
 
 function BloodShieldTracker:AddDimensionOptions(opts, barName, order)
@@ -870,120 +870,6 @@ function BloodShieldTracker:GetShieldBarOptions()
 	self:AddAppearanceOptions(shieldBarOpts, "ShieldBar")
 	self:AddAdvancedPositioning(shieldBarOpts, "ShieldBar")
 	return shieldBarOpts
-end
-
-function BloodShieldTracker:GetBloodChargeBarOptions()
-	local bloodChargeOpts = {
-		order = 2,
-		type = "group",
-		name = L["Blood Charge Bar"],
-		desc = L["Blood Charge Bar"],
-		args = {
-		    description = {
-		        order = 1,
-		        type = "description",
-		        name = L["BloodChargeBar_Desc"],
-		    },
-            generalOptions = {
-                order = 2,
-                type = "header",
-                name = L["General Options"],
-            },
-    		status_bar_enabled = {
-				name = L["Enabled"],
-				desc = L["EnableBarDesc"],
-				type = "toggle",
-				order = 10,
-				set = function(info, val)
-				    self.db.profile.bars["BloodChargeBar"].enabled = val
-					self.bars["BloodChargeBar"]:UpdateVisibility()
-				end,
-                get = function(info)
-					return self.db.profile.bars["BloodChargeBar"].enabled
-				end,
-			},
-			lock_bar = {
-				name = L["Lock bar"],
-				desc = L["LockBarDesc"],
-				type = "toggle",
-				order = 20,
-				set = function(info, val)
-				    self.db.profile.bars["BloodChargeBar"].locked = val 
-					self.bars["BloodChargeBar"]:Lock()
-				end,
-                get = function(info)
-					return self.db.profile.bars["BloodChargeBar"].locked
-				end,
-			},
-			progress = {
-				name = L["Progress Bar"],
-				desc = L["BloodChargeProgress_OptionDesc"],
-				type = "select",
-				values = {
-				    ["None"] = L["None"],
-				    ["Time"] = L["Time Remaining"],
-				    ["Charges"] = L["Charges"]
-				},
-				order = 40,
-				set = function(info, val)
-				    self.db.profile.bars["BloodChargeBar"].progress = val
-			        self:UpdateBloodChargeBarMode()
-				end,
-                get = function(info)
-                    return self.db.profile.bars["BloodChargeBar"].progress
-                end,
-			},
-            timeRemaining = {
-                order = 100,
-                type = "header",
-                name = L["Time Remaining"],
-            },
-			show_time = {
-				name = L["Show Time"],
-				desc = L["ShowTime_OptionDesc"],
-				type = "toggle",
-				order = 110,
-				set = function(info, val)
-				    self.db.profile.bars["BloodChargeBar"].show_time = val
-				    if val then
-				        self.bars["BloodChargeBar"].bar.time:Show()
-			        else
-			            self.bars["BloodChargeBar"].bar.time:Hide()
-		            end
-				end,
-                get = function(info)
-                    return self.db.profile.bars["BloodChargeBar"].show_time
-                end,
-			},
-			time_pos = {
-				name = L["Position"],
-				desc = L["TimePosition_OptionDesc"],
-				type = "select",
-				values = {
-				    ["RIGHT"] = L["Right"],
-				    ["LEFT"] = L["Left"],
-				},
-				order = 120,
-				set = function(info, val)
-				    self.db.profile.bars["BloodChargeBar"].time_pos = val
-			        self.bars["BloodChargeBar"].bar.time:SetPoint(val or "RIGHT")
-			        self.bars["BloodChargeBar"].bar.time:SetJustifyH(val or "RIGHT")
-				end,
-                get = function(info)
-                    return self.db.profile.bars["BloodChargeBar"].time_pos
-                end,
-                disabled = function()
-                    return not self.db.profile.bars["BloodChargeBar"].show_time
-                end,
-			},
-		},
-	}
-	self:AddDimensionOptions(bloodChargeOpts, "BloodChargeBar")
-	self:AddPositionOptions(bloodChargeOpts, "BloodChargeBar")
-	self:AddColorsOptions(bloodChargeOpts, "BloodChargeBar")
-	self:AddAppearanceOptions(bloodChargeOpts, "BloodChargeBar")
-	self:AddAdvancedPositioning(bloodChargeOpts, "BloodChargeBar")
-	return bloodChargeOpts
 end
 
 function BloodShieldTracker:GetBoneShieldBarOptions()

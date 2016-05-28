@@ -523,14 +523,6 @@ addon.defaults = {
 				width = 100,
 				y = -90,
 			},
-			["BloodChargeBar"] = {
-				enabled = false,
-				progress = "Time",
-				show_time = false,
-				time_pos = "RIGHT",
-				x = -90,
-				y = -90,
-			},
 			["EstimateBar"] = {
 				enabled = true,
 				hide_ooc = false,
@@ -698,7 +690,6 @@ function BloodShieldTracker:OnInitialize()
 	self.pwsbar = Bar:Create("PWSBar", "PW:S Bar", false)
 	self.absorbsbar = Bar:Create("TotalAbsorbsBar", "Total Absorbs Bar", false)
 	self.purgatorybar = Bar:Create("PurgatoryBar", "Purgatory Bar", false)
-	self.bloodchargebar = Bar:Create("BloodChargeBar", "Blood Charge Bar", true)
 	self.boneshieldbar = Bar:Create("BoneShieldBar", "Bone Shield Bar", true)
 	self.amsbar = Bar:Create("AMSBar", "Anti-Magic Shell Bar", true)
 
@@ -914,8 +905,6 @@ function BloodShieldTracker:OnEnable()
 			displayName, displayName, nil, "core")
 		self.optionsFrame.ShieldBar = ACD:AddToBlizOptions(
 			displayName, L["Blood Shield Bar"], displayName, "shieldBarOpts")
-		self.optionsFrame.BloodChargeBar = ACD:AddToBlizOptions(
-			displayName, L["Blood Charge Bar"], displayName, "bloodChargeOpts")
 		self.optionsFrame.BoneShieldBar = ACD:AddToBlizOptions(
 			displayName, L["Bone Shield Bar"], displayName, "boneShieldOpts")
 		self.optionsFrame.PriestBar = ACD:AddToBlizOptions(
@@ -1348,17 +1337,6 @@ function BloodShieldTracker:UpdateShieldBarMode()
     end
 end
 
-function BloodShieldTracker:UpdateBloodChargeBarMode()
-	local bar = self.bloodchargebar
-    if bar.db.progress == "Charges" then
-        bar.bar:SetMinMaxValues(0, addon.MAX_BLOOD_CHARGES)
-        bar.bar:SetValue(0)
-    else
-        bar.bar:SetMinMaxValues(0, 1)
-        bar.bar:SetValue(1)        
-    end
-end
-
 function BloodShieldTracker:UpdateBoneShieldBarMode()
 	local bar = self.boneshieldbar
     if bar.db.progress == "Charges" then
@@ -1625,35 +1603,6 @@ local function onUpdateShieldBar(self, elapsed)
 	end
 end
 
-local function onUpdateBloodCharge(self, elapsed)
-	self.lastUpdate = (self.lastUpdate or 0) + elapsed
-	self.timer = self.timer - elapsed
-	if self.lastUpdate >= 0.1 then
-		if self.active then
-			if self.timer < 0 then
-				self.timer = 0
-				self.active = false
-				self:SetScript("OnUpdate", nil)
-				self:Hide()
-			else
-				local profile = BloodShieldTracker.db.profile.bars["BloodChargeBar"]
-				if profile.show_time then
-					self.time:SetText(tostring(round(self.timer)))
-				end
-				if profile.progress == "Time" then
-					self:SetValue(self.timer)
-				elseif profile.progress == "Charges" then
-					self:SetValue(self.count)
-				end
-				self:Show()
-			end
-		else
-			self:Hide()
-		end
-		self.lastUpdate = 0
-	end
-end
-
 local function onUpdateBoneShield(self, elapsed)
 	self.lastUpdate = (self.lastUpdate or 0) + elapsed
 	self.timer = self.timer - elapsed
@@ -1726,7 +1675,6 @@ local TrackWithDataNames = {
 	["Blood Shield"] = true,
 	["Bone Shield"] = false,
 	["Anti-Magic Shell"] = true,
-	["Blood Charge"] = false,
 }
 local TrackWithData = {}
 for k, v in pairs(TrackWithDataNames) do
@@ -1876,31 +1824,6 @@ function BloodShieldTracker:CheckAuras()
 
 	-- Checking to see if it is necessary to always update the estimates
 	--self:UpdateEstimates("CheckAura", "player")
-
-	if self.db.profile.bars["BloodChargeBar"].enabled then
-		local bcBar = self.bloodchargebar
-		if AurasFound["Blood Charge"] then
-			local data = AuraData["Blood Charge"]
-			bcBar.bar.timer = data.expires - GetTime()
-			if bcBar.db.progress == "Charges" then
-				bcBar.bar:SetMinMaxValues(0, addon.MAX_BLOOD_CHARGES)
-			elseif bcBar.db.progress == "Time" then
-				bcBar.bar:SetMinMaxValues(0, data.duration)
-			else
-				bcBar.bar:SetMinMaxValues(0, 1)
-			end
-			bcBar.bar.value:SetText(tostring(data.count))
-			bcBar.bar.active = true
-			bcBar.bar.count = data.count
-			bcBar.bar:Show()
-			bcBar.bar:SetScript("OnUpdate", onUpdateBloodCharge)
-		else
-			bcBar.bar.active = false
-			bcBar.bar.timer = 0
-			bcBar.bar:SetScript("OnUpdate", nil)
-			bcBar:Hide()
-		end
-	end
 
 	if self.db.profile.bars["BoneShieldBar"].enabled and addon.IsBloodTank then
 		local bar = self.boneshieldbar
