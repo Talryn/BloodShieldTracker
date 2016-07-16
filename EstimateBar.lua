@@ -589,7 +589,7 @@ local function UpdateTime(self, elapsed)
 end
 
 function EstimateBar:GetEffectiveHealingBuffModifiers()
-    return (1+iccBuffAmt) * (1+vbHealingInc) * (1+gsHealModifier) * (1+luckOfTheDrawAmt) * (1+versatilityPercent)
+    return (1+iccBuffAmt) * (1+vbHealingInc) * (1+gsHealModifier) * (1+luckOfTheDrawAmt)
 end
 
 function EstimateBar:GetEffectiveHealingDebuffModifiers()
@@ -748,7 +748,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
             local predictedHeal = 0
             if healingDebuffMultiplier ~= 1 then 
                 predictedHeal = round(
-                    recentDmg * dsHealModifier * Tier14Bonus  *
+                    recentDmg * dsHealModifier * Tier14Bonus  * (1+versatilityPercent) *
                     self:GetEffectiveHealingBuffModifiers() * 
                     self:GetEffectiveHealingDebuffModifiers())
             end
@@ -793,7 +793,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
                 isMinimum = true
                 shieldValue = bsMinimum
             end
-            predictedHeal = round(recentDmg * dsHealModifier * Tier14Bonus *
+            predictedHeal = round(recentDmg * dsHealModifier * Tier14Bonus * (1+versatilityPercent) *
                 self:GetEffectiveHealingBuffModifiers() * 
                 self:GetEffectiveHealingDebuffModifiers())
         end
