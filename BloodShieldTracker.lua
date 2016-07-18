@@ -241,14 +241,14 @@ local AbsorbShieldsOrdered = {
 	"Blood Shield",
 	"Power Word: Shield",
 	"Clarity of Will",
-	"Divine Aegis",
+	--"Divine Aegis",
 	"Life Cocoon",
-	"Spirit Shell",
-	"Guard",
-	"Saved by the Light",
-	"Sacred Shield",
+	--"Spirit Shell",
+	--"Guard",
+	--"Saved by the Light",
+	--"Sacred Shield",
 	"Anti-Magic Shell",
-	"Indomitable Pride",
+	--"Indomitable Pride",
 }
 local AbsorbShields = {}
 for i, k in ipairs(AbsorbShieldsOrdered) do
