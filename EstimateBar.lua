@@ -625,7 +625,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
 	        local spellName = param10 or "n/a"
 			local school = param11
 	        local schoolName = addon.GetSpellSchool(school) or "N/A"
-	        if addon.db.profile.debug then
+	        if addon.db.profile.debug and addon.db.profile.debugdmg then
 	            local spellAbsFmt = "Spell Absorbed (%s-%s,%d) %d by %s"
 	            BST:Print(spellAbsFmt:format(spellName, schoolName, school, absorbed, absorbName))
 	        end
@@ -633,7 +633,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
 			absorbed = param16
 			absorbId = param13
 			absorbName = param14
-	        if addon.db.profile.debug then
+	        if addon.db.profile.debug and addon.db.profile.debugdmg then
 	            local spellAbsFmt = "Spell Absorbed (None) %d by %s"
 	            BST:Print(spellAbsFmt:format(absorbed, absorbName))
 	        end
@@ -666,7 +666,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
         if eventtype:find("SWING_") and param9 then
             local damage, absorb = param9, param14 or 0
 
-            if addon.db.profile.debug then
+            if addon.db.profile.debug and addon.db.profile.debugdmg then
                 local swingDmgFmt = "Swing Damage for %d [%d absorbed, %s]"
                 BST:Print(swingDmgFmt:format(damage, absorb, eventtype))
             end
@@ -695,7 +695,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
             if spellName == SpellIds["Spirit Link"] and 
 				srcName == SpellNames["Spirit Link Totem"] then
                 countDamage = false
-                if addon.db.profile.debug then
+                if addon.db.profile.debug and addon.db.profile.debugdmg then
                     BST:Print("Ignoring Spirit Link damage of "..(damage or 0))
                 end
             end
@@ -704,7 +704,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
                 self:AddDamageTaken(timestamp, damage)
             end
 
-            if addon.db.profile.debug then
+            if addon.db.profile.debug and addon.db.profile.debugdmg then
                 local spellDmgFmt = "%s Damage (%s-%s,%d) for %d [%d absorbed]"
                 BST:Print(spellDmgFmt:format(
                     type, spellName, schoolName, school, damage, absorb))
@@ -718,7 +718,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
     			local damage = 0
    			    damage = param11 or 0
 
-                if addon.db.profile.debug then
+                if addon.db.profile.debug and addon.db.profile.debugdmg then
                     local absorbFmt = "Absorbed swing for %d"
                     BST:Print(absorbFmt:format(damage))
                 end
@@ -731,7 +731,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
                 local spellName, school = param10 or "n/a", param11 or 0
                 local schoolName = addon.GetSpellSchool(school) or "N/A"
 
-                if addon.db.profile.debug then
+                if addon.db.profile.debug and addon.db.profile.debugdmg then
                     local absorbFmt = "Absorbed spell (%s-%s,%d) for %d"
                     BST:Print(absorbFmt:format(spellName, schoolName, school, damage))
                 end

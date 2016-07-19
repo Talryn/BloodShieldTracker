@@ -457,6 +457,7 @@ addon.defaults = {
 		},
         verbose = false,
 		debug = false,
+		debugdmg = false,
         enable_only_for_blood = true,
         precision = "Zero",
 		numberFormat = "Abbreviated",
@@ -647,6 +648,16 @@ function BloodShieldTracker:ChatCommand(input)
 			elseif cmds[2] and cmds[2] == "off" then
 				self.db.profile.debug = false
 				self:Print("Debugging off.")
+			elseif cmds[2] and cmds[2] == "dmg" then
+				if cmds[3] and cmds[3] == "on" then
+					self.db.profile.debugdmg = true
+					self:Print("Debugging: damage on.")
+				elseif cmds[3] and cmds[3] == "off" then
+					self.db.profile.debugdmg = false
+					self:Print("Debugging: damage off.")
+				else
+					self:Print("Debugging: damage is "..(self.db.profile.debugdmg and "on." or "off."))
+				end
 			else
 				self:Print("Debugging is "..(self.db.profile.debug and "on." or "off."))
 			end
