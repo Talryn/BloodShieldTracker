@@ -1080,8 +1080,12 @@ function BloodShieldTracker:CheckTalents5()
 			elseif texture == "Interface\\Icons\\Spell_Deathknight_UnholyPresence" then
 				addon.currentSpec = "Unholy"
 			else
-				self:Print("Error detecing player spec.")
-				addon.currentSpec = "Blood"
+				if addon.db.profile.debug then
+					local fmt = "Could not detect player spec. [%s,%s,%s,%s]"
+					self:Print(fmt:format(_G.tostring(activeSpecNum), _G.tostring(id), 
+						_G.tostring(name), _G.tostring(texture)))
+				end
+				addon.currentSpec = addon.currentSpec or "Blood"
 			end
 			if addon.currentSpec == "Blood" then
 				addon.IsBloodTank = true
