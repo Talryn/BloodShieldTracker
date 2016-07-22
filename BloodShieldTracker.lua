@@ -261,25 +261,6 @@ local GlyphIds = {
 	["Vampiric Blood"] = 58676,
 }
 
-local ICCBuffs = {
-	Horde = {
-		[SpellIds["Hellscream's Warsong 05"]] = 0.05,
-		[SpellIds["Hellscream's Warsong 10"]] = 0.10,
-		[SpellIds["Hellscream's Warsong 15"]] = 0.15,
-		[SpellIds["Hellscream's Warsong 20"]] = 0.20,
-		[SpellIds["Hellscream's Warsong 25"]] = 0.25,
-		[SpellIds["Hellscream's Warsong 30"]] = 0.30,
-	},
-	Alliance = {
-		[SpellIds["Strength of Wrynn 05"]] = 0.05,
-		[SpellIds["Strength of Wrynn 10"]] = 0.10,
-		[SpellIds["Strength of Wrynn 15"]] = 0.15,
-		[SpellIds["Strength of Wrynn 20"]] = 0.20,
-		[SpellIds["Strength of Wrynn 25"]] = 0.25,
-		[SpellIds["Strength of Wrynn 30"]] = 0.30,
-	}
-}
-
 local scentBloodStackBuff = 0.2
 local vbGlyphedHealthInc = 0.0
 local vbGlyphedHealingInc = 0.25

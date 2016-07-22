@@ -152,6 +152,8 @@ function Bar:Initialize()
 	if self.name == "BoneShieldBar" then
 		self.bar.recharge = 0
 	end
+	
+	self:UpdateUI()
 end
 
 function Bar:UpdateVisibility()
