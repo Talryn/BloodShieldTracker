@@ -1,8 +1,8 @@
 local _G = getfenv(0)
 local ADDON_NAME, addon = ...
 local LibStub = _G.LibStub
-local BST = LibStub("AceAddon-3.0"):GetAddon(addon.addonName)
-local L = LibStub("AceLocale-3.0"):GetLocale(addon.addonName)
+local BST = LibStub("AceAddon-3.0"):GetAddon(addon.addonNameCondensed)
+local L = LibStub("AceLocale-3.0"):GetLocale(addon.addonNameCondensed)
 
 -- Local versions for performance
 local ceil = _G.math.ceil
@@ -121,11 +121,26 @@ local ICCBuffs = {
 }
 
 function EstimateBar:OnInitialize()
-	self.estimatebar = addon.Bar:Create("EstimateBar", "Estimate Bar", false)
+	self.estimatebar = addon.Bar:Create({
+		name = "EstimateBar",
+		friendlyName = "Estimate Bar",
+		initTimer = false,
+		disableAnchor = false,
+		hasBorder = true,
+		functions = {
+			GetWidth = function(self)
+				return self.db.width
+			end,
+			GetHeight = function(self)
+				return self.db.height
+			end,
+			SetPoint = addon.SetPointWithAnchor,
+		},
+	})
 end
 
 function EstimateBar:Enable()
-	if BST.db.profile.bars["EstimateBar"].enabled then
+	if self.estimatebar.db.enabled then
 		self:OnEnable()
 	else
 		self:OnDisable()
@@ -208,7 +223,7 @@ end
 local EventFrames = {}
 
 function EstimateBar:ToggleEstimateBar()
-	if BST.db.profile.bars["EstimateBar"].enabled then
+	if self.estimatebar.db.enabled then
 		for unit, events in _G.pairs(UnitEvents) do
 			local frame = EventFrames[unit] or _G.CreateFrame("Frame",
 					ADDON_NAME.."_ESTBAR_EventFrame_"..unit)
@@ -230,7 +245,7 @@ function EstimateBar:ToggleEstimateBar()
 			if frame and frame.UnregisterAllEvents then frame:UnregisterAllEvents() end
 		end
 	end
-	BST.bars["EstimateBar"]:UpdateVisibility()
+	self.estimatebar:UpdateVisibility()
 end
 
 local function UpdateTime(self, elapsed)
@@ -486,7 +501,7 @@ function EstimateBar:UNIT_SPELLCAST_SENT(event, unit, spellName)
 	if unit == "player" and spellName == SpellNames["Death Strike"] then
 		DS_SentTime = GetTime()
 		if addon.db.profile.debug then
-			BST:Print(EstDSHealFmt:format(estimatedDS))
+			addon:Print(EstDSHealFmt:format(estimatedDS))
 		end
 	end
 end
@@ -500,7 +515,7 @@ function EstimateBar:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, rank, line
 	            if diff > 0 then
 	                DS_Latency = diff
 	                if addon.db.profile.debug then
-	                    BST:Print("DS Latency: "..DS_Latency)
+	                    addon:Print("DS Latency: "..DS_Latency)
 	                end
 	                -- If the latency appears overly large then cap it at 2 seconds.
 	                if DS_Latency > 2 then 
@@ -646,7 +661,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
 	        local schoolName = addon.GetSpellSchool(school) or "N/A"
 	        if addon.db.profile.debug and addon.db.profile.debugdmg then
 	            local spellAbsFmt = "Spell Absorbed (%s-%s,%d) %d by %s"
-	            BST:Print(spellAbsFmt:format(spellName, schoolName, school, absorbed, absorbName))
+	            addon:Print(spellAbsFmt:format(spellName, schoolName, school, absorbed, absorbName))
 	        end
 		else
 			absorbed = param16
@@ -654,7 +669,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
 			absorbName = param14
 	        if addon.db.profile.debug and addon.db.profile.debugdmg then
 	            local spellAbsFmt = "Spell Absorbed (None) %d by %s"
-	            BST:Print(spellAbsFmt:format(absorbed, absorbName))
+	            addon:Print(spellAbsFmt:format(absorbed, absorbName))
 	        end
 		end
 
@@ -664,7 +679,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
 
 		--         if addon.db.profile.debug then
 		-- 	local fmt = "SPELL_ABSORBED %s %s %s %s %s %s %s %s %s %s %s %s"
-		-- 	BST:Print(fmt:format(
+		-- 	addon:Print(fmt:format(
 		-- 		_G.tostring(param9),
 		-- 		_G.tostring(param10),
 		-- 		_G.tostring(param11),
@@ -687,7 +702,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
 
             if addon.db.profile.debug and addon.db.profile.debugdmg then
                 local swingDmgFmt = "Swing Damage for %d [%d absorbed, %s]"
-                BST:Print(swingDmgFmt:format(damage, absorb, eventtype))
+                addon:Print(swingDmgFmt:format(damage, absorb, eventtype))
             end
 
             self:AddDamageTaken(timestamp, damage)

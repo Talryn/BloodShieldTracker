@@ -7,7 +7,13 @@ local floor, abs = _G.math.floor, _G.math.abs
 local tonumber = _G.tonumber
 local tostring = _G.tostring
 
-addon.addonName = "BloodShieldTracker"
+addon.addonName = "Blood Shield Tracker"
+addon.addonNameCondensed = "BloodShieldTracker"
+
+-- Add an external frame for anchoring.
+addon.FrameNames = {
+	["Compact Runes"] = "CompactRunes_RunicPowerBar",
+}
 
 -- Try to remove the Git hash at the end, otherwise return the passed in value.
 local function cleanupVersion(version)
@@ -49,6 +55,12 @@ end
 addon.callbacks = {
 	["Auras"] = {},
 	["GearUpdate"] = {},
+	["TalentUpdate"] = {},
+	["CombatStart"] = {},
+	["CombatEnd"] = {},
+	["ProfileUpdate"] = {},
+	["PlayerAlive"] = {},
+	["PlayerDead"] = {},
 }
 function addon:RegisterCallback(event, name, func)
 	local callbacks = addon.callbacks[event]
@@ -175,4 +187,29 @@ function addon.GetSpellSchool(school)
         [7] = "Arcane"
     }
     return schools[school] or "Special"
+end
+
+addon.UpdateDisplayEvents = {
+	["PlayerAura"] = {},
+	["SpellCooldown"] = {},
+	["CombatStart"] = {},
+	["CombatEnd"] = {},
+}
+
+function addon:BarDisplayUpdateForEvent(event)
+	for bar, enabled in pairs(addon.UpdateDisplayEvents[event] or {}) do
+		if bar and enabled and bar.UpdateDisplay then
+			bar:UpdateDisplay(event)
+		end
+	end
+end
+
+function addon:BarDisplayAdd(event, bar)
+	local events = addon.UpdateDisplayEvents[event]
+	events[bar] = true
+end
+
+function addon:BarDisplayRemove(event, bar)
+	local events = addon.UpdateDisplayEvents[event]
+	events[bar] = nil
 end

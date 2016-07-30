@@ -12,10 +12,11 @@ locale.xml
 
 Core.lua
 Constants.lua
+Talents.lua
 Bar.lua
 BloodShieldTracker.lua
 Options.lua
 EstimateBar.lua
-BoneWallTracker.lua
 HealthBar.lua
+TargetSwingTimer.lua
 Migration.lua

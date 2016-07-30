@@ -1,8 +1,8 @@
 local _G = getfenv(0)
 local ADDON_NAME, addon = ...
 local LibStub = _G.LibStub
-local BST = LibStub("AceAddon-3.0"):GetAddon(addon.addonName)
-local L = LibStub("AceLocale-3.0"):GetLocale(addon.addonName)
+local BST = LibStub("AceAddon-3.0"):GetAddon(addon.addonNameCondensed)
+local L = LibStub("AceLocale-3.0"):GetLocale(addon.addonNameCondensed)
 
 local ceil = _G.math.ceil
 local tostring = _G.tostring
@@ -39,11 +39,26 @@ addon.defaults.profile.bars["HealthBar"] = {
 }
 
 function HealthBar:OnInitialize()
-	self.healthbar = addon.Bar:Create("HealthBar", "Health Bar", false)
+	self.healthbar = addon.Bar:Create({
+		name = "HealthBar",
+		friendlyName = "Health Bar",
+		initTimer = false,
+		disableAnchor = false,
+		hasBorder = true,
+		functions = {
+			GetWidth = function(self)
+				return self.db.width
+			end,
+			GetHeight = function(self)
+				return self.db.height
+			end,
+			SetPoint = addon.SetPointWithAnchor,
+		},
+	})
 end
 
 function HealthBar:Enable()
-	if BST.db.profile.bars["HealthBar"].enabled then
+	if self.healthbar.db.enabled then
 		self:OnEnable()
 	else
 		self:OnDisable()
@@ -145,7 +160,7 @@ function HealthBar:UNIT_HEALTH(event, unit)
 end
 
 function HealthBar:ToggleHealthBar()
-	if BST.db.profile.bars["HealthBar"].enabled then
+	if self.healthbar.db.enabled then
 		for unit, events in _G.pairs(UnitEvents) do
 			local frame = EventFrames[unit] or _G.CreateFrame("Frame",
 					ADDON_NAME.."_HB_EventFrame_"..unit)
@@ -169,7 +184,7 @@ function HealthBar:ToggleHealthBar()
 			if frame and frame.UnregisterAllEvents then frame:UnregisterAllEvents() end
 		end
 	end
-	BST.bars["HealthBar"]:UpdateVisibility()
+	self.healthbar:UpdateVisibility()
 end
 
 local percentIntFmt = "%d%%"
@@ -311,11 +326,11 @@ function HealthBar:GetHealthBarOptions()
 				},
 				order = 50,
 				set = function(info, val)
-				    BST.db.profile.bars["HealthBar"].text_format = val
+				    addon.db.profile.bars["HealthBar"].text_format = val
 			        self:UpdateHealthBar(false)
 				end,
                 get = function(info)
-                    return BST.db.profile.bars["HealthBar"].text_format
+                    return addon.db.profile.bars["HealthBar"].text_format
                 end,
 			},
             colors = {
@@ -330,12 +345,12 @@ function HealthBar:GetHealthBarOptions()
 				type = "color",
 				hasAlpha = true,
 				set = function(info, r, g, b, a)
-				    local c = BST.db.profile.bars["HealthBar"].textcolor
+				    local c = addon.db.profile.bars["HealthBar"].textcolor
 				    c.r, c.g, c.b, c.a = r, g, b, a
 			        self.healthbar:UpdateGraphics()
 				end,
 				get = function(info)
-			        local c = BST.db.profile.bars["HealthBar"].textcolor
+			        local c = addon.db.profile.bars["HealthBar"].textcolor
 				    return c.r, c.g, c.b, c.a
 				end,					
 			},
@@ -346,12 +361,12 @@ function HealthBar:GetHealthBarOptions()
 				type = "color",
 				hasAlpha = true,
 				set = function(info, r, g, b, a)
-				    local c = BST.db.profile.bars["HealthBar"].color
+				    local c = addon.db.profile.bars["HealthBar"].color
 				    c.r, c.g, c.b, c.a = r, g, b, a
 			        self.healthbar:UpdateGraphics()
 				end,
 				get = function(info)
-			        local c = BST.db.profile.bars["HealthBar"].color
+			        local c = addon.db.profile.bars["HealthBar"].color
 				    return c.r, c.g, c.b, c.a
 				end,					
 			},
@@ -362,12 +377,12 @@ function HealthBar:GetHealthBarOptions()
 				type = "color",
 				hasAlpha = true,
 				set = function(info, r, g, b, a)
-				    local c = BST.db.profile.bars["HealthBar"].bgcolor
+				    local c = addon.db.profile.bars["HealthBar"].bgcolor
 				    c.r, c.g, c.b, c.a = r, g, b, a
 			        self.healthbar:UpdateGraphics()
 				end,
 				get = function(info)
-			        local c = BST.db.profile.bars["HealthBar"].bgcolor
+			        local c = addon.db.profile.bars["HealthBar"].bgcolor
 				    return c.r, c.g, c.b, c.a
 				end,					
 			},
@@ -383,12 +398,12 @@ function HealthBar:GetHealthBarOptions()
 				type = "color",
 				hasAlpha = true,
 				set = function(info, r, g, b, a)
-				    local c = BST.db.profile.bars["HealthBar"].alt_textcolor
+				    local c = addon.db.profile.bars["HealthBar"].alt_textcolor
 				    c.r, c.g, c.b, c.a = r, g, b, a
 			        self.healthbar:UpdateGraphics()
 				end,
 				get = function(info)
-			        local c = BST.db.profile.bars["HealthBar"].alt_textcolor
+			        local c = addon.db.profile.bars["HealthBar"].alt_textcolor
 				    return c.r, c.g, c.b, c.a
 				end,					
 			},
@@ -399,12 +414,12 @@ function HealthBar:GetHealthBarOptions()
 				type = "color",
 				hasAlpha = true,
 				set = function(info, r, g, b, a)
-				    local c = BST.db.profile.bars["HealthBar"].alt_color
+				    local c = addon.db.profile.bars["HealthBar"].alt_color
 				    c.r, c.g, c.b, c.a = r, g, b, a
 			        self.healthbar:UpdateGraphics()
 				end,
 				get = function(info)
-			        local c = BST.db.profile.bars["HealthBar"].alt_color
+			        local c = addon.db.profile.bars["HealthBar"].alt_color
 				    return c.r, c.g, c.b, c.a
 				end,					
 			},
@@ -415,12 +430,12 @@ function HealthBar:GetHealthBarOptions()
 				type = "color",
 				hasAlpha = true,
 				set = function(info, r, g, b, a)
-				    local c = BST.db.profile.bars["HealthBar"].alt_bgcolor
+				    local c = addon.db.profile.bars["HealthBar"].alt_bgcolor
 				    c.r, c.g, c.b, c.a = r, g, b, a
 			        self.healthbar:UpdateGraphics()
 				end,
 				get = function(info)
-			        local c = BST.db.profile.bars["HealthBar"].alt_bgcolor
+			        local c = addon.db.profile.bars["HealthBar"].alt_bgcolor
 				    return c.r, c.g, c.b, c.a
 				end,					
 			},

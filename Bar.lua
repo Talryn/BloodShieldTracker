@@ -1,111 +1,228 @@
 local _G = getfenv(0)
 local ADDON_NAME, addon = ...
 
-local tostring = _G.tostring
-local type = _G.type
-
 local LSM = _G.LibStub:GetLibrary("LibSharedMedia-3.0")
 
-local function IsFrame(frame)
-	if frame and type(frame) == "string" then
-		local f = _G.GetClickFrame(frame)
-		if f and type(f) == "table" and f.SetPoint and f.GetName then
-			return true
-		end
-	end
-	return false
-end
-
-addon.FrameNames = {
-	["Compact Runes"] = "CompactRunes_RunicPowerBar",
-}
-
 local Bar = {}
+
+-- Table which has pointers to all the bars.
+addon.bars = {}
+
+-- Table of possible anchor points.
+addon.FrameNames = addon.FrameNames or {}
+
 -- Define a generic class for the bars
 Bar.__index = Bar
 addon.Bar = Bar
 
-function Bar:Create(name, friendlyName, hasTimeRemaining, disableAnchor)
-  local object = _G.setmetatable({}, Bar)
-	object.name = name
-	object.friendlyName = friendlyName or name
-	object.anchorTries = 0
-	object.hasTimeRemaining = hasTimeRemaining
-	object:Initialize()
-	-- Add the bar to the addon's table of bars
-	addon.bars[name] = object
-	if disableAnchor ~= false then
+local function IsEnabled(self)
+	return self.db.enabled
+end
+
+function Bar:UpdateLayoutFunctions(functions)
+	if functions then
+		for name, func in _G.pairs(functions) do
+			if func and _G.type(func) == "function" then
+				self[name] = func
+			end
+		end
+		if self.bar then
+			self:UpdateVisibility()
+		end
+	end
+end
+
+local function getValueOrDefault(value, default)
+	return value == nil and default or value
+end
+
+function Bar:Create(settings)
+	-- Old params: name, fontAdj, width, height, setPoint, setValuePoint
+	local object = _G.setmetatable({}, Bar)
+	object.name = settings.name
+	object.friendlyName = settings.friendlyName or settings.name
+	object.fontAdj = settings.fontAdj or 0
+	object.parentFrame = getValueOrDefault(settings.parentFrame, addon.mainFrame or _G.UIParent)
+	object.hasBorder = getValueOrDefault(settings.hasBorder, false)
+	object.hasOwnTexture = getValueOrDefault(settings.hasOwnTexture, false)
+	object.setBarColor = getValueOrDefault(settings.setBarColor, true)
+	object.setBkgColor = getValueOrDefault(settings.setBkgColor, true)
+	object.setTxtColor = getValueOrDefault(settings.setTxtColor, true)
+	object.hideOnDisable = getValueOrDefault(settings.hideOnDisable, true)
+	object.updateSetPoint = getValueOrDefault(settings.updateSetPoint, true)
+	object.hasSecondaryValue = getValueOrDefault(settings.hasSecondaryValue, false)
+	object.secondaryFontAdj = settings.secondaryFontAdj
+	object.db = addon.db.profile.bars[settings.name]
+
+	if not object.IsEnabled then
+		object.IsEnabled = IsEnabled
+	end
+	
+	if settings.layout and addon.LayoutManager and addon.LayoutManager.RegisterLayout then
+		addon.LayoutManager:RegisterLayout(object, settings.layout)
+	end
+
+	if settings.width and _G.type(settings.width) ~= "function" then
+		object.GetWidth = function() return settings.width end
+	end
+
+	if settings.height and _G.type(settings.height) ~= "function" then
+		object.GetHeight = function() return settings.height end
+	end
+
+	if settings.functions then
+		for name, func in _G.pairs(settings.functions) do
+			if func and _G.type(func) == "function" then
+				object[name] = func
+			end
+		end
+	end
+
+	if not object.SetDesiredPoint then
+		object.SetDesiredPoint = function(self) return self:SetPoint() end
+	end
+
+	object:Initialize(settings)
+
+	if settings.disableAnchor ~= false then
 		addon.FrameNames[object.friendlyName] = object.bar:GetName()
 	end
-	object:UpdatePosition()
+
+	-- Add the bar to the addon's table of bars
+	addon.bars[settings.name] = object
+	
+	if object.PostInitialize and _G.type(object.PostInitialize) == "function" then
+		object:PostInitialize()
+	end
+
 	return object
 end
 
-function Bar:Initialize()
-	self.db = addon.db.profile.bars[self.name]
-  self.frameName = ADDON_NAME.."_"..self.name
-  local bar = _G.CreateFrame("StatusBar", self.frameName, _G.UIParent)
+function Bar:Initialize(settings)
+	local bar = _G.CreateFrame("StatusBar", 
+		addon.addonNameCondensed .. "_"  .. self.name, self.parentFrame)
 	self.bar = bar
-	bar.object = self
-  --bar:SetPoint("CENTER", _G.UIParent, "CENTER", self.db.x, self.db.y)
-	bar:SetScale(self.db.scale)
-  bar:SetOrientation("HORIZONTAL")
-  bar:SetWidth(self.db.width)
-  bar:SetHeight(self.db.height)
-	local bt = LSM:Fetch("statusbar", self.db.texture)
-  bar:SetStatusBarTexture(bt)
-  bar:GetStatusBarTexture():SetHorizTile(false)
-  bar:GetStatusBarTexture():SetVertTile(false)
-  local bc = self.db.color
-  bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-  bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-  bar.bg:SetTexture(bt)
-  bar.bg:SetAllPoints(true)
-  local bgc = self.db.bgcolor
-  bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-  bar.border = bar:CreateTexture(nil, "BACKGROUND")
-  bar.border:SetPoint("CENTER")
-  bar.border:SetWidth(bar:GetWidth()+9)
-  bar.border:SetHeight(bar:GetHeight()+8)
-  bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
-	if not self.db.border then
-		bar.border:Hide()
+	bar.parent = self
+	self.altcolor = false
+	bar:SetScale(1)
+	local orientation = "HORIZONTAL"
+	if self.GetOrientation and _G.type(self.GetOrientation) == "function" then
+		orientation = self:GetOrientation()
 	end
-	local font = LSM:Fetch("font", addon.db.profile.font_face)
-    bar.value = bar:CreateFontString(nil, "OVERLAY")
-    bar.value:SetPoint("CENTER")
-    bar.value:SetFont(font, 
-		addon.db.profile.font_size, 
-		addon:GetFontFlags())
-    bar.value:SetJustifyH("CENTER")
-    bar.value:SetShadowOffset(1, -1)
-    local tc = self.db.textcolor
-    bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-    bar.value:SetText("0")
-    bar.lock = false
-
-	if self.hasTimeRemaining then
-	    bar.time = bar:CreateFontString(nil, "OVERLAY")
-	    bar.time:SetPoint(self.db.time_pos or "RIGHT")
-	    bar.time:SetFont(font, 
-			addon.db.profile.font_size, 
-			addon:GetFontFlags())
-	    bar.time:SetJustifyH(self.db.time_pos or "RIGHT")
-	    bar.time:SetShadowOffset(1, -1)
-	    bar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-	    bar.time:SetText("0")
-	    if self.db.show_time then
-	        bar.time:Show()
-	    else
-	        bar.time:Hide()
-	    end
+	bar:SetOrientation(orientation)
+	bar:SetWidth(self:GetWidth())
+	bar:SetHeight(self:GetHeight())
+	local bt = LSM:Fetch("statusbar", addon.db.profile.texture)
+	bar:SetStatusBarTexture(bt)
+	bar:GetStatusBarTexture():SetHorizTile(false)
+	bar:GetStatusBarTexture():SetVertTile(false)
+	if self.setBarColor then
+		local bc = self.db.color
+		bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+	end
+	bar.bg = bar:CreateTexture(nil, "BACKGROUND")
+	bar.bg:SetTexture(bt)
+	bar.bg:SetAllPoints(true)
+	if self.setBkgColor then
+		local bgc = self.db.bgcolor
+		bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
 	end
 
+	local ff, fh, fflags = addon.GetFontSettings()
+	local font = LSM:Fetch("font", ff)
+	bar.value = bar:CreateFontString(nil, "OVERLAY")
+	bar.value:SetPoint("CENTER")
+	bar.value:SetFont(font, fh + self.fontAdj, fflags)
+	bar.value:SetJustifyH("CENTER")
+	--bar.value:SetShadowOffset(1, -1)
+	local tc = self.db.textcolor
+	bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+	if settings.setValueToZero then
+		bar.value:SetText("0")
+	end
+
+	if self.hasBorder then
+	    bar.border = bar:CreateTexture(nil, "BACKGROUND")
+	    bar.border:SetPoint("CENTER")
+	    bar.border:SetWidth(bar:GetWidth()+9)
+	    bar.border:SetHeight(bar:GetHeight()+8)
+	    bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
+	  	if not self.db.border then
+	  		bar.border:Hide()
+	  	end
+	end
+
+	if self.hasSecondaryValue then
+		bar.secondaryValue = bar:CreateFontString(nil, "OVERLAY")
+		bar.secondaryValue:SetPoint("RIGHT")
+		bar.secondaryValue:SetFont(font, fh + self.fontAdj - 1, fflags)
+		bar.secondaryValue:SetJustifyH("CENTER")
+		local tc = self.db.secondaryTextColor or self.db.textcolor
+		bar.secondaryValue:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+		bar.secondaryValue:SetText("0")
+		bar.secondaryValue:Hide()
+		if self.SetSecondaryValuePoint then
+			self:SetSecondaryValuePoint()
+		end
+	end
+
+	if self.SetPoint then self:SetPoint() end
+	if self.SetValuePoint then
+		self:SetValuePoint()
+	else
+	    bar.value:SetPoint("CENTER")
+	end
+
+	if settings.initTimer then
+		bar.active = false
+		bar.timer = 0
+		bar:Hide()
+	end
+
+	if self.db.shown == false then
+		self.bar:SetStatusBarTexture("")
+		self.bar.bg:SetTexture("")
+		self.bar.border:Hide()
+	end
+
+	bar.locked = true
+	bar.updateVisibilityOnLock = settings.updateVisibilityOnLock
+end
+
+function Bar:Show()
+	self.bar:Show()
+end
+
+function Bar:Hide()
+	if addon.configMode then return end
+	self.bar:Hide()
+end
+
+function Bar:IsLocked()
+	return self.bar.locked
+end
+
+function Bar:Lock(locked)
+	if locked ~= nil then
+		self.bar.locked = locked
+	end
+	self.bar:EnableMouse(not self.bar.locked)
+	if self.updateVisibilityOnLock then
+		if not self.bar.locked then
+			self.bar:Show()
+		elseif not self.bar.active then
+			self.bar:Hide()
+		end
+	end
+end
+
+function Bar:SetMovable()
+	local bar = self.bar
     bar:SetMovable(true)
     bar:RegisterForDrag("LeftButton")
     bar:SetScript("OnDragStart",
         function(self, button)
-			if not self.lock then
+			if not self.locked then
             	self:StartMoving()
 			end
         end)
@@ -119,151 +236,116 @@ function Bar:Initialize()
 			y = y - _G.GetScreenHeight()/2
 			x = x / self:GetScale()
 			y = y / self:GetScale()
-			self.object.db.x, self.object.db.y = x, y
+			self.parent.db.x, self.parent.db.y = x, y
 			self:SetUserPlaced(false);
         end)
-    bar:EnableMouse(true)
-	bar.duration = 1
-    bar:SetMinMaxValues(0, bar.duration)
-    bar:SetValue(1)
-    bar:Hide()
-	self:Lock(self.db.locked)
-
-	if self.name == "HealthBar" or self.name == "EstimateBar" then
-		self.altcolor = false
-	end
-
-	if self.name == "ShieldBar" then
-		self.shield_curr = 0
-		self.shield_max = 0
-	    self.expires = 0
-	    self.active = false
-	elseif self.name == "BloodChargeBar" or self.name == "BoneShieldBar" 
-		or self.name == "BoneWallBar" then
-		self.bar.active = false
-		self.bar.timer = 0
-		self.bar.count = 0
-	elseif self.name == "AMSBar" then
-		self.bar.active = false
-		self.bar.timer = 0
-	--elseif self.name == "EstimateBar" then
-	--	self:UpdateEstimateBarText(dsHealMin)
-	end
-	if self.name == "BoneShieldBar" then
-		self.bar.recharge = 0
-	end
-	
-	self:UpdateUI()
+	self:Lock()
 end
 
-function Bar:UpdateVisibility()
-	if self.name == "HealthBar" then
-        if not self.db.enabled or 
-			(self.db.hide_ooc and (not _G.InCombatLockdown() or addon.idle)) then
-            if self.bar:IsVisible() then
-                self.bar:Hide()
-            end
-        else
-            self.bar:Show()
-        end
-	elseif self.name == "EstimateBar" then
-		if self.db.enabled and addon:IsTrackerEnabled() and
-			(not self.db.hide_ooc or _G.InCombatLockdown()) then
-			self.bar:Show()
-		else
-			self.bar:Hide()
-		end
-	elseif self.name == "BoneShieldBar" or self.name == "BoneWallBar" then
-		if not self.db.enabled or not addon.IsBloodTank then
-			self.bar:Hide()
-			self.bar:SetScript("OnUpdate", nil)
-		end
-	else
-		if not self.db.enabled then
-			self.bar:Hide()
-		end
-	end
-end
-
-function Bar:Hide()
-	if addon.configMode then return end
-	
-	self.bar:Hide()
-end
-
-function Bar:Lock(locked)
-	if locked == nil then
-		locked = self.db.locked
-	end
-
-	self.bar.lock = locked
-    if locked then
-        self.bar:EnableMouse(false)
-    else
-        self.bar:EnableMouse(true)
-    end
-end
-
+local numberFmt = "%.0f"
 function Bar:SetValue(value)
-	if self.db.enabled then
-		self.bar.value:SetText(addon.FormatNumber(value))
-	end
+	self.bar:SetValue(value)
+	self.bar.value:SetText(numberFmt:format(value))
+end
+
+function Bar:SetValueTextColor(color)
+   	local tc = color or self.db.textcolor
+   	self.bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 end
 
 function Bar:Reset()
-	self:Lock()
-	self:UpdatePosition()
-	self:UpdateTexture()
-	self:UpdateBorder()
-	self:UpdateUI()
+	self:ResetFonts()
+	self:UpdateVisibility()
+	--self:UpdateTexture()
 	self:UpdateGraphics()
 end
 
-function Bar:UpdatePosition()
-	local anchorFrame = addon.FrameNames[self.db.anchorFrame]
-	if not anchorFrame and self.db.anchorFrame == "Custom" then
-		anchorFrame = self.db.anchorFrameCustom
-	end
-
-	self.bar:ClearAllPoints()
-
-	local isFrame = IsFrame(anchorFrame)
-	local BST = addon.BloodShieldTracker
-	if anchorFrame and isFrame then
-		if addon.db.profile.debug then
-			BST:Print("Found anchor for bar '"..tostring(self.name).."'.")
-		end
-		self.bar:SetPoint(
-			self.db.anchorPt, anchorFrame, self.db.anchorFramePt, 
-			self.db.anchorX, self.db.anchorY)
-		self.anchorTries = 0
-	else
-		self.bar:SetPoint("CENTER", _G.UIParent, "CENTER", self.db.x, self.db.y)
-		if anchorFrame and not isFrame and self.anchorTries < 13 then
-			if addon.db.profile.debug then
-				BST:Print("Waiting for anchor for bar '"..tostring(self.name).."'.")
-			end
-	    	BST:ScheduleTimer(Bar.UpdatePosition, 5, self)
-			self.anchorTries = (self.anchorTries or 0) + 1
-		else
-			self.anchorTries = 0
-		end
+function Bar:ResetFonts()
+	local ff, fh, fontFlags = addon.GetFontSettings()
+	local font = LSM:Fetch("font", ff)
+	self.bar.value:SetFont(font, fh + self.fontAdj, fontFlags)
+	self.bar.value:SetText(self.bar.value:GetText())
+	if self.hasSecondaryValue and self.secondaryValue then
+		self.bar.secondaryValue:SetFont(font, 
+			fh + (self.secondaryFontAdj or self.fontAdj), fontFlags)
+		self.bar.secondaryValue:SetText(self.bar.secondaryValue:GetText())
 	end
 end
 
-function Bar:ResetFonts()
-	local ff, fh, fontFlags = addon:GetFontSettings()
-	self.bar.value:SetFont(ff, fh, fontFlags)						
-	self.bar.value:SetText(self.bar.value:GetText())
-	if self.hasTimeRemaining then
-		self.bar.time:SetFont(ff, fh, fontFlags)
-		self.bar.time:SetText(self.bar.time:GetText())
+function Bar:UpdateVisibility()
+	local orientation = "HORIZONTAL"
+	if self.GetOrientation and _G.type(self.GetOrientation) == "function" then
+		orientation = self:GetOrientation()
+	end
+	self.bar:SetOrientation(orientation)
+	if self.GetWidth then self.bar:SetWidth(self:GetWidth()) end
+	if self.GetHeight then self.bar:SetHeight(self:GetHeight())	end
+	if self.SetPoint and self.updateSetPoint then self:SetPoint() end
+	if self.SetValuePoint then
+		self:SetValuePoint()
+	else
+		self.bar.value:SetPoint("CENTER")
+	end
+	if self.hasSecondaryValue then
+		if self.SetSecondaryValuePoint then
+			self:SetSecondaryValuePoint()
+		else
+			self.bar.secondaryValue:SetPoint("RIGHT")
+		end
+	end
+	if not self.db.enabled and self.hideOnDisable then
+		self.bar:Hide()
+		self.bar:SetScript("OnUpdate", nil)
+	end
+
+	self:UpdateTexture()
+end
+
+function Bar:UpdateTexture()
+	if self.db.shown == false then return end
+
+	local bt = LSM:Fetch("statusbar", addon.db.profile.texture)
+    if addon.CustomUI and addon.CustomUI.texture then
+        bt = addon.CustomUI.texture
+	elseif self.hasOwnTexture then
+	    bt = LSM:Fetch("statusbar", self.db.texture)
+    end
+
+	self.bar:SetStatusBarTexture(bt)
+	self.bar.bg:SetTexture(bt)
+	self.bar:GetStatusBarTexture():SetHorizTile(false)
+	self.bar:GetStatusBarTexture():SetVertTile(false)
+	--self:UpdateGraphics()
+end
+
+function Bar:UpdateGraphics()
+	local bc, bgc, tc
+	if self.altcolor then
+		bc = self.db.alt_color or self.db.color
+		bgc = self.db.alt_bgcolor or self.db.bgcolor
+		tc = self.db.alt_textcolor or self.db.textcolor
+	else
+		bc = self.db.color
+		bgc = self.db.bgcolor
+		tc = self.db.textcolor
+	end
+
+	if self.setBarColor then
+		self.bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+	end
+	if self.setBkgColor then
+		self.bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+	end
+	if self.setTxtColor then
+		self.bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+	end
+	if self.hasSecondaryValue and self.secondaryValue then
+		self.bar.secondaryValue:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 	end
 end
 
 function Bar:UpdateUI()
-	local show = self.db.shown
-	if not show then
+	if self.db.shown == false then
 		self.bar:SetStatusBarTexture("")
 		self.bar.bg:SetTexture("")
 		self.bar.border:Hide()
@@ -274,69 +356,19 @@ function Bar:UpdateUI()
 end
 
 function Bar:UpdateBorder()
+	if not self.hasBorder then return end
     local bar = self.bar
-	if bar then
-	    if addon.CustomUI.showBorders ~= nil then
-	        if addon.CustomUI.showBorders == true then
-	            bar.border:Show()
-            else
-                bar.border:Hide()
-            end
+    if addon.CustomUI and addon.CustomUI.showBorders ~= nil then
+        if addon.CustomUI.showBorders == true then
+            bar.border:Show()
         else
-    		if self.db.border then
-    			bar.border:Show()
-    		else
-    			bar.border:Hide()
-    		end
-		end
-	end
-end
-
-function Bar:UpdateTexture()
-	if not self.db.shown then
-		return
-	end
-
-	local bt
-    if addon.CustomUI.texture then
-        bt = addon.CustomUI.texture
+            bar.border:Hide()
+        end
     else
-	    bt = LSM:Fetch("statusbar", self.db.texture)
-    end
-	self.bar:SetStatusBarTexture(bt)
-	self.bar.bg:SetTexture(bt)
-    self.bar:GetStatusBarTexture():SetHorizTile(false)
-    self.bar:GetStatusBarTexture():SetVertTile(false)
-	self:UpdateGraphics()
-end
-
-function Bar:UpdateGraphics()
-    local bc, bgc, tc
-
-	if self.altcolor then
-	    bc = self.db.alt_color
-	    bgc = self.db.alt_bgcolor
-	    tc = self.db.alt_textcolor
-	else
-	    bc = self.db.color
-	    bgc = self.db.bgcolor
-	    tc = self.db.textcolor
-	end
-
-    self.bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
-    self.bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
-    self.bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-
-	if self.hasTimeRemaining then
-	    if self.db.show_time then
-	        self.bar.time:Show()
-	    else
-	        self.bar.time:Hide()
-	    end
-	    self.bar.time:SetPoint(self.db.time_pos or "RIGHT")
-        self.bar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
-	end
-	if self.name == "EstimateBar" then
-		self:UpdateVisibility()
+		if self.db.border then
+			bar.border:Show()
+		else
+			bar.border:Hide()
+		end
 	end
 end

@@ -1,6 +1,8 @@
 local _G = getfenv(0)
 local ADDON_NAME, addon = ...
 
+addon.MIN_UPDATE_TIME = 0.05
+
 addon.DsHealAPModifiers = {
 	--["Blood"] = 1.6,
 	["Blood"] = 4,

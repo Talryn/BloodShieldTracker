@@ -1,7 +1,7 @@
 local _G = getfenv(0)
 local ADDON_NAME, addon = ...
 
-local BloodShieldTracker = LibStub("AceAddon-3.0"):GetAddon(addon.addonName)
+local BloodShieldTracker = LibStub("AceAddon-3.0"):GetAddon(addon.addonNameCondensed)
 
 function BloodShieldTracker:MigrateSettings()
 	local profile_version = self.db.profile.profile_version

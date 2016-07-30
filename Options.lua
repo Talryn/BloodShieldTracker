@@ -9,8 +9,8 @@ local select = _G.select
 local SpellNames = addon.SpellNames
 local ItemNames = addon.ItemNames
 
-local BloodShieldTracker = LibStub("AceAddon-3.0"):GetAddon(addon.addonName)
-local L = LibStub("AceLocale-3.0"):GetLocale(addon.addonName)
+local BloodShieldTracker = LibStub("AceAddon-3.0"):GetAddon(addon.addonNameCondensed)
+local L = LibStub("AceLocale-3.0"):GetLocale(addon.addonNameCondensed)
 local LSM = _G.LibStub:GetLibrary("LibSharedMedia-3.0")
 local icon = _G.LibStub("LibDBIcon-1.0")
 
@@ -78,8 +78,8 @@ function BloodShieldTracker:AddDimensionOptions(opts, barName, order)
 		step = 1,
 		set = function(info, val)
 		    self.db.profile.bars[barName].width = val 
-			self.bars[barName].bar:SetWidth(val)
-			self.bars[barName].bar.border:SetWidth(val+9)
+			addon.bars[barName].bar:SetWidth(val)
+			addon.bars[barName].bar.border:SetWidth(val+9)
 		end,
 		get = function(info, val)
 		    return self.db.profile.bars[barName].width
@@ -95,8 +95,8 @@ function BloodShieldTracker:AddDimensionOptions(opts, barName, order)
 		step = 1,
 		set = function(info, val)
 		    self.db.profile.bars[barName].height = val 
-			self.bars[barName].bar:SetHeight(val)
-			self.bars[barName].bar.border:SetHeight(val + 8)
+			addon.bars[barName].bar:SetHeight(val)
+			addon.bars[barName].bar.border:SetHeight(val + 8)
 		end,
 		get = function(info, val)
 		    return self.db.profile.bars[barName].height
@@ -115,7 +115,7 @@ function BloodShieldTracker:AddDimensionOptions(opts, barName, order)
 		end,
 		set = function(info, val)
 		    self.db.profile.bars[barName].scale = val
-		    self.bars[barName].bar:SetScale(val)
+		    addon.bars[barName].bar:SetScale(val)
 		end
 	}
 end
@@ -138,7 +138,7 @@ function BloodShieldTracker:AddPositionOptions(opts, barName, order)
 		bigStep = 1,
 		set = function(info, val)
 		    self.db.profile.bars[barName].x = val
-			self.bars[barName].bar:SetPoint(
+			addon.bars[barName].bar:SetPoint(
 				"CENTER", _G.UIParent, "CENTER", 
 				self.db.profile.bars[barName].x, 
 				self.db.profile.bars[barName].y)
@@ -157,7 +157,7 @@ function BloodShieldTracker:AddPositionOptions(opts, barName, order)
 		bigStep = 1,
 		set = function(info, val)
 		    self.db.profile.bars[barName].y = val
-			self.bars[barName].bar:SetPoint(
+			addon.bars[barName].bar:SetPoint(
 				"CENTER", _G.UIParent, "CENTER", 
 				self.db.profile.bars[barName].x, 
 				self.db.profile.bars[barName].y)
@@ -184,7 +184,7 @@ function BloodShieldTracker:AddColorsOptions(opts, barName, order)
 		set = function(info, r, g, b, a)
 		    local c = self.db.profile.bars[barName].textcolor
 		    c.r, c.g, c.b, c.a = r, g, b, a
-		    self.bars[barName]:UpdateGraphics()
+		    addon.bars[barName]:UpdateGraphics()
 		end,
 		get = function(info)
 	        local c = self.db.profile.bars[barName].textcolor
@@ -200,7 +200,7 @@ function BloodShieldTracker:AddColorsOptions(opts, barName, order)
 		set = function(info, r, g, b, a)
 		    local c = self.db.profile.bars[barName].color
 		    c.r, c.g, c.b, c.a = r, g, b, a
-		    self.bars[barName]:UpdateGraphics()
+		    addon.bars[barName]:UpdateGraphics()
 		end,
 		get = function(info)
 	        local c = self.db.profile.bars[barName].color
@@ -216,7 +216,7 @@ function BloodShieldTracker:AddColorsOptions(opts, barName, order)
 		set = function(info, r, g, b, a)
 		    local c = self.db.profile.bars[barName].bgcolor
 		    c.r, c.g, c.b, c.a = r, g, b, a
-		    self.bars[barName]:UpdateGraphics()
+		    addon.bars[barName]:UpdateGraphics()
 		end,
 		get = function(info)
 	        local c = self.db.profile.bars[barName].bgcolor
@@ -244,7 +244,7 @@ function BloodShieldTracker:AddAppearanceOptions(opts, barName, order)
 		end,
 		set = function(info, val)
 		    self.db.profile.bars[barName].texture = val
-		    self.bars[barName]:UpdateTexture()
+		    addon.bars[barName]:UpdateTexture()
 		end,
 		disabled = function()
 		    return not self.db.profile.bars[barName].shown
@@ -260,7 +260,7 @@ function BloodShieldTracker:AddAppearanceOptions(opts, barName, order)
 		end,
 		set = function(info, val)
 		    self.db.profile.bars[barName].border = val
-		    self.bars[barName]:UpdateBorder()
+		    addon.bars[barName]:UpdateBorder()
 		end,
 	}
 	opts.args.visible_opt = {
@@ -273,7 +273,7 @@ function BloodShieldTracker:AddAppearanceOptions(opts, barName, order)
 		end,
 		set = function(info,val) 
 	        self.db.profile.bars[barName].shown = val
-	        self.bars[barName]:UpdateUI()
+	        addon.bars[barName]:UpdateUI()
 	    end,
 	}
 end
@@ -333,7 +333,7 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 		order = 1010,
 		set = function(info, val)
 			self.db.profile.bars[barName].anchorFrame = val
-			self.bars[barName]:UpdatePosition()
+			addon.bars[barName]:SetPoint()
 		end,
 			get = function(info)
       	return self.db.profile.bars[barName].anchorFrame
@@ -353,7 +353,7 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 		order = 1020,
 		set = function(info, val)
 		    self.db.profile.bars[barName].anchorFrameCustom = val
-			self.bars[barName]:UpdatePosition()
+			addon.bars[barName]:SetPoint()
 		end,
         get = function(info)
             return self.db.profile.bars[barName].anchorFrameCustom
@@ -375,7 +375,7 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 		order = 1030,
 		set = function(info, val)
 		    self.db.profile.bars[barName].anchorFramePt = val
-			self.bars[barName]:UpdatePosition()
+			addon.bars[barName]:SetPoint()
 		end,
         get = function(info)
             return self.db.profile.bars[barName].anchorFramePt
@@ -397,7 +397,7 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 		order = 1040,
 		set = function(info, val)
 		    self.db.profile.bars[barName].anchorPt = val
-			self.bars[barName]:UpdatePosition()
+			addon.bars[barName]:SetPoint()
 		end,
         get = function(info)
             return self.db.profile.bars[barName].anchorPt
@@ -416,7 +416,7 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 		bigStep = 1,
 		set = function(info, val)
 		    self.db.profile.bars[barName].anchorX = val
-			self.bars[barName]:UpdatePosition()
+			addon.bars[barName]:SetPoint()
 		end,
 		get = function(info, val)
 		    return self.db.profile.bars[barName].anchorX
@@ -435,7 +435,7 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 		bigStep = 1,
 		set = function(info, val)
 		    self.db.profile.bars[barName].anchorY = val
-			self.bars[barName]:UpdatePosition()
+			addon.bars[barName]:SetPoint()
 		end,
 		get = function(info, val)
 		    return self.db.profile.bars[barName].anchorY
@@ -549,11 +549,11 @@ function BloodShieldTracker:GetGeneralOptions()
 				func = function()
 				    addon.configMode = not addon.configMode
 					if addon.configMode then
-						for name, bar in pairs(self.bars) do
+						for name, bar in pairs(addon.bars) do
 							bar.bar:Show()
 						end
 					else
-						for name, bar in pairs(self.bars) do
+						for name, bar in pairs(addon.bars) do
 							if bar.db.enabled and bar.db.hide_ooc ~= nil then
 								if bar.db.hide_ooc and 
 									not _G.InCombatLockdown() then
@@ -710,7 +710,7 @@ function BloodShieldTracker:GetShieldBarOptions()
 				order = 10,
 				set = function(info, val)
 				    self.db.profile.bars["ShieldBar"].enabled = val
-					self.bars["ShieldBar"]:UpdateVisibility()
+					addon.bars["ShieldBar"]:UpdateVisibility()
 				end,
                 get = function(info)
 					return self.db.profile.bars["ShieldBar"].enabled
@@ -729,45 +729,6 @@ function BloodShieldTracker:GetShieldBarOptions()
 					return self.db.profile.bars["ShieldBar"].locked
 				end,
 			},
-			text_format = {
-				name = L["Text Format"],
-				desc = L["ShieldTextFormat_OptionDesc"],
-				type = "select",
-				values = {
-				    ["Full"] = L["Full"],
-				    ["OnlyPerc"] = L["Only Percent"],
-				    ["OnlyCurrent"] = L["Only Current"],
-				    ["OnlyMax"] = L["Only Maximum"],
-				    ["CurrMax"] = L["Current and Maximum"]
-				},
-				order = 30,
-				set = function(info, val)
-				    self.db.profile.bars["ShieldBar"].text_format = val
-				end,
-                get = function(info)
-                    return self.db.profile.bars["ShieldBar"].text_format
-                end,
-			},
-			progress = {
-				name = L["Progress Bar"],
-				desc = L["ShieldProgress_OptionDesc"],
-				type = "select",
-				values = {
-				    ["None"] = L["None"],
-				    ["Time"] = L["Time Remaining"],
-				    ["Current"] = L["Current Value"]
-				},
-				order = 40,
-				set = function(info, val)
-				    self.db.profile.bars["ShieldBar"].progress = val
-				    if val == "Time" or val == "None" then
-				        self:UpdateShieldBarMode()
-			        end
-				end,
-                get = function(info)
-                    return self.db.profile.bars["ShieldBar"].progress
-                end,
-			},
             timeRemaining = {
                 order = 100,
                 type = "header",
@@ -780,11 +741,7 @@ function BloodShieldTracker:GetShieldBarOptions()
 				order = 110,
 				set = function(info, val)
 				    self.db.profile.bars["ShieldBar"].show_time = val
-				    if val then
-				        self.shieldbar.bar.time:Show()
-			        else
-			            self.shieldbar.bar.time:Hide()
-		            end
+					self.shieldbar:UpdateBarConfig()
 				end,
                 get = function(info)
                     return self.db.profile.bars["ShieldBar"].show_time
@@ -801,8 +758,7 @@ function BloodShieldTracker:GetShieldBarOptions()
 				order = 120,
 				set = function(info, val)
 				    self.db.profile.bars["ShieldBar"].time_pos = val
-			        self.shieldbar.bar.time:SetPoint(val or "RIGHT")
-			        self.shieldbar.bar.time:SetJustifyH(val or "RIGHT")
+					self.shieldbar:UpdateBarConfig()
 				end,
                 get = function(info)
                     return self.db.profile.bars["ShieldBar"].time_pos
@@ -896,7 +852,7 @@ function BloodShieldTracker:GetBoneShieldBarOptions()
 				order = 10,
 				set = function(info, val)
 				    self.db.profile.bars["BoneShieldBar"].enabled = val
-					self.bars["BoneShieldBar"]:UpdateVisibility()
+					addon.bars["BoneShieldBar"]:UpdateVisibility()
 				end,
                 get = function(info)
 					return self.db.profile.bars["BoneShieldBar"].enabled
@@ -909,7 +865,7 @@ function BloodShieldTracker:GetBoneShieldBarOptions()
 				order = 20,
 				set = function(info, val)
 				    self.db.profile.bars["BoneShieldBar"].locked = val 
-					self.bars["BoneShieldBar"]:Lock()
+					addon.bars["BoneShieldBar"]:Lock()
 				end,
                 get = function(info)
 					return self.db.profile.bars["BoneShieldBar"].locked
@@ -927,7 +883,7 @@ function BloodShieldTracker:GetBoneShieldBarOptions()
 				order = 30,
 				set = function(info, val)
 				    self.db.profile.bars["BoneShieldBar"].progress = val
-			        self:UpdateBoneShieldBarMode()
+			        self.boneshieldbar:UpdateBarConfig()
 				end,
                 get = function(info)
                     return self.db.profile.bars["BoneShieldBar"].progress
@@ -945,11 +901,7 @@ function BloodShieldTracker:GetBoneShieldBarOptions()
 				order = 110,
 				set = function(info, val)
 				    self.db.profile.bars["BoneShieldBar"].show_time = val
-				    if val then
-				        self.bars["BoneShieldBar"].bar.time:Show()
-			        else
-			            self.bars["BoneShieldBar"].bar.time:Hide()
-		            end
+			        self.boneshieldbar:UpdateBarConfig()
 				end,
                 get = function(info)
                     return self.db.profile.bars["BoneShieldBar"].show_time
@@ -966,8 +918,7 @@ function BloodShieldTracker:GetBoneShieldBarOptions()
 				order = 120,
 				set = function(info, val)
 				    self.db.profile.bars["BoneShieldBar"].time_pos = val
-			        self.bars["BoneShieldBar"].bar.time:SetPoint(val or "RIGHT")
-			        self.bars["BoneShieldBar"].bar.time:SetJustifyH(val or "RIGHT")
+			        self.boneshieldbar:UpdateBarConfig()
 				end,
                 get = function(info)
                     return self.db.profile.bars["BoneShieldBar"].time_pos
@@ -1010,7 +961,7 @@ function BloodShieldTracker:GetPWSBarOptions()
 				order = 10,
 				set = function(info, val)
 				    self.db.profile.bars["PWSBar"].enabled = val
-					self.bars["PWSBar"]:UpdateVisibility()
+					addon.bars["PWSBar"]:UpdateVisibility()
 				end,
                 get = function(info)
 					return self.db.profile.bars["PWSBar"].enabled
@@ -1023,7 +974,7 @@ function BloodShieldTracker:GetPWSBarOptions()
 				order = 20,
 				set = function(info, val)
 				    self.db.profile.bars["PWSBar"].locked = val 
-					self.bars["PWSBar"]:Lock(val)
+					addon.bars["PWSBar"]:Lock(val)
 				end,
                 get = function(info)
 					return self.db.profile.bars["PWSBar"].locked
@@ -1086,7 +1037,7 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
 				order = 10,
 				set = function(info, val)
 				    self.db.profile.bars["TotalAbsorbsBar"].enabled = val
-					self.bars["TotalAbsorbsBar"]:UpdateVisibility()
+					addon.bars["TotalAbsorbsBar"]:UpdateVisibility()
 				end,
                 get = function(info) 
 					return self.db.profile.bars["TotalAbsorbsBar"].enabled
@@ -1099,7 +1050,7 @@ function BloodShieldTracker:GetAbsorbsBarOptions()
 				order = 20,
 				set = function(info, val)
 				    self.db.profile.bars["TotalAbsorbsBar"].locked = val 
-					self.bars["TotalAbsorbsBar"]:Lock(val)
+					addon.bars["TotalAbsorbsBar"]:Lock(val)
 				end,
                 get = function(info)
 					return self.db.profile.bars["TotalAbsorbsBar"].locked
@@ -1182,7 +1133,7 @@ function BloodShieldTracker:GetPurgatoryBarOptions()
 				order = 10,
 				set = function(info, val)
 				    self.db.profile.bars["PurgatoryBar"].enabled = val
-					self.bars["PurgatoryBar"]:UpdateVisibility()
+					addon.bars["PurgatoryBar"]:UpdateVisibility()
 				end,
                 get = function(info)
 					return self.db.profile.bars["PurgatoryBar"].enabled
@@ -1195,7 +1146,7 @@ function BloodShieldTracker:GetPurgatoryBarOptions()
 				order = 20,
 				set = function(info, val)
 				    self.db.profile.bars["PurgatoryBar"].locked = val 
-					self.bars["PurgatoryBar"]:Lock(val)
+					addon.bars["PurgatoryBar"]:Lock(val)
 				end,
                 get = function(info)
 					return self.db.profile.bars["PurgatoryBar"].locked
@@ -1235,7 +1186,7 @@ function BloodShieldTracker:GetAMSBarOptions()
 				order = 10,
 				set = function(info, val)
 				    self.db.profile.bars["AMSBar"].enabled = val
-					self.bars["AMSBar"]:UpdateVisibility()
+					addon.bars["AMSBar"]:UpdateVisibility()
 				end,
                 get = function(info)
 					return self.db.profile.bars["AMSBar"].enabled
@@ -1248,7 +1199,7 @@ function BloodShieldTracker:GetAMSBarOptions()
 				order = 20,
 				set = function(info, val)
 				    self.db.profile.bars["AMSBar"].locked = val 
-					self.bars["AMSBar"]:Lock()
+					addon.bars["AMSBar"]:Lock()
 				end,
                 get = function(info)
 					return self.db.profile.bars["AMSBar"].locked
@@ -1266,11 +1217,7 @@ function BloodShieldTracker:GetAMSBarOptions()
 				order = 110,
 				set = function(info, val)
 				    self.db.profile.bars["AMSBar"].show_time = val
-				    if val then
-				        self.bars["AMSBar"].bar.time:Show()
-			        else
-			            self.bars["AMSBar"].bar.time:Hide()
-		            end
+			        self.amsbar:UpdateBarConfig()
 				end,
                 get = function(info)
                     return self.db.profile.bars["AMSBar"].show_time
@@ -1286,9 +1233,8 @@ function BloodShieldTracker:GetAMSBarOptions()
 				},
 				order = 120,
 				set = function(info, val)
-				    self.db.profile.bars["AMSBar"].time_pos = val
-			        self.bars["AMSBar"].bar.time:SetPoint(val or "RIGHT")
-			        self.bars["AMSBar"].bar.time:SetJustifyH(val or "RIGHT")
+					self.db.profile.bars["AMSBar"].time_pos = val
+					self.amsbar:UpdateBarConfig()
 				end,
                 get = function(info)
                     return self.db.profile.bars["AMSBar"].time_pos

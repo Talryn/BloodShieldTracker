@@ -1,8 +1,8 @@
 local _G = getfenv(0)
 local ADDON_NAME, addon = ...
 local LibStub = _G.LibStub
-local BST = LibStub("AceAddon-3.0"):GetAddon(addon.addonName)
-local L = LibStub("AceLocale-3.0"):GetLocale(addon.addonName)
+local BST = LibStub("AceAddon-3.0"):GetAddon(addon.addonNameCondensed)
+local L = LibStub("AceLocale-3.0"):GetLocale(addon.addonNameCondensed)
 
 local ceil = _G.math.ceil
 local tostring = _G.tostring
@@ -56,7 +56,21 @@ end
 local EventFrames = {}
 
 function BWTracker:OnInitialize()
-	self.bonewallbar = addon.Bar:Create("BoneWallBar", "Bone Wall Bar", true)
+	self.bonewallbar = addon.Bar:Create({
+		name = "BoneWallBar",
+		friendlyName = "Bone Wall Bar",
+		initTimer = true,
+		disableAnchor = true,
+		functions = {
+			GetWidth = function(self)
+				return self.db.width
+			end,
+			GetHeight = function(self)
+				return self.db.height
+			end,
+			SetPoint = addon.SetPointWithAnchor,
+		},
+	})
 end
 
 function BWTracker:Enable()
