@@ -127,6 +127,7 @@ function EstimateBar:OnInitialize()
 		initTimer = false,
 		disableAnchor = false,
 		hasBorder = true,
+		hasOwnTexture = true,
 		functions = {
 			GetWidth = function(self)
 				return self.db.width
@@ -501,7 +502,7 @@ function EstimateBar:UNIT_SPELLCAST_SENT(event, unit, spellName)
 	if unit == "player" and spellName == SpellNames["Death Strike"] then
 		DS_SentTime = GetTime()
 		if addon.db.profile.debug then
-			addon:Print(EstDSHealFmt:format(estimatedDS))
+			addon.Print(EstDSHealFmt:format(estimatedDS))
 		end
 	end
 end
@@ -515,7 +516,7 @@ function EstimateBar:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, rank, line
 	            if diff > 0 then
 	                DS_Latency = diff
 	                if addon.db.profile.debug then
-	                    addon:Print("DS Latency: "..DS_Latency)
+	                    addon.Print("DS Latency: "..DS_Latency)
 	                end
 	                -- If the latency appears overly large then cap it at 2 seconds.
 	                if DS_Latency > 2 then 
@@ -661,7 +662,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
 	        local schoolName = addon.GetSpellSchool(school) or "N/A"
 	        if addon.db.profile.debug and addon.db.profile.debugdmg then
 	            local spellAbsFmt = "Spell Absorbed (%s-%s,%d) %d by %s"
-	            addon:Print(spellAbsFmt:format(spellName, schoolName, school, absorbed, absorbName))
+	            addon.Print(spellAbsFmt:format(spellName, schoolName, school, absorbed, absorbName))
 	        end
 		else
 			absorbed = param16
@@ -669,7 +670,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
 			absorbName = param14
 	        if addon.db.profile.debug and addon.db.profile.debugdmg then
 	            local spellAbsFmt = "Spell Absorbed (None) %d by %s"
-	            addon:Print(spellAbsFmt:format(absorbed, absorbName))
+	            addon.Print(spellAbsFmt:format(absorbed, absorbName))
 	        end
 		end
 
@@ -679,7 +680,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
 
 		--         if addon.db.profile.debug then
 		-- 	local fmt = "SPELL_ABSORBED %s %s %s %s %s %s %s %s %s %s %s %s"
-		-- 	addon:Print(fmt:format(
+		-- 	addon.Print(fmt:format(
 		-- 		_G.tostring(param9),
 		-- 		_G.tostring(param10),
 		-- 		_G.tostring(param11),
@@ -702,7 +703,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
 
             if addon.db.profile.debug and addon.db.profile.debugdmg then
                 local swingDmgFmt = "Swing Damage for %d [%d absorbed, %s]"
-                addon:Print(swingDmgFmt:format(damage, absorb, eventtype))
+                addon.Print(swingDmgFmt:format(damage, absorb, eventtype))
             end
 
             self:AddDamageTaken(timestamp, damage)

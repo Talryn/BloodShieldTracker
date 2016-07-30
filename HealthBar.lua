@@ -45,6 +45,7 @@ function HealthBar:OnInitialize()
 		initTimer = false,
 		disableAnchor = false,
 		hasBorder = true,
+		hasOwnTexture = true,
 		functions = {
 			GetWidth = function(self)
 				return self.db.width

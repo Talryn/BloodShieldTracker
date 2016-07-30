@@ -84,6 +84,7 @@ function module:CreateDisplay()
 		friendlyName = "Target Swing Timer Bar",
 		initTimer = true,
 		hasBorder = true,
+		hasOwnTexture = true,
 		functions = {
 			GetWidth = function(self)
 				return self.db.width

@@ -24,7 +24,9 @@ addon.DEBUG_OUTPUT = false
 addon.DEBUG_BUFFER = ""
 
 -- Make Print accessible to other parts of the addon.
-addon.Print = BST.Print
+addon.Print = function(...)
+	BloodShieldTracker:Print(...)
+end
 
 -- Define Bar for now but the rest is at the bottom of the file.
 local Bar = addon.Bar
@@ -701,7 +703,7 @@ function addon.SetPointWithAnchor(self)
 	local isFrame = addon.IsFrame(anchorFrame)
 	if anchorFrame and isFrame then
 		if addon.db.profile.debug then
-			addon:Print("Found anchor for bar '".._G.tostring(self.name).."'.")
+			addon.Print("Found anchor for bar '".._G.tostring(self.name).."'.")
 		end
 		self.bar:SetPoint(
 			self.db.anchorPt, anchorFrame, self.db.anchorFramePt, 
@@ -711,7 +713,7 @@ function addon.SetPointWithAnchor(self)
 		self.bar:SetPoint("CENTER", _G.UIParent, "CENTER", self.db.x, self.db.y)
 		if anchorFrame and not isFrame and self.anchorTries < 13 then
 			if addon.db.profile.debug then
-				addon:Print("Waiting for anchor for bar '".._G.tostring(self.name).."'.")
+				addon.Print("Waiting for anchor for bar '".._G.tostring(self.name).."'.")
 			end
 	    	_G.C_Timer.After(5, function()
 				self:SetPoint()
@@ -737,6 +739,7 @@ function BloodShieldTracker:CreateDisplay()
 		disableAnchor = true,
 		hasSecondaryValue = true,
 		hasBorder = true,
+		hasOwnTexture = true,
 		functions = {
 			GetWidth = function(self)
 				return self.db.width
@@ -832,6 +835,7 @@ function BloodShieldTracker:CreateDisplay()
 		initTimer = true,
 		disableAnchor = false,
 		hasBorder = true,
+		hasOwnTexture = true,
 		functions = {
 			GetWidth = function(self)
 				return self.db.width
@@ -889,6 +893,7 @@ function BloodShieldTracker:CreateDisplay()
 		initTimer = true,
 		disableAnchor = false,
 		hasBorder = true,
+		hasOwnTexture = true,
 		functions = {
 			GetWidth = function(self)
 				return self.db.width
@@ -954,6 +959,7 @@ function BloodShieldTracker:CreateDisplay()
 		initTimer = false,
 		disableAnchor = false,
 		hasBorder = true,
+		hasOwnTexture = true,
 		functions = {
 			GetWidth = function(self)
 				return self.db.width
@@ -1019,6 +1025,7 @@ function BloodShieldTracker:CreateDisplay()
 		disableAnchor = true,
 		hasSecondaryValue = true,
 		hasBorder = true,
+		hasOwnTexture = true,
 		functions = {
 			GetWidth = function(self)
 				return self.db.width
@@ -1135,6 +1142,7 @@ function BloodShieldTracker:CreateDisplay()
 		disableAnchor = true,
 		hasSecondaryValue = true,
 		hasBorder = true,
+		hasOwnTexture = true,
 		functions = {
 			GetWidth = function(self)
 				return self.db.width
