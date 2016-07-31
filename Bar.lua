@@ -294,7 +294,7 @@ function Bar:UpdateVisibility()
 		end
 	end
 	if not self.db.enabled and self.hideOnDisable then
-		self.bar:Hide()
+		self:Hide()
 		self.bar:SetScript("OnUpdate", nil)
 	end
 
@@ -304,11 +304,10 @@ end
 function Bar:UpdateTexture()
 	if self.db.shown == false then return end
 
-	local bt = LSM:Fetch("statusbar", addon.db.profile.texture)
+	local bt = LSM:Fetch("statusbar", self.hasOwnTexture and 
+		self.db.texture or addon.db.profile.texture)
     if addon.CustomUI and addon.CustomUI.texture then
         bt = addon.CustomUI.texture
-	elseif self.hasOwnTexture then
-	    bt = LSM:Fetch("statusbar", self.db.texture)
     end
 
 	self.bar:SetStatusBarTexture(bt)

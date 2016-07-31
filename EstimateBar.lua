@@ -70,16 +70,11 @@ local dsMinHealPercentSuccor = 0.20
 local vbHealingBonus = 0.30
 local guardianSpiritHealBuff = 0.60
 
-local T14BonusAmt = 0.1
-
 -- Curent state information
 local DarkSuccorBuff = false
 local DS_SentTime = nil
 local DS_Latency = nil
 
-local Tier14Bonus = 1
-
--- MoP Variables --
 -- The actual minimum DS heal percent, based on spec.
 addon.maxHealth = 1
 local actualDsMinHeal = dsMinHealPercent
@@ -138,6 +133,7 @@ function EstimateBar:OnInitialize()
 			SetPoint = addon.SetPointWithAnchor,
 		},
 	})
+	self.estimatebar:Hide()
 end
 
 function EstimateBar:Enable()
@@ -166,16 +162,15 @@ function EstimateBar:OnDisable()
 end
 
 function EstimateBar:GearUpdate()
-	local currentBonus = Tier14Bonus
-	Tier14Bonus = 1 + (addon.tierCount["T14 Tank"] >= 4 and T14BonusAmt or 0)
-	if currentBonus ~= Tier14Bonus then
-		self:UpdateMinHeal("CheckGear", "player")
-		if addon.db.profile.verbose and addon.idle then
-			local fmt = "T14 Bonus: %d%%"
-			BST:Print(fmt:format(Tier14Bonus*100-100))
-		end
-	end
-
+	-- local currentBonus = Tier14Bonus
+	-- Tier14Bonus = 1 + (addon.tierCount["T14 Tank"] >= 4 and T14BonusAmt or 0)
+	-- if currentBonus ~= Tier14Bonus then
+	-- 	EstimateBar:UpdateMinHeal("CheckGear", "player")
+	-- 	if addon.db.profile.verbose and addon.idle then
+	-- 		local fmt = "T14 Bonus: %d%%"
+	-- 		BST:Print(fmt:format(Tier14Bonus*100-100))
+	-- 	end
+	-- end
 end
 
 local UnitEvents = {
@@ -240,13 +235,21 @@ function EstimateBar:ToggleEstimateBar()
 				end
 			end
 		end
-		self:UpdateEstimateBar(true)
+		if addon.idle then
+			self:UpdateMinHeal("PLAYER_ENTERING_WORLD", "player")
+		else
+			self:UpdateEstimateBar(true)
+		end
+		self.estimatebar:UpdateVisibility()
+		if not self.estimatebar.db.hide_ooc or _G.UnitAffectingCombat("player") then
+			self.estimatebar:Show()
+		end
 	else
 		for unit, frame in _G.pairs(EventFrames) do
 			if frame and frame.UnregisterAllEvents then frame:UnregisterAllEvents() end
 		end
+		self.estimatebar:Hide()
 	end
-	self.estimatebar:UpdateVisibility()
 end
 
 local function UpdateTime(self, elapsed)
@@ -268,7 +271,7 @@ function EstimateBar:UpdateEstimateBar(timestamp)
         local recentDamage = self:GetRecentDamageTaken(timestamp)
 
         local predictedValue, minimumValue = 0, 0
-		local baseValue = recentDamage * dsHealModifier * Tier14Bonus * (1+versatilityPercent)
+		local baseValue = recentDamage * dsHealModifier * (1+versatilityPercent)
 
         if self.estimatebar.db.bar_mode == "BS" then
             predictedValue = round(baseValue * shieldPercent)
@@ -351,7 +354,7 @@ function EstimateBar:UpdateMinHeal(event, unit)
 		if DarkSuccorBuff == true then
 			actualDsMinHeal = dsMinHealPercentSuccor
 		end
-		baseValue = maxHealth * actualDsMinHeal * Tier14Bonus * (1+versatilityPercent)
+		baseValue = maxHealth * actualDsMinHeal * (1+versatilityPercent)
 		dsHealMin = round(baseValue *
 			self:GetEffectiveHealingBuffModifiers() * 
 			self:GetEffectiveHealingDebuffModifiers())
@@ -783,7 +786,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
             local predictedHeal = 0
             if healingDebuffMultiplier ~= 1 then 
                 predictedHeal = round(
-                    recentDmg * dsHealModifier * Tier14Bonus  * (1+versatilityPercent) *
+                    recentDmg * dsHealModifier * (1+versatilityPercent) *
                     self:GetEffectiveHealingBuffModifiers() * 
                     self:GetEffectiveHealingDebuffModifiers())
             end
@@ -828,7 +831,7 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
                 isMinimum = true
                 shieldValue = bsMinimum
             end
-            predictedHeal = round(recentDmg * dsHealModifier * Tier14Bonus * (1+versatilityPercent) *
+            predictedHeal = round(recentDmg * dsHealModifier * (1+versatilityPercent) *
                 self:GetEffectiveHealingBuffModifiers() * 
                 self:GetEffectiveHealingDebuffModifiers())
         end
@@ -880,7 +883,7 @@ function EstimateBar:GetEstimateBarOptions()
 				order = 20,
 				set = function(info, val)
 				    addon.db.profile.bars["EstimateBar"].enabled = val
-					addon.bars["EstimateBar"]:UpdateVisibility()
+					if val then self:OnEnable() else self:OnDisable() end
 				end,
 	            get = function(info)
 					return addon.db.profile.bars["EstimateBar"].enabled 

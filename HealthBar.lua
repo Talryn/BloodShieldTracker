@@ -56,6 +56,7 @@ function HealthBar:OnInitialize()
 			SetPoint = addon.SetPointWithAnchor,
 		},
 	})
+	self.healthbar:Hide()
 end
 
 function HealthBar:Enable()
@@ -180,12 +181,16 @@ function HealthBar:ToggleHealthBar()
 		self:UNIT_MAXHEALTH("ToggleHealthBar", "player")
 		self:UNIT_HEALTH("ToggleHealthBar", "player")
 		self:UpdateHealthBar(true)
+		self.healthbar:UpdateVisibility()
+		if not self.healthbar.db.hide_ooc or _G.UnitAffectingCombat("player") then
+			self.healthbar:Show()
+		end
 	else
 		for unit, frame in _G.pairs(EventFrames) do
 			if frame and frame.UnregisterAllEvents then frame:UnregisterAllEvents() end
 		end
+		self.healthbar:Hide()
 	end
-	self.healthbar:UpdateVisibility()
 end
 
 local percentIntFmt = "%d%%"
@@ -259,7 +264,7 @@ function HealthBar:GetHealthBarOptions()
 				order = 10,
 				set = function(info, val)
 				    BST.db.profile.bars["HealthBar"].enabled = val
-			        self:ToggleHealthBar()
+					if val then self:OnEnable() else self:OnDisable() end
 				end,
                 get = function(info)
                     return BST.db.profile.bars["HealthBar"].enabled
