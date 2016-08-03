@@ -1235,9 +1235,12 @@ function BloodShieldTracker:CreateDisplay()
 end
 
 function BloodShieldTracker:OnInitialize()
-  -- Load the settings
-  self.db = _G.LibStub("AceDB-3.0"):New("BloodShieldTrackerDB", 
-		addon.defaults, "Default")
+	self:CheckClass()
+	if not addon.isDK then return end
+
+  	-- Load the settings
+  	self.db = _G.LibStub("AceDB-3.0"):New(
+		"BloodShieldTrackerDB", addon.defaults, "Default")
 	addon.db = self.db
 
 	-- Migrate the settings
@@ -1381,6 +1384,15 @@ function BloodShieldTracker:Skin()
     end
 end
 
+function addon.SkinFrame(frame)
+	local skinning = addon.db.profile.skinning
+	local tukui = Tukui and skinning.tukui.enabled and skinning.tukui.borders
+	local elvui = ElvUI and skinning.elvui.enabled and skinning.elvui.borders
+	if (tukui or elvui) and frame.CreateBackdrop then
+		frame:CreateBackdrop()
+	end
+end
+
 function BloodShieldTracker:SetCustomTexture(texture)
     if texture then
         CustomUI.texture = texture
@@ -1454,6 +1466,8 @@ function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 end
 
 function BloodShieldTracker:OnEnable()
+	if not addon.isDK then return end
+
 	-- Try to load the spell and item names one more time.
 	LoadItemNames()
 	LoadSpellNames()

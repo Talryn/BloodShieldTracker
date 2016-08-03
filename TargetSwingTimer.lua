@@ -13,7 +13,8 @@ local floor = _G.math.floor
 local round = addon.round
 
 local module = {}
-addon:RegisterModule("TargetSwingTimer", module)
+module.name = "TargetSwingTimer"
+addon:RegisterModule(module.name, module)
 module.enabled = false
 
 local MIN_UPDATE_TIME = addon.MIN_UPDATE_TIME
@@ -34,10 +35,12 @@ function module:OnInitialize()
 end
 
 function module:Enable()
+	addon:RegisterCallback("TalentUpdate", module.name, module.TalentUpdate)
 	self:Toggle()
 end
 
 function module:Disable()
+	addon:UnregisterCallback("TalentUpdate", module.name)
 	self:OnDisable()
 end
 
@@ -56,11 +59,10 @@ function module:OnEnable()
 	self.eventFrame:SetScript("OnEvent", self.EventHandler)
 	if not self.targetSwingBar then self:CreateDisplay() end
 	self:UpdateDisplay()
-	addon:RegisterCallback("PlayerAlive", "TargetSwingTimer", module.PlayerAlive)
-	addon:RegisterCallback("PlayerDead", "TargetSwingTimer", module.PlayerDead)
-	addon:RegisterCallback("CombatStart", "TargetSwingTimer", module.CombatStart)
-	addon:RegisterCallback("CombatEnd", "TargetSwingTimer", module.CombatEnd)
-	addon:RegisterCallback("TalentUpdate", "TargetSwingTimer", module.TalentUpdate)
+	addon:RegisterCallback("PlayerAlive", module.name, module.PlayerAlive)
+	addon:RegisterCallback("PlayerDead", module.name, module.PlayerDead)
+	addon:RegisterCallback("CombatStart", module.name, module.CombatStart)
+	addon:RegisterCallback("CombatEnd", module.name, module.CombatEnd)
 	self.enabled = true
 end
 
@@ -70,11 +72,10 @@ function module:OnDisable()
 		self.eventFrame:SetScript("OnEvent", nil)
 	end
 	self:HideBar()
-	addon:UnregisterCallback("PlayerAlive", "TargetSwingTimer")
-	addon:UnregisterCallback("PlayerDead", "TargetSwingTimer")
-	addon:UnregisterCallback("CombatStart", "TargetSwingTimer")
-	addon:UnregisterCallback("CombatEnd", "TargetSwingTimer")
-	addon:UnregisterCallback("TalentUpdate", "TargetSwingTimer")
+	addon:UnregisterCallback("PlayerAlive", module.name)
+	addon:UnregisterCallback("PlayerDead", module.name)
+	addon:UnregisterCallback("CombatStart", module.name)
+	addon:UnregisterCallback("CombatEnd", module.name)
 	self.enabled = false
 end
 
@@ -93,6 +94,9 @@ function module:CreateDisplay()
 				return self.db.height
 			end,
 			SetPoint = addon.SetPointWithAnchor,
+			PostInitialize = function(self)
+				addon.SkinFrame(self.bar)
+			end,
 		}
 	})
 	self.targetSwingBar:SetMovable()

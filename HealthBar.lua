@@ -21,9 +21,10 @@ local formatFull = "%s/%s (%d%%)"
 local formatNoPer = "%s/%s"
 local formatCurrPerc = "%s (%d%%)"
 
-local HealthBar = {}
-addon:RegisterModule("HealthBar", HealthBar)
-HealthBar.enabled = false
+local module = {}
+module.name = "HealthBar"
+addon:RegisterModule(module.name, module)
+module.enabled = false
 
 addon.defaults.profile.bars["HealthBar"] = {
 	hide_ooc = false,
@@ -38,62 +39,46 @@ addon.defaults.profile.bars["HealthBar"] = {
 	y = -150,
 }
 
-function HealthBar:OnInitialize()
-	self.healthbar = addon.Bar:Create({
-		name = "HealthBar",
-		friendlyName = "Health Bar",
-		initTimer = false,
-		disableAnchor = false,
-		hasBorder = true,
-		hasOwnTexture = true,
-		functions = {
-			GetWidth = function(self)
-				return self.db.width
-			end,
-			GetHeight = function(self)
-				return self.db.height
-			end,
-			SetPoint = addon.SetPointWithAnchor,
-		},
-	})
-	self.healthbar:Hide()
+function module:SetProfile()
+	self.profile = addon.db.profile.bars.HealthBar
 end
 
-function HealthBar:Enable()
-	if self.healthbar.db.enabled then
-		self:OnEnable()
-	else
-		self:OnDisable()
+function module.ProfileUpdate()
+	module:SetProfile()
+end
+
+function module:OnInitialize()
+	addon:RegisterCallback("ProfileUpdate", module.name, module.ProfileUpdate)
+	self:SetProfile()
+end
+
+function module.TalentUpdate()
+	module:Toggle()
+end
+
+function module:Enable()
+	addon:RegisterCallback("TalentUpdate", module.name, module.TalentUpdate)
+	self:Toggle()
+end
+
+function module:Disable()
+	addon:UnregisterCallback("TalentUpdate", module.name)
+	self:OnDisable()
+end
+
+function module:PLAYER_REGEN_DISABLED()
+	if addon:IsTrackerEnabled() and self.healthbar.db.enabled then
+		self.healthbar.bar:Show()
 	end
 end
 
-function HealthBar:OnEnable()
-	if self.enabled then return end
-	self.enabled = true
-	self:ToggleHealthBar()
-end
-
-function HealthBar:OnDisable()
-	if not self.enabled then return end
-	self.enabled = false
-	self:ToggleHealthBar()
-end
-
-function HealthBar:PLAYER_REGEN_DISABLED()
-	if addon:IsTrackerEnabled() then
-		if self.healthbar.db.enabled then
-			self.healthbar.bar:Show()
-		end
-	end
-end
-
-function HealthBar:PLAYER_REGEN_ENABLED()
+function module:PLAYER_REGEN_ENABLED()
     if self.healthbar.db.hide_ooc then
         self.healthbar.bar:Hide()
     end
 end
 
-function HealthBar:PLAYER_DEAD()
+function module:PLAYER_DEAD()
     -- Hide the health bar if configured to do so for OOC
     if self.healthbar.db.hide_ooc then
         if self.healthbar.bar:IsVisible() then
@@ -115,20 +100,20 @@ local UnitEvents = {
 }
 local function EventFrame_OnEvent(frame, event, ...)
 	if event == "UNIT_HEALTH" then
-		HealthBar:UNIT_HEALTH(event, ...)
+		module:UNIT_HEALTH(event, ...)
 	elseif event == "UNIT_MAXHEALTH" then
-		HealthBar:UNIT_MAXHEALTH(event, ...)
+		module:UNIT_MAXHEALTH(event, ...)
 	elseif event == "PLAYER_REGEN_DISABLED" then
-		HealthBar:PLAYER_REGEN_DISABLED(event, ...)
+		module:PLAYER_REGEN_DISABLED(event, ...)
 	elseif event == "PLAYER_REGEN_ENABLED" then
-		HealthBar:PLAYER_REGEN_ENABLED(event, ...)
+		module:PLAYER_REGEN_ENABLED(event, ...)
 	elseif event == "PLAYER_DEAD" then
-		HealthBar:PLAYER_DEAD(event, ...)
+		module:PLAYER_DEAD(event, ...)
 	end
 end
 local EventFrames = {}
 
-function HealthBar:UNIT_MAXHEALTH(event, unit)
+function module:UNIT_MAXHEALTH(event, unit)
 	if unit and unit == "player" then
 		local oldHealth = maxHealth or 1
 		maxHealth = UnitHealthMax("player") or 1
@@ -146,7 +131,7 @@ function HealthBar:UNIT_MAXHEALTH(event, unit)
 	end
 end
 
-function HealthBar:UNIT_HEALTH(event, unit)
+function module:UNIT_HEALTH(event, unit)
 	if unit and unit == "player" then
 		local oldHealth = currentHealth or 0
 		currentHealth = UnitHealth("player") or 0
@@ -161,40 +146,76 @@ function HealthBar:UNIT_HEALTH(event, unit)
 	end
 end
 
-function HealthBar:ToggleHealthBar()
-	if self.healthbar.db.enabled then
-		for unit, events in _G.pairs(UnitEvents) do
-			local frame = EventFrames[unit] or _G.CreateFrame("Frame",
-					ADDON_NAME.."_HB_EventFrame_"..unit)
-			if frame then
-				frame:SetScript("OnEvent", EventFrame_OnEvent)
-				EventFrames[unit] = frame
-				for i, event in _G.ipairs(events) do
-					if unit == "any" then
-						frame:RegisterEvent(event)
-					else
-						frame:RegisterUnitEvent(event, unit)
-					end
+function module:OnEnable()
+	if not self.healthbar then self:CreateDisplay() end
+	for unit, events in _G.pairs(UnitEvents) do
+		local frame = EventFrames[unit] or _G.CreateFrame("Frame",
+				ADDON_NAME.."_HB_EventFrame_"..unit)
+		if frame then
+			frame:SetScript("OnEvent", EventFrame_OnEvent)
+			EventFrames[unit] = frame
+			for i, event in _G.ipairs(events) do
+				if unit == "any" then
+					frame:RegisterEvent(event)
+				else
+					frame:RegisterUnitEvent(event, unit)
 				end
 			end
 		end
-		self:UNIT_MAXHEALTH("ToggleHealthBar", "player")
-		self:UNIT_HEALTH("ToggleHealthBar", "player")
-		self:UpdateHealthBar(true)
-		self.healthbar:UpdateVisibility()
-		if not self.healthbar.db.hide_ooc or _G.UnitAffectingCombat("player") then
-			self.healthbar:Show()
-		end
+	end
+	self:UNIT_MAXHEALTH("Toggle", "player")
+	self:UNIT_HEALTH("Toggle", "player")
+	self:UpdateHealthBar(true)
+	self.healthbar:UpdateVisibility()
+	if not self.healthbar.db.hide_ooc or _G.UnitAffectingCombat("player") then
+		self.healthbar:Show()
+	end
+	self.enabled = true
+end
+
+function module:CreateDisplay()
+	self.healthbar = addon.Bar:Create({
+		name = "HealthBar",
+		friendlyName = "Health Bar",
+		initTimer = false,
+		disableAnchor = false,
+		hasBorder = true,
+		hasOwnTexture = true,
+		functions = {
+			GetWidth = function(self)
+				return self.db.width
+			end,
+			GetHeight = function(self)
+				return self.db.height
+			end,
+			SetPoint = addon.SetPointWithAnchor,
+			PostInitialize = function(self)
+				addon.SkinFrame(self.bar)
+			end,
+		},
+	})
+	self.healthbar:SetMovable()
+	self.healthbar:Hide()
+end
+
+function module:OnDisable()
+	for unit, frame in _G.pairs(EventFrames) do
+		if frame and frame.UnregisterAllEvents then frame:UnregisterAllEvents() end
+	end
+	if self.healthbar then self.healthbar:Hide() end
+	self.enabled = false
+end
+
+function module:Toggle()
+	if self.profile.enabled and addon:IsTrackerEnabled() then
+		self:OnEnable()
 	else
-		for unit, frame in _G.pairs(EventFrames) do
-			if frame and frame.UnregisterAllEvents then frame:UnregisterAllEvents() end
-		end
-		self.healthbar:Hide()
+		self:OnDisable()
 	end
 end
 
 local percentIntFmt = "%d%%"
-function HealthBar:UpdateHealthBar(maxChanged)
+function module:UpdateHealthBar(maxChanged)
 	if self.healthbar.db.enabled then
 		if maxChanged then
 			self.healthbar.bar:SetMinMaxValues(0, maxHealth)
@@ -232,15 +253,15 @@ function HealthBar:UpdateHealthBar(maxChanged)
 		end
 end
 
-function HealthBar:GetOptions()
-	return "healthBarOpts", self:GetHealthBarOptions()
+function module:GetOptions()
+	return "healthBarOpts", self:GetModuleOptions()
 end
 
-function HealthBar:AddOptions()
+function module:AddOptions()
 	return "HealthBar", L["Health Bar"], "healthBarOpts"
 end
 
-function HealthBar:GetHealthBarOptions()
+function module:GetModuleOptions()
 	local healthBarOpts = {
 	    order = 8,
 	    type = "group",

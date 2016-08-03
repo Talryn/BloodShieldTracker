@@ -105,11 +105,11 @@ function Bar:Initialize(settings)
 	bar.parent = self
 	self.altcolor = false
 	bar:SetScale(1)
-	local orientation = "HORIZONTAL"
+	self.orientation = "HORIZONTAL"
 	if self.GetOrientation and _G.type(self.GetOrientation) == "function" then
-		orientation = self:GetOrientation()
+		self.orientation = self:GetOrientation()
 	end
-	bar:SetOrientation(orientation)
+	bar:SetOrientation(self.orientation)
 	bar:SetWidth(self:GetWidth())
 	bar:SetHeight(self:GetHeight())
 	local bt = LSM:Fetch("statusbar", addon.db.profile.texture)
@@ -128,8 +128,7 @@ function Bar:Initialize(settings)
 		bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
 	end
 
-	local ff, fh, fflags = addon.GetFontSettings()
-	local font = LSM:Fetch("font", ff)
+	local font, fh, fflags = addon.GetFontSettings()
 	bar.value = bar:CreateFontString(nil, "OVERLAY")
 	bar.value:SetPoint("CENTER")
 	bar.value:SetFont(font, fh + self.fontAdj, fflags)
@@ -155,7 +154,7 @@ function Bar:Initialize(settings)
 	if self.hasSecondaryValue then
 		bar.secondaryValue = bar:CreateFontString(nil, "OVERLAY")
 		bar.secondaryValue:SetPoint("RIGHT")
-		bar.secondaryValue:SetFont(font, fh + self.fontAdj - 1, fflags)
+		bar.secondaryValue:SetFont(font, fh + (self.secondaryFontAdj or self.fontAdj), fflags)
 		bar.secondaryValue:SetJustifyH("CENTER")
 		local tc = self.db.secondaryTextColor or self.db.textcolor
 		bar.secondaryValue:SetTextColor(tc.r, tc.g, tc.b, tc.a)
@@ -261,11 +260,10 @@ function Bar:Reset()
 end
 
 function Bar:ResetFonts()
-	local ff, fh, fontFlags = addon.GetFontSettings()
-	local font = LSM:Fetch("font", ff)
+	local font, fh, fontFlags = addon.GetFontSettings()
 	self.bar.value:SetFont(font, fh + self.fontAdj, fontFlags)
 	self.bar.value:SetText(self.bar.value:GetText())
-	if self.hasSecondaryValue and self.secondaryValue then
+	if self.hasSecondaryValue and self.bar.secondaryValue then
 		self.bar.secondaryValue:SetFont(font, 
 			fh + (self.secondaryFontAdj or self.fontAdj), fontFlags)
 		self.bar.secondaryValue:SetText(self.bar.secondaryValue:GetText())
@@ -273,11 +271,10 @@ function Bar:ResetFonts()
 end
 
 function Bar:UpdateVisibility()
-	local orientation = "HORIZONTAL"
 	if self.GetOrientation and _G.type(self.GetOrientation) == "function" then
-		orientation = self:GetOrientation()
+		self.orientation = self:GetOrientation()
 	end
-	self.bar:SetOrientation(orientation)
+	self.bar:SetOrientation(self.orientation)
 	if self.GetWidth then self.bar:SetWidth(self:GetWidth()) end
 	if self.GetHeight then self.bar:SetHeight(self:GetHeight())	end
 	if self.SetPoint and self.updateSetPoint then self:SetPoint() end
@@ -289,7 +286,7 @@ function Bar:UpdateVisibility()
 	if self.hasSecondaryValue then
 		if self.SetSecondaryValuePoint then
 			self:SetSecondaryValuePoint()
-		else
+		elseif self.bar.secondaryValue then
 			self.bar.secondaryValue:SetPoint("RIGHT")
 		end
 	end
@@ -338,7 +335,7 @@ function Bar:UpdateGraphics()
 	if self.setTxtColor then
 		self.bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 	end
-	if self.hasSecondaryValue and self.secondaryValue then
+	if self.hasSecondaryValue and self.bar.secondaryValue then
 		self.bar.secondaryValue:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 	end
 end

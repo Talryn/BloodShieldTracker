@@ -12,6 +12,7 @@ local ipairs = _G.ipairs
 local tinsert, tremove = table.insert, table.remove
 local wipe = _G.wipe
 local round = addon.round
+local max = _G.math.max
 
 -- Local versions of WoW API calls
 local UnitHealth = _G.UnitHealth
@@ -28,9 +29,12 @@ local SpellNames = addon.SpellNames
 local formatStandard = "%s%s%s"
 local formatPercent = "%s%%"
 
-local EstimateBar = {}
-addon:RegisterModule("EstimateBar", EstimateBar)
-EstimateBar.enabled = false
+local AurasFound = {}
+
+local module = {}
+module.name = "EstimateBar"
+addon:RegisterModule(module.name, module)
+module.enabled = false
 
 addon.defaults.profile.bars["EstimateBar"] = {
 	enabled = true,
@@ -59,6 +63,7 @@ local UPDATE_TIMER_FREQUENCY = 0.3
 local currentTime = time()
 addon.idle = true
 local updateTimer = nil
+local afterTimer = nil
 local lastSeconds = 5
 local damageTaken = {}
 local removeList = {}
@@ -68,16 +73,13 @@ local dsHealModifier = 0.20  -- Percent of the DS Heal from the tooltip.
 local dsMinHealPercent = 0.10
 local dsMinHealPercentSuccor = 0.20
 local vbHealingBonus = 0.30
-local guardianSpiritHealBuff = 0.60
+local guardianSpiritHealBuff = 0.40
 
 -- Curent state information
 local DarkSuccorBuff = false
 local DS_SentTime = nil
 local DS_Latency = nil
-
--- The actual minimum DS heal percent, based on spec.
 addon.maxHealth = 1
-local actualDsMinHeal = dsMinHealPercent
 local dsHealMin = 0
 local bsMinimum = 0
 -- End --
@@ -115,57 +117,38 @@ local ICCBuffs = {
 	}
 }
 
-function EstimateBar:OnInitialize()
-	self.estimatebar = addon.Bar:Create({
-		name = "EstimateBar",
-		friendlyName = "Estimate Bar",
-		initTimer = false,
-		disableAnchor = false,
-		hasBorder = true,
-		hasOwnTexture = true,
-		functions = {
-			GetWidth = function(self)
-				return self.db.width
-			end,
-			GetHeight = function(self)
-				return self.db.height
-			end,
-			SetPoint = addon.SetPointWithAnchor,
-		},
-	})
-	self.estimatebar:Hide()
+function module:SetProfile()
+	self.profile = addon.db.profile.bars.EstimateBar
 end
 
-function EstimateBar:Enable()
-	if self.estimatebar.db.enabled then
-		self:OnEnable()
-	else
-		self:OnDisable()
-	end
+function module.ProfileUpdate()
+	module:SetProfile()
 end
 
-function EstimateBar:OnEnable()
-	if self.enabled then return end
-	self.enabled = true
-	self:ToggleEstimateBar()
-
-	addon:RegisterCallback("Auras", "EstimateBar", EstimateBar.CheckAuras)
-	addon:RegisterCallback("GearUpdate", "EstimateBar", EstimateBar.GearUpdate)
+function module:OnInitialize()
+	addon:RegisterCallback("ProfileUpdate", module.name, module.ProfileUpdate)
+	self:SetProfile()
 end
 
-function EstimateBar:OnDisable()
-	if not self.enabled then return end
-	self.enabled = false
-	self:ToggleEstimateBar()
-	addon:UnregisterCallback("Auras", "EstimateBar")
-	addon:UnregisterCallback("GearUpdate", "EstimateBar")
+function module.TalentUpdate()
+	module:Toggle()
 end
 
-function EstimateBar:GearUpdate()
+function module:Enable()
+	addon:RegisterCallback("TalentUpdate", module.name, module.TalentUpdate)
+	self:Toggle()
+end
+
+function module:Disable()
+	addon:UnregisterCallback("TalentUpdate", module.name)
+	self:OnDisable()
+end
+
+function module:GearUpdate()
 	-- local currentBonus = Tier14Bonus
 	-- Tier14Bonus = 1 + (addon.tierCount["T14 Tank"] >= 4 and T14BonusAmt or 0)
 	-- if currentBonus ~= Tier14Bonus then
-	-- 	EstimateBar:UpdateMinHeal("CheckGear", "player")
+	-- 	module:UpdateMinHeal("CheckGear", "player")
 	-- 	if addon.db.profile.verbose and addon.idle then
 	-- 		local fmt = "T14 Bonus: %d%%"
 	-- 		BST:Print(fmt:format(Tier14Bonus*100-100))
@@ -192,63 +175,105 @@ local UnitEvents = {
 }
 local function EventFrame_OnEvent(frame, event, ...)
 	if event == "PLAYER_REGEN_DISABLED" then
-		EstimateBar:PLAYER_REGEN_DISABLED(event, ...)
+		module:PLAYER_REGEN_DISABLED(event, ...)
 	elseif event == "PLAYER_REGEN_ENABLED" then
-		EstimateBar:PLAYER_REGEN_ENABLED(event, ...)
+		module:PLAYER_REGEN_ENABLED(event, ...)
 	elseif event == "PLAYER_ALIVE" then
-		EstimateBar:PLAYER_ALIVE(event, ...)
+		module:PLAYER_ALIVE(event, ...)
 	elseif event == "PLAYER_DEAD" then
-		EstimateBar:PLAYER_DEAD(event, ...)
+		module:PLAYER_DEAD(event, ...)
 	elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
-		EstimateBar:UNIT_SPELLCAST_SUCCEEDED(event, ...)
+		module:UNIT_SPELLCAST_SUCCEEDED(event, ...)
 	elseif event == "PLAYER_ENTERING_WORLD" then
-		EstimateBar:PLAYER_ENTERING_WORLD(event, ...)
+		module:PLAYER_ENTERING_WORLD(event, ...)
 	elseif event == "UNIT_MAXHEALTH" then
-		EstimateBar:UNIT_MAXHEALTH(event, ...)
+		module:UNIT_MAXHEALTH(event, ...)
 	-- elseif event == "UNIT_AURA" then
-	-- 	EstimateBar:UNIT_AURA(event, ...)
+	-- 	module:UNIT_AURA(event, ...)
 	elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
-		EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(event, ...)
+		module:COMBAT_LOG_EVENT_UNFILTERED(event, ...)
 	-- Send directly to particular functions
 	elseif event == "COMBAT_RATING_UPDATE" then
-		EstimateBar:UpdateRatings(event, ...)
+		module:UpdateRatings(event, ...)
 	elseif event == "MASTERY_UPDATE" then
-		EstimateBar:UpdateRatings(event, ...)
+		module:UpdateRatings(event, ...)
 	end
 end
 local EventFrames = {}
 
-function EstimateBar:ToggleEstimateBar()
-	if self.estimatebar.db.enabled then
-		for unit, events in _G.pairs(UnitEvents) do
-			local frame = EventFrames[unit] or _G.CreateFrame("Frame",
-					ADDON_NAME.."_ESTBAR_EventFrame_"..unit)
-			if frame then
-				frame:SetScript("OnEvent", EventFrame_OnEvent)
-				EventFrames[unit] = frame
-				for i, event in _G.ipairs(events) do
-					if unit == "any" then
-						frame:RegisterEvent(event)
-					else
-						frame:RegisterUnitEvent(event, unit)
-					end
+function module:CreateDisplay()
+	self.estimatebar = addon.Bar:Create({
+		name = "EstimateBar",
+		friendlyName = "Estimate Bar",
+		initTimer = false,
+		disableAnchor = false,
+		hasBorder = true,
+		hasOwnTexture = true,
+		functions = {
+			GetWidth = function(self)
+				return self.db.width
+			end,
+			GetHeight = function(self)
+				return self.db.height
+			end,
+			SetPoint = addon.SetPointWithAnchor,
+			PostInitialize = function(self)
+				addon.SkinFrame(self.bar)
+			end,
+		},
+	})
+	self.estimatebar:SetMovable()
+	self.estimatebar:Hide()
+end
+
+function module:OnEnable()
+	if not self.estimatebar then self:CreateDisplay() end
+	addon:RegisterCallback("Auras", module.name, module.CheckAuras)
+	addon:RegisterCallback("GearUpdate", module.name, module.GearUpdate)
+
+	for unit, events in _G.pairs(UnitEvents) do
+		local frame = EventFrames[unit] or _G.CreateFrame("Frame",
+				ADDON_NAME.."_ESTBAR_EventFrame_"..unit)
+		if frame then
+			frame:SetScript("OnEvent", EventFrame_OnEvent)
+			EventFrames[unit] = frame
+			for i, event in _G.ipairs(events) do
+				if unit == "any" then
+					frame:RegisterEvent(event)
+				else
+					frame:RegisterUnitEvent(event, unit)
 				end
 			end
 		end
-		if addon.idle then
-			self:UpdateMinHeal("PLAYER_ENTERING_WORLD", "player")
-		else
-			self:UpdateEstimateBar(true)
-		end
-		self.estimatebar:UpdateVisibility()
-		if not self.estimatebar.db.hide_ooc or _G.UnitAffectingCombat("player") then
-			self.estimatebar:Show()
-		end
+	end
+	addon.idle = not _G.UnitAffectingCombat("player")
+	if not self.estimatebar.db.hide_ooc or not addon.idle then
+		self.estimatebar:Show()
+	end
+	if addon.idle then
+		self:UpdateMinHeal("PLAYER_ENTERING_WORLD", "player")
 	else
-		for unit, frame in _G.pairs(EventFrames) do
-			if frame and frame.UnregisterAllEvents then frame:UnregisterAllEvents() end
-		end
-		self.estimatebar:Hide()
+		self:UpdateEstimateBar()
+	end
+	self.estimatebar:UpdateVisibility()
+	self.enabled = true
+end
+
+function module:OnDisable()
+	addon:UnregisterCallback("Auras", module.name)
+	addon:UnregisterCallback("GearUpdate", module.name)
+	for unit, frame in _G.pairs(EventFrames) do
+		if frame and frame.UnregisterAllEvents then frame:UnregisterAllEvents() end
+	end
+	if self.estimatebar then self.estimatebar:Hide() end
+	self.enabled = false
+end
+
+function module:Toggle()
+	if self.profile.enabled and addon:IsTrackerEnabled() then
+		self:OnEnable()
+	else
+		self:OnDisable()
 	end
 end
 
@@ -256,17 +281,30 @@ local function UpdateTime(self, elapsed)
     currentTime = currentTime + elapsed
 end
 
-function EstimateBar:UpdateBars(timestamp)
+function module:UpdateAfterCombat()
+	if afterTimer then
+		afterTimer:Cancel()
+		afterTimer = nil
+	end
+	if not _G.UnitAffectingCombat("player") then
+		module:UpdateMinHeal("CombatEnd", "player")
+	end
+end
+
+function module:UpdateBars(timestamp)
     if addon.idle then
     	if updateTimer then
             updateTimer:Cancel()
             updateTimer = nil
+			if not afterTimer then
+				afterTimer = _G.C_Timer.NewTimer(6.0, module.UpdateAfterCombat)
+			end
         end
     end
-    EstimateBar:UpdateEstimateBar(timestamp)
+    module:UpdateEstimateBar(timestamp)
 end
 
-function EstimateBar:UpdateEstimateBar(timestamp)
+function module:UpdateEstimateBar(timestamp)
     if self.estimatebar.db.enabled and not addon.idle then
         local recentDamage = self:GetRecentDamageTaken(timestamp)
 
@@ -311,7 +349,7 @@ function EstimateBar:UpdateEstimateBar(timestamp)
     end
 end
 
-function EstimateBar:UpdateEstimateBarText(estimate)
+function module:UpdateEstimateBarText(estimate)
 	local text = ""
 	local sep = ""
     if self.estimatebar.db.show_text then
@@ -336,7 +374,7 @@ function EstimateBar:UpdateEstimateBarText(estimate)
             text, sep, val))
 end
 
-function EstimateBar:UpdateEstimateBarTextWithMin()
+function module:UpdateEstimateBarTextWithMin()
 	local value = 0
     if self.estimatebar.db.bar_mode == "BS" then
         value = bsMinimum
@@ -346,15 +384,13 @@ function EstimateBar:UpdateEstimateBarTextWithMin()
 	self:UpdateEstimateBarText(value)
 end
 
-function EstimateBar:UpdateMinHeal(event, unit)
+function module:UpdateMinHeal(event, unit)
 	if unit == "player" then
 		local baseValue
 		local maxHealth = UnitHealthMax("player")
-		actualDsMinHeal = dsMinHealPercent
-		if DarkSuccorBuff == true then
-			actualDsMinHeal = dsMinHealPercentSuccor
-		end
-		baseValue = maxHealth * actualDsMinHeal * (1+versatilityPercent)
+		baseValue = maxHealth * 
+			(DarkSuccorBuff and dsMinHealPercentSuccor or dsMinHealPercent) * 
+			(1+versatilityPercent)
 		dsHealMin = round(baseValue *
 			self:GetEffectiveHealingBuffModifiers() * 
 			self:GetEffectiveHealingDebuffModifiers())
@@ -365,7 +401,7 @@ function EstimateBar:UpdateMinHeal(event, unit)
 	end
 end
 
-function EstimateBar:UpdateEstimates(event, unit)
+function module:UpdateEstimates(event, unit)
 	if unit == "player" then
 		--if addon.idle then
 		self:UpdateEstimateBar()
@@ -373,24 +409,28 @@ function EstimateBar:UpdateEstimates(event, unit)
 	end
 end
 
-function EstimateBar:PLAYER_REGEN_DISABLED()
+function module:PLAYER_REGEN_DISABLED()
 	addon.idle = false
 
 	if addon:IsTrackerEnabled() and self.estimatebar.db.enabled then
-		updateTimer = _G.C_Timer.NewTicker(UPDATE_TIMER_FREQUENCY, EstimateBar.UpdateBars)
+		if afterTimer then
+			afterTimer:Cancel()
+			afterTimer = nil
+		end
+		updateTimer = _G.C_Timer.NewTicker(UPDATE_TIMER_FREQUENCY, module.UpdateBars)
         self.estimatebar.bar:Show()
         self.estimatebar.bar:SetScript("OnUpdate", UpdateTime)
     end
 end
 
-function EstimateBar:PLAYER_REGEN_ENABLED()
+function module:PLAYER_REGEN_ENABLED()
 	addon.idle = true
     if self.estimatebar.db.hide_ooc then
         self.estimatebar.bar:Hide()
     end
 end
 
-function EstimateBar:PLAYER_DEAD()
+function module:PLAYER_DEAD()
     -- Hide the health bar if configured to do so for OOC
     if self.estimatebar.db.hide_ooc then
         if self.estimatebar.bar:IsVisible() then
@@ -399,7 +439,7 @@ function EstimateBar:PLAYER_DEAD()
     end
 end
 
-function EstimateBar:GetRecentDamageTaken(timestamp)
+function module:GetRecentDamageTaken(timestamp)
     local latency = 0
     local damage = 0
     local current = timestamp
@@ -436,7 +476,7 @@ function EstimateBar:GetRecentDamageTaken(timestamp)
     return damage
 end
 
-function EstimateBar:AddDamageTaken(timestamp, damage)
+function module:AddDamageTaken(timestamp, damage)
     -- Add the new damage taken data
     tinsert(damageTaken, {timestamp,damage})
     wipe(removeList)
@@ -459,7 +499,7 @@ function EstimateBar:AddDamageTaken(timestamp, damage)
 end
 
 local CR_VERSATILITY_DAMAGE_DONE = _G.CR_VERSATILITY_DAMAGE_DONE or 29
-function EstimateBar:UpdateRatings()
+function module:UpdateRatings()
 	local update = false
 	local mastery = GetMasteryEffect()
 	if mastery ~= masteryRating then
@@ -481,16 +521,16 @@ function EstimateBar:UpdateRatings()
 	end
 end
 
-function EstimateBar:PLAYER_ENTERING_WORLD()
+function module:PLAYER_ENTERING_WORLD()
 	self:UNIT_MAXHEALTH("PLAYER_ENTERING_WORLD", "player")
 end
 
-function EstimateBar:PLAYER_ALIVE()
+function module:PLAYER_ALIVE()
 	self:UNIT_MAXHEALTH("PLAYER_ALIVE", "player")
 	self:UpdateEstimateBar()
 end
 
-function EstimateBar:UNIT_MAXHEALTH(event, unit)
+function module:UNIT_MAXHEALTH(event, unit)
 	if unit == "player" then
 		local maxHealth = UnitHealthMax("player")
 		if maxHealth ~= addon.maxHealth then
@@ -501,7 +541,7 @@ function EstimateBar:UNIT_MAXHEALTH(event, unit)
 end
 
 local EstDSHealFmt = "Estimated DS Heal: %d"
-function EstimateBar:UNIT_SPELLCAST_SENT(event, unit, spellName)
+function module:UNIT_SPELLCAST_SENT(event, unit, spellName)
 	if unit == "player" and spellName == SpellNames["Death Strike"] then
 		DS_SentTime = GetTime()
 		if addon.db.profile.debug then
@@ -510,7 +550,7 @@ function EstimateBar:UNIT_SPELLCAST_SENT(event, unit, spellName)
 	end
 end
 
-function EstimateBar:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, rank, lineId, spellId)
+function module:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, rank, lineId, spellId)
     if unit == "player" then
 		if spellName == SpellNames["Death Strike"] then
 	        local succeededTime = GetTime()
@@ -532,10 +572,12 @@ function EstimateBar:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, rank, line
     end
 end
 
-function EstimateBar:CheckAuras()
+function module:CheckAuras()
     local name, rank, icon, count, dispelType, duration, expires,
         caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
 		castByPlayer, value, value2, value3
+
+	wipe(AurasFound)
 
     local iccBuffFound = false
     local vampBloodFound = false
@@ -586,18 +628,27 @@ function EstimateBar:CheckAuras()
 			gsHealModifier = guardianSpiritHealBuff
 
 		else
-			-- Check for various healing debuffs
-			for k,v in pairs(addon.HealingDebuffs) do
-				if spellId == k then
-					if not count or count == 0 then
-						count = 1
-					end
-					healingDebuff = v * count
-					if healingDebuff > healingDebuffMultiplier then
-						healingDebuffMultiplier = healingDebuff
-					end
-				end
+			local amount = addon.HealingDebuffs[spellId]
+			if amount then
+				local stacks = max(count or 0, 1)
+				healingDebuff = amount * stacks 
+				if healingDebuff > healingDebuffMultiplier then
+					healingDebuffMultiplier = healingDebuff
+				end				
 			end
+
+			-- Check for various healing debuffs
+			-- for k,v in pairs(addon.HealingDebuffs) do
+			-- 	if spellId == k then
+			-- 		if not count or count == 0 then
+			-- 			count = 1
+			-- 		end
+			-- 		healingDebuff = v * count
+			-- 		if healingDebuff > healingDebuffMultiplier then
+			-- 			healingDebuffMultiplier = healingDebuff
+			-- 		end
+			-- 	end
+			-- end
 		end
 
         i = i + 1
@@ -619,22 +670,22 @@ function EstimateBar:CheckAuras()
 	    healingDebuffMultiplier = 1
     end
 
-	EstimateBar:UpdateMinHeal("UNIT_MAXHEALTH", "player")
+	module:UpdateMinHeal("UNIT_MAXHEALTH", "player")
 end
 
 local function UpdateTime(self, elapsed)
     currentTime = currentTime + elapsed
 end
 
-function EstimateBar:GetEffectiveHealingBuffModifiers()
+function module:GetEffectiveHealingBuffModifiers()
     return (1+iccBuffAmt) * (1+vbHealingInc) * (1+gsHealModifier) * (1+luckOfTheDrawAmt)
 end
 
-function EstimateBar:GetEffectiveHealingDebuffModifiers()
+function module:GetEffectiveHealingDebuffModifiers()
     return (1-healingDebuffMultiplier)
 end
 
-function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
+function module:COMBAT_LOG_EVENT_UNFILTERED(...)
     local event, timestamp, eventtype, hideCaster, 
         srcGUID, srcName, srcFlags, srcRaidFlags, 
         destGUID, destName, destFlags, destRaidFlags, 
@@ -851,15 +902,15 @@ function EstimateBar:COMBAT_LOG_EVENT_UNFILTERED(...)
     end
 end
 
-function EstimateBar:GetOptions()
-	return "estimateBarOpts", self:GetEstimateBarOptions()
+function module:GetOptions()
+	return "estimateBarOpts", self:GetModuleOptions()
 end
 
-function EstimateBar:AddOptions()
+function module:AddOptions()
 	return "EstimateBar", L["Estimate Bar"], "estimateBarOpts"
 end
 
-function EstimateBar:GetEstimateBarOptions()
+function module:GetModuleOptions()
 	local estimateBarOpts = {
 	    order = 3,
 	    type = "group",
