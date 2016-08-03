@@ -146,9 +146,7 @@ function Bar:Initialize(settings)
 	    bar.border:SetWidth(bar:GetWidth()+9)
 	    bar.border:SetHeight(bar:GetHeight()+8)
 	    bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
-	  	if not self.db.border then
-	  		bar.border:Hide()
-	  	end
+		self:UpdateBorder()
 	end
 
 	if self.hasSecondaryValue then
