@@ -288,6 +288,8 @@ function module:UpdateAfterCombat()
 	end
 	if not _G.UnitAffectingCombat("player") then
 		module:UpdateMinHeal("CombatEnd", "player")
+		self.estimatebar.altcolor = false
+		self.estimatebar:UpdateGraphics()
 	end
 end
 
