@@ -51,6 +51,7 @@ function Bar:Create(settings)
 	object.hideOnDisable = getValueOrDefault(settings.hideOnDisable, true)
 	object.updateSetPoint = getValueOrDefault(settings.updateSetPoint, true)
 	object.hasSecondaryValue = getValueOrDefault(settings.hasSecondaryValue, false)
+	object.movable = getValueOrDefault(settings.movable, true)
 	object.secondaryFontAdj = settings.secondaryFontAdj
 	object.db = addon.db.profile.bars[settings.name]
 
@@ -184,6 +185,8 @@ function Bar:Initialize(settings)
 
 	bar.locked = true
 	bar.updateVisibilityOnLock = settings.updateVisibilityOnLock
+
+	if self.movable then self:SetMovable() end
 end
 
 function Bar:Show()

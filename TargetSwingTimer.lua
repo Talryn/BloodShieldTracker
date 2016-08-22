@@ -99,7 +99,6 @@ function module:CreateDisplay()
 			end,
 		}
 	})
-	self.targetSwingBar:SetMovable()
 	--addon.frames.targetSwingTimerBar = self.targetSwingBar
 end
 

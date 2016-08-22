@@ -194,7 +194,6 @@ function module:CreateDisplay()
 			end,
 		},
 	})
-	self.healthbar:SetMovable()
 	self.healthbar:Hide()
 end
 
@@ -284,11 +283,11 @@ function module:GetModuleOptions()
 				type = "toggle",
 				order = 10,
 				set = function(info, val)
-				    BST.db.profile.bars["HealthBar"].enabled = val
+				    addon.db.profile.bars["HealthBar"].enabled = val
 					if val then self:OnEnable() else self:OnDisable() end
 				end,
                 get = function(info)
-                    return BST.db.profile.bars["HealthBar"].enabled
+                    return addon.db.profile.bars["HealthBar"].enabled
                 end,
 			},
 			lock_bar = {
@@ -297,11 +296,11 @@ function module:GetModuleOptions()
 				type = "toggle",
 				order = 20,
 				set = function(info, val)
-				    BST.db.profile.bars["HealthBar"].locked = val 
-					BST.bars["HealthBar"]:Lock(val)
+				    addon.db.profile.bars["HealthBar"].locked = val 
+					self.healthbar:Lock(val)
 				end,
                 get = function(info)
-                    return BST.db.profile.bars["HealthBar"].locked
+                    return addon.db.profile.bars["HealthBar"].locked
                 end,
 			},
 			hide_ooc = {
@@ -310,18 +309,18 @@ function module:GetModuleOptions()
 				type = "toggle",
 				order = 30,
 				set = function(info, val)
-				    BST.db.profile.bars["HealthBar"].hide_ooc = val
+				    addon.db.profile.bars["HealthBar"].hide_ooc = val
 					if not _G.InCombatLockdown() then
 					    if val then
 					        self.healthbar.bar:Hide()
 				        elseif addon:IsTrackerEnabled() and
-							BST.db.profile.bars["HealthBar"].enabled then
+							addon.db.profile.bars["HealthBar"].enabled then
 				            self.healthbar.bar:Show()
 			            end
 			        end
 				end,
                 get = function(info)
-                    return BST.db.profile.bars["HealthBar"].hide_ooc
+                    return addon.db.profile.bars["HealthBar"].hide_ooc
                 end,
 			},
 			low_percent = {
@@ -334,10 +333,10 @@ function module:GetModuleOptions()
 				max = 0.95,
 				bigStep = 0.05,
 				set = function(info, val)
-				    BST.db.profile.bars["HealthBar"].low_percent = val
+				    addon.db.profile.bars["HealthBar"].low_percent = val
 				end,
 				get = function(info, val)
-				    return BST.db.profile.bars["HealthBar"].low_percent
+				    return addon.db.profile.bars["HealthBar"].low_percent
 				end,
 			},
 			text_format = {

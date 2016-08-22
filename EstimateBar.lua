@@ -222,7 +222,6 @@ function module:CreateDisplay()
 			end,
 		},
 	})
-	self.estimatebar:SetMovable()
 	self.estimatebar:Hide()
 end
 
@@ -949,7 +948,7 @@ function module:GetModuleOptions()
 				order = 30,
 				set = function(info, val)
 				    addon.db.profile.bars["EstimateBar"].locked = val 
-					self.estimatebar:Lock()
+					self.estimatebar:Lock(val)
 				end,
 	            get = function(info)
 					return addon.db.profile.bars["EstimateBar"].locked

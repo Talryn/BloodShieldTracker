@@ -723,7 +723,7 @@ function BloodShieldTracker:GetShieldBarOptions()
 				order = 20,
 				set = function(info, val)
 				    self.db.profile.bars["ShieldBar"].locked = val 
-					self.shieldbar:Lock()
+					self.shieldbar:Lock(val)
 				end,
                 get = function(info)
 					return self.db.profile.bars["ShieldBar"].locked
@@ -865,7 +865,7 @@ function BloodShieldTracker:GetBoneShieldBarOptions()
 				order = 20,
 				set = function(info, val)
 				    self.db.profile.bars["BoneShieldBar"].locked = val 
-					addon.bars["BoneShieldBar"]:Lock()
+					addon.bars["BoneShieldBar"]:Lock(val)
 				end,
                 get = function(info)
 					return self.db.profile.bars["BoneShieldBar"].locked
@@ -1199,7 +1199,7 @@ function BloodShieldTracker:GetAMSBarOptions()
 				order = 20,
 				set = function(info, val)
 				    self.db.profile.bars["AMSBar"].locked = val 
-					addon.bars["AMSBar"]:Lock()
+					addon.bars["AMSBar"]:Lock(val)
 				end,
                 get = function(info)
 					return self.db.profile.bars["AMSBar"].locked
