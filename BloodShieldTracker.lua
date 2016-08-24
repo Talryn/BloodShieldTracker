@@ -24,9 +24,7 @@ addon.DEBUG_OUTPUT = false
 addon.DEBUG_BUFFER = ""
 
 -- Make Print accessible to other parts of the addon.
-addon.Print = function(...)
-	BloodShieldTracker:Print(...)
-end
+addon.Print = function(self, ...) return BloodShieldTracker:Print(...) end
 
 -- Define Bar for now but the rest is at the bottom of the file.
 local Bar = addon.Bar

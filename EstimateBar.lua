@@ -72,7 +72,8 @@ local removeList = {}
 local dsHealModifier = 0.20  -- Percent of the DS Heal from the tooltip.
 local dsMinHealPercent = 0.10
 local dsMinHealPercentSuccor = 0.20
-local vbHealingBonus = 0.30
+local BaseVBHealingBonus = 0.30
+local vbHealingBonus = BaseVBHealingBonus
 local guardianSpiritHealBuff = 0.40
 
 -- Curent state information
@@ -229,6 +230,11 @@ function module:OnEnable()
 	if not self.estimatebar then self:CreateDisplay() end
 	addon:RegisterCallback("Auras", module.name, module.CheckAuras)
 	addon:RegisterCallback("GearUpdate", module.name, module.GearUpdate)
+
+	vbHealingBonus = self:GetVBBonus()
+	if addon.db.profile.debug then
+		addon:Print("VB Healing Bonus: ".._G.tostring(vbHealingBonus))
+	end
 
 	for unit, events in _G.pairs(UnitEvents) do
 		local frame = EventFrames[unit] or _G.CreateFrame("Frame",
@@ -497,6 +503,28 @@ function module:AddDamageTaken(timestamp, damage)
     end
     
     self:UpdateBars(timestamp)
+end
+
+module.vampBloodBonuses = {
+	["30"] = 0.3,
+	["35"] = 0.35,
+	["40"] = 0.40,
+	["45"] = 0.45,	
+}
+function module:GetVBBonus()
+	if addon.currentSpec ~= "Blood" then return 0 end
+
+	local desc = _G.GetSpellDescription(SpellIds["Vampiric Blood"])
+	local matches = _G.string.gmatch(desc, "(%d%d)%%")
+	local healthBonus = matches()
+	local healingBonus = matches()
+	if healingBonus ~= nil then
+		local value = self.vampBloodBonuses[healingBonus]
+		if value ~= nil then
+			return value
+		end
+	end
+	return BaseVBHealingBonus
 end
 
 local CR_VERSATILITY_DAMAGE_DONE = _G.CR_VERSATILITY_DAMAGE_DONE or 29
