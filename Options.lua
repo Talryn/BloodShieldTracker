@@ -317,7 +317,7 @@ function BloodShieldTracker:AddAdvancedPositioning(options, barName)
 		name = L["Anchor"],
 		desc = L["Anchor_OptDesc"],
 		type = "select",
-		values = GetAnchorFrames(frames, barName),
+		values = function() return GetAnchorFrames(frames, barName) end,
 		--values = {
 		--	["None"] = L["None"],
 		--	["Custom"] = L["Custom"],

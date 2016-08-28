@@ -183,7 +183,7 @@ function Bar:Initialize(settings)
 		self.bar.border:Hide()
 	end
 
-	bar.locked = true
+	bar.locked = getValueOrDefault(self.db.locked, true)
 	bar.updateVisibilityOnLock = settings.updateVisibilityOnLock
 
 	if self.movable then self:SetMovable() end
