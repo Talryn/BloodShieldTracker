@@ -509,7 +509,10 @@ module.vampBloodBonuses = {
 	["30"] = 0.3,
 	["35"] = 0.35,
 	["40"] = 0.40,
-	["45"] = 0.45,	
+	["45"] = 0.45,
+	["50"] = 0.50,
+	["55"] = 0.55,
+	["60"] = 0.60,
 }
 function module:GetVBBonus()
 	if addon.currentSpec ~= "Blood" then return 0 end
