@@ -105,7 +105,7 @@ function Bar:Initialize(settings)
 	self.bar = bar
 	bar.parent = self
 	self.altcolor = false
-	bar:SetScale(1)
+	bar:SetScale(self.db.scale or 1)
 	self.orientation = "HORIZONTAL"
 	if self.GetOrientation and _G.type(self.GetOrientation) == "function" then
 		self.orientation = self:GetOrientation()
