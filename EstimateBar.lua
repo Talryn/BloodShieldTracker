@@ -15,6 +15,7 @@ local round = addon.round
 local max = _G.math.max
 
 -- Local versions of WoW API calls
+local UnitBuff = _G.UnitBuff
 local UnitHealth = _G.UnitHealth
 local UnitHealthMax = _G.UnitHealthMax
 local GetTime = _G.GetTime
@@ -72,6 +73,7 @@ local removeList = {}
 local dsHealModifier = 0.20  -- Percent of the DS Heal from the tooltip.
 local dsMinHealPercent = 0.10
 local dsMinHealPercentSuccor = 0.20
+local BONE_SHIELD_DMG_REDUCTION = 0.16
 local BaseVBHealingBonus = 0.30
 local vbHealingBonus = BaseVBHealingBonus
 local guardianSpiritHealBuff = 0.40
@@ -483,9 +485,14 @@ function module:GetRecentDamageTaken(timestamp)
     return damage
 end
 
+local boneShieldReduction = 1 - BONE_SHIELD_DMG_REDUCTION
 function module:AddDamageTaken(timestamp, damage)
+	-- As of 7.1.5 if Bone Shield is up, the damage was higher.
+	local name = UnitBuff("player", SpellNames["Bone Shield"])
+	local actualDmg = name and (damage / boneShieldReduction) or damage
+
     -- Add the new damage taken data
-    tinsert(damageTaken, {timestamp,damage})
+    tinsert(damageTaken, {timestamp,actualDmg})
     wipe(removeList)
     -- Remove any data older than lastSeconds
     for i, v in ipairs(damageTaken) do
