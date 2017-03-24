@@ -203,6 +203,9 @@ local SpellIds = {
 	["Blood Boil"] = 48721,
 	["Sacred Shield"] = 65148,
 	["Marrowrend"] = 195182,
+	["Protection of Tyr"] = 200430,
+	["Lana'thel's Lament"] = 212974,
+	["Divine Hymn"] = 64844,
 	-- ICC Buffs for Horde
 	["Hellscream's Warsong 05"] = 73816,
 	["Hellscream's Warsong 10"] = 73818,
@@ -1665,11 +1668,11 @@ function BloodShieldTracker:CheckTalents5()
 		local activeSpecNum = _G.GetSpecialization()
 		if activeSpecNum and activeSpecNum > 0 then
 			local id, name, desc, texture = _G.GetSpecializationInfo(activeSpecNum)
-    	if texture == "Interface\\Icons\\Spell_Deathknight_BloodPresence" then
+			if id == 250 then
 				addon.currentSpec = "Blood"
-			elseif texture == "Interface\\Icons\\Spell_Deathknight_FrostPresence" then
+			elseif id == 251 then
 				addon.currentSpec = "Frost"
-			elseif texture == "Interface\\Icons\\Spell_Deathknight_UnholyPresence" then
+			elseif id == 252 then
 				addon.currentSpec = "Unholy"
 			else
 				if addon.db.profile.debug then

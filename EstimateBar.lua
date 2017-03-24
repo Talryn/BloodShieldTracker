@@ -9,6 +9,7 @@ local ceil = _G.math.ceil
 local table = _G.table
 local tostring = _G.tostring
 local ipairs = _G.ipairs
+local pairs = _G.pairs
 local tinsert, tremove = table.insert, table.remove
 local wipe = _G.wipe
 local round = addon.round
@@ -31,6 +32,7 @@ local formatStandard = "%s%s%s"
 local formatPercent = "%s%%"
 
 local AurasFound = {}
+local HealingBuffsFound = {}
 
 local module = {}
 module.name = "EstimateBar"
@@ -77,6 +79,14 @@ local BONE_SHIELD_DMG_REDUCTION = 0.16
 local BaseVBHealingBonus = 0.30
 local vbHealingBonus = BaseVBHealingBonus
 local guardianSpiritHealBuff = 0.40
+local HealingBuffs = {
+	[SpellIds["Guardian Spirit"]] = 0.40,
+	[SpellIds["Divine Hymn"]] = 0.10,
+	[SpellIds["Protection of Tyr"]] = 0.15,
+	[SpellIds["Lana'thel's Lament"]] = 0.05,
+	[SpellIds["Hellscream's Warsong 30"]] = 0.30,  -- Horde ICC Bonus
+	[SpellIds["Strength of Wrynn 30"]] = 0.30, -- Alliance ICC Bonus
+}
 
 -- Curent state information
 local DarkSuccorBuff = false
@@ -87,8 +97,6 @@ local dsHealMin = 0
 local bsMinimum = 0
 -- End --
 
-local iccBuff = false
-local iccBuffAmt = 0.0
 local vbBuff = false
 local vbHealingInc = 0.0
 local gsHealModifier = 0.0
@@ -100,25 +108,6 @@ local versatilityPercent = 0
 local shieldPercent = 0
 local luckOfTheDrawBuff = false
 local luckOfTheDrawAmt = 0
-
-local ICCBuffs = {
-	Horde = {
-		[SpellIds["Hellscream's Warsong 05"]] = 0.05,
-		[SpellIds["Hellscream's Warsong 10"]] = 0.10,
-		[SpellIds["Hellscream's Warsong 15"]] = 0.15,
-		[SpellIds["Hellscream's Warsong 20"]] = 0.20,
-		[SpellIds["Hellscream's Warsong 25"]] = 0.25,
-		[SpellIds["Hellscream's Warsong 30"]] = 0.30,
-	},
-	Alliance = {
-		[SpellIds["Strength of Wrynn 05"]] = 0.05,
-		[SpellIds["Strength of Wrynn 10"]] = 0.10,
-		[SpellIds["Strength of Wrynn 15"]] = 0.15,
-		[SpellIds["Strength of Wrynn 20"]] = 0.20,
-		[SpellIds["Strength of Wrynn 25"]] = 0.25,
-		[SpellIds["Strength of Wrynn 30"]] = 0.30,
-	}
-}
 
 function module:SetProfile()
 	self.profile = addon.db.profile.bars.EstimateBar
@@ -617,8 +606,8 @@ function module:CheckAuras()
 		castByPlayer, value, value2, value3
 
 	wipe(AurasFound)
+	wipe(HealingBuffsFound)
 
-    local iccBuffFound = false
     local vampBloodFound = false
     local healingDebuff = 0
 	DarkSuccorBuff = false
@@ -628,44 +617,30 @@ function module:CheckAuras()
     gsHealModifier = 0.0
 
     -- Loop through unit auras to find ones of interest.
-    local i = 1
-    repeat
-        name, rank, icon, count, dispelType, duration, expires, caster, 
+	local i = 1
+	repeat
+		name, rank, icon, count, dispelType, duration, expires, caster, 
 			stealable, consolidate, spellId, canApplyAura, isBossDebuff, 
 			castByPlayer, value, value2, value3 = UnitAura("player", i)
-        if name == nil or spellId == nil then break end
+		if name == nil or spellId == nil then break end
 
-        if spellId == SpellIds["Dark Succor"] then
-            DarkSuccorBuff = true
+		if spellId == SpellIds["Dark Succor"] then
+			DarkSuccorBuff = true
 
-        elseif spellId == SpellIds["Luck of the Draw"] then
-            luckOfTheDrawBuff = true
-    	    if not count or count == 0 then
-    	        count = 1
+		elseif spellId == SpellIds["Luck of the Draw"] then
+			luckOfTheDrawBuff = true
+			if not count or count == 0 then
+				count = 1
             end
-            luckOfTheDrawAmt = addon.LUCK_OF_THE_DRAW_MOD * count
-
-		elseif name == SpellNames["Hellscream's Warsong 30"] then
-			iccBuffFound = true
-			iccBuff = true
-			iccBuffAmt = ICCBuffs.Horde[spellId] or 
-			ICCBuffs.Horde[SpellIds["Hellscream's Warsong 30"]]
-
-		elseif name == SpellNames["Strength of Wrynn 30"] then
-			iccBuffFound = true
-			iccBuff = true
-			iccBuffAmt = ICCBuffs.Alliance[spellId] or 
-			ICCBuffs.Alliance[SpellIds["Strength of Wrynn 30"]]
+			luckOfTheDrawAmt = addon.LUCK_OF_THE_DRAW_MOD * count
 
         elseif spellId == SpellIds["Vampiric Blood"] then
 			vampBloodFound = true
-            vbBuff = true
-            vbHealingInc = vbHealingBonus
+			vbBuff = true
+			vbHealingInc = vbHealingBonus
 
-		elseif spellId == SpellIds["Guardian Spirit"] then
-			AurasFound["Guardian Spirit"] = true
-			gsHealModifier = guardianSpiritHealBuff
-
+		elseif HealingBuffs[spellId] then
+			HealingBuffsFound[spellId] = HealingBuffs[spellId]
 		else
 			local amount = addon.HealingDebuffs[spellId]
 			if amount then
@@ -675,29 +650,10 @@ function module:CheckAuras()
 					healingDebuffMultiplier = healingDebuff
 				end				
 			end
-
-			-- Check for various healing debuffs
-			-- for k,v in pairs(addon.HealingDebuffs) do
-			-- 	if spellId == k then
-			-- 		if not count or count == 0 then
-			-- 			count = 1
-			-- 		end
-			-- 		healingDebuff = v * count
-			-- 		if healingDebuff > healingDebuffMultiplier then
-			-- 			healingDebuffMultiplier = healingDebuff
-			-- 		end
-			-- 	end
-			-- end
 		end
 
-        i = i + 1
+		i = i + 1
 	until name == nil
-
-    -- If the ICC buff isn't present, reset the values
-    if not iccBuffFound then
-        iccBuff = false
-        iccBuffAmt = 0.0
-    end
 
     if not vampBloodFound then
         vbBuff = false
@@ -717,11 +673,17 @@ local function UpdateTime(self, elapsed)
 end
 
 function module:GetEffectiveHealingBuffModifiers()
-    return (1+iccBuffAmt) * (1+vbHealingInc) * (1+gsHealModifier) * (1+luckOfTheDrawAmt)
+	local healingBuffs = 1.0
+	for id, bonus in pairs(HealingBuffsFound) do
+		if bonus and bonus > 0 then
+			healingBuffs = healingBuffs * (1 + bonus)
+		end
+	end
+    return (1 + vbHealingInc) * (1 + luckOfTheDrawAmt) * healingBuffs
 end
 
 function module:GetEffectiveHealingDebuffModifiers()
-    return (1-healingDebuffMultiplier)
+    return (1 - healingDebuffMultiplier)
 end
 
 function module:COMBAT_LOG_EVENT_UNFILTERED(...)
