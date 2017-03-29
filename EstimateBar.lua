@@ -86,6 +86,11 @@ local HealingBuffs = {
 	[SpellIds["Lana'thel's Lament"]] = 0.05,
 	[SpellIds["Hellscream's Warsong 30"]] = 0.30,  -- Horde ICC Bonus
 	[SpellIds["Strength of Wrynn 30"]] = 0.30, -- Alliance ICC Bonus
+	[SpellIds["Haemostasis"]] = 0.2, -- Legendary shoulders, per stack
+}
+local CarrionFeast = {
+	powerId = 1481,
+	perRank = 0.05,
 }
 
 -- Curent state information
@@ -95,6 +100,7 @@ local DS_Latency = nil
 addon.maxHealth = 1
 local dsHealMin = 0
 local bsMinimum = 0
+local CarrionFeastTotal = 0
 -- End --
 
 local vbBuff = false
@@ -136,7 +142,7 @@ function module:Disable()
 	self:OnDisable()
 end
 
-function module:GearUpdate()
+function module.GearUpdate()
 	-- local currentBonus = Tier14Bonus
 	-- Tier14Bonus = 1 + (addon.tierCount["T14 Tank"] >= 4 and T14BonusAmt or 0)
 	-- if currentBonus ~= Tier14Bonus then
@@ -148,6 +154,22 @@ function module:GearUpdate()
 	-- end
 end
 
+function module:ArtifactUpdate()
+	-- Check Carrion Feast
+	local power = C_ArtifactUI.GetPowerInfo(CarrionFeast.powerId) or {}
+	local rank = power.currentRank or 0
+	CarrionFeastTotal = rank * CarrionFeast.perRank
+	if addon.db.profile.debug then
+		local fmt = "Carrion Feast: %d - %d%%"
+		addon:Print(fmt:format(rank, CarrionFeastTotal * 100))
+	end
+	self:UpdateMinHeal("ArtifactUpdate", "player")
+end
+
+function module.WeaponUpdate()
+	module:ArtifactUpdate()
+end
+
 local UnitEvents = {
 	["any"] = {
 		"PLAYER_REGEN_DISABLED",
@@ -157,7 +179,9 @@ local UnitEvents = {
 		"COMBAT_LOG_EVENT_UNFILTERED",
 		"PLAYER_ENTERING_WORLD",
 		"COMBAT_RATING_UPDATE",
-		"MASTERY_UPDATE"
+		"MASTERY_UPDATE",
+		"ARTIFACT_UPDATE",
+		"ARTIFACT_XP_UPDATE",
 	},
 	["player"] = {
 		"UNIT_SPELLCAST_SUCCEEDED",
@@ -189,6 +213,10 @@ local function EventFrame_OnEvent(frame, event, ...)
 		module:UpdateRatings(event, ...)
 	elseif event == "MASTERY_UPDATE" then
 		module:UpdateRatings(event, ...)
+	elseif event == "ARTIFACT_UPDATE" then
+		module:ArtifactUpdate(event, ...)
+	elseif event == "ARTIFACT_XP_UPDATE" then
+		module:ArtifactUpdate(event, ...)
 	end
 end
 local EventFrames = {}
@@ -221,11 +249,13 @@ function module:OnEnable()
 	if not self.estimatebar then self:CreateDisplay() end
 	addon:RegisterCallback("Auras", module.name, module.CheckAuras)
 	addon:RegisterCallback("GearUpdate", module.name, module.GearUpdate)
+	addon:RegisterCallback("WeaponUpdate", module.name, module.WeaponUpdate)
 
 	vbHealingBonus = self:GetVBBonus()
 	if addon.db.profile.debug then
 		addon:Print("VB Healing Bonus: ".._G.tostring(vbHealingBonus))
 	end
+	self:UpdateRatings()
 
 	for unit, events in _G.pairs(UnitEvents) do
 		local frame = EventFrames[unit] or _G.CreateFrame("Frame",
@@ -258,6 +288,7 @@ end
 function module:OnDisable()
 	addon:UnregisterCallback("Auras", module.name)
 	addon:UnregisterCallback("GearUpdate", module.name)
+	addon:UnregisterCallback("WeaponUpdate", module.name)
 	for unit, frame in _G.pairs(EventFrames) do
 		if frame and frame.UnregisterAllEvents then frame:UnregisterAllEvents() end
 	end
@@ -509,6 +540,7 @@ module.vampBloodBonuses = {
 	["50"] = 0.50,
 	["55"] = 0.55,
 	["60"] = 0.60,
+	["65"] = 0.65,
 }
 function module:GetVBBonus()
 	if addon.currentSpec ~= "Blood" then return 0 end
@@ -545,6 +577,10 @@ function module:UpdateRatings()
 	end
 
 	if update then
+        if addon.db.profile.debug then
+			local fmt = "Versatility: %0.4f%%"
+			addon:Print(fmt:format(versatilityBonus))
+		end
 		self:UpdateEstimates("UpdateRatings", "player")
 	end
 end
@@ -573,7 +609,7 @@ function module:UNIT_SPELLCAST_SENT(event, unit, spellName)
 	if unit == "player" and spellName == SpellNames["Death Strike"] then
 		DS_SentTime = GetTime()
 		if addon.db.profile.debug then
-			addon.Print(EstDSHealFmt:format(estimatedDS))
+			addon:Print(EstDSHealFmt:format(estimatedDS))
 		end
 	end
 end
@@ -587,7 +623,7 @@ function module:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, rank, lineId, s
 	            if diff > 0 then
 	                DS_Latency = diff
 	                if addon.db.profile.debug then
-	                    addon.Print("DS Latency: "..DS_Latency)
+	                    addon:Print("DS Latency: "..DS_Latency)
 	                end
 	                -- If the latency appears overly large then cap it at 2 seconds.
 	                if DS_Latency > 2 then 
@@ -640,7 +676,8 @@ function module:CheckAuras()
 			vbHealingInc = vbHealingBonus
 
 		elseif HealingBuffs[spellId] then
-			HealingBuffsFound[spellId] = HealingBuffs[spellId]
+			local stacks = max(count or 0, 1)
+			HealingBuffsFound[spellId] = HealingBuffs[spellId] * stacks
 		else
 			local amount = addon.HealingDebuffs[spellId]
 			if amount then
@@ -679,7 +716,7 @@ function module:GetEffectiveHealingBuffModifiers()
 			healingBuffs = healingBuffs * (1 + bonus)
 		end
 	end
-    return (1 + vbHealingInc) * (1 + luckOfTheDrawAmt) * healingBuffs
+	return (1 + vbHealingInc) * (1 + luckOfTheDrawAmt) * healingBuffs * (1 + CarrionFeastTotal)
 end
 
 function module:GetEffectiveHealingDebuffModifiers()
@@ -717,7 +754,7 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
 	        local schoolName = addon.GetSpellSchool(school) or "N/A"
 	        if addon.db.profile.debug and addon.db.profile.debugdmg then
 	            local spellAbsFmt = "Spell Absorbed (%s-%s,%d) %d by %s"
-	            addon.Print(spellAbsFmt:format(spellName, schoolName, school, absorbed, absorbName))
+	            addon:Print(spellAbsFmt:format(spellName, schoolName, school, absorbed, absorbName))
 	        end
 		else
 			absorbed = param16
@@ -725,7 +762,7 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
 			absorbName = param14
 	        if addon.db.profile.debug and addon.db.profile.debugdmg then
 	            local spellAbsFmt = "Spell Absorbed (None) %d by %s"
-	            addon.Print(spellAbsFmt:format(absorbed, absorbName))
+	            addon:Print(spellAbsFmt:format(absorbed, absorbName))
 	        end
 		end
 
@@ -735,7 +772,7 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
 
 		--         if addon.db.profile.debug then
 		-- 	local fmt = "SPELL_ABSORBED %s %s %s %s %s %s %s %s %s %s %s %s"
-		-- 	addon.Print(fmt:format(
+		-- 	addon:Print(fmt:format(
 		-- 		_G.tostring(param9),
 		-- 		_G.tostring(param10),
 		-- 		_G.tostring(param11),
@@ -758,7 +795,7 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
 
             if addon.db.profile.debug and addon.db.profile.debugdmg then
                 local swingDmgFmt = "Swing Damage for %d [%d absorbed, %s]"
-                addon.Print(swingDmgFmt:format(damage, absorb, eventtype))
+                addon:Print(swingDmgFmt:format(damage, absorb, eventtype))
             end
 
             self:AddDamageTaken(timestamp, damage)

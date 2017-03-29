@@ -206,6 +206,7 @@ local SpellIds = {
 	["Protection of Tyr"] = 200430,
 	["Lana'thel's Lament"] = 212974,
 	["Divine Hymn"] = 64844,
+	["Haemostasis"] = 235559,
 	-- ICC Buffs for Horde
 	["Hellscream's Warsong 05"] = 73816,
 	["Hellscream's Warsong 10"] = 73818,
@@ -704,7 +705,7 @@ function addon.SetPointWithAnchor(self)
 	local isFrame = addon.IsFrame(anchorFrame)
 	if anchorFrame and isFrame then
 		if addon.db.profile.debug then
-			addon.Print("Found anchor for bar '".._G.tostring(self.name).."'.")
+			addon:Print("Found anchor for bar '".._G.tostring(self.name).."'.")
 		end
 		self.bar:SetPoint(
 			self.db.anchorPt, anchorFrame, self.db.anchorFramePt, 
@@ -714,7 +715,7 @@ function addon.SetPointWithAnchor(self)
 		self.bar:SetPoint("CENTER", _G.UIParent, "CENTER", self.db.x, self.db.y)
 		if anchorFrame and not isFrame and self.anchorTries < 13 then
 			if addon.db.profile.debug then
-				addon.Print("Waiting for anchor for bar '".._G.tostring(self.name).."'.")
+				addon:Print("Waiting for anchor for bar '".._G.tostring(self.name).."'.")
 			end
 	    	_G.C_Timer.After(5, function()
 				self:SetPoint()
@@ -1646,6 +1647,7 @@ function BloodShieldTracker:CheckTalents(event)
 	self:CheckTalents5()
 	self:UpdateTierBonus()
 	addon:FireCallback("GearUpdate")
+	addon:FireCallback("WeaponUpdate")
 	addon:FireCallback("TalentUpdate")
 	addon:UpdateBarsForTalents()
 
@@ -1846,6 +1848,9 @@ end
 function BloodShieldTracker:PLAYER_EQUIPMENT_CHANGED(event, slot, hasItem)
 	if TierSlots[slot] and not GearChangeTimer then
 		GearChangeTimer = self:ScheduleTimer("CheckGear", 1.5)
+	end
+	if slot == _G.INVSLOT_MAINHAND then
+		addon:FireCallback("WeaponUpdate")
 	end
 end
 

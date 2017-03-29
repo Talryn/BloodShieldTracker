@@ -55,6 +55,7 @@ end
 addon.callbacks = {
 	["Auras"] = {},
 	["GearUpdate"] = {},
+	["WeaponUpdate"] = {},
 	["TalentUpdate"] = {},
 	["CombatStart"] = {},
 	["CombatEnd"] = {},
