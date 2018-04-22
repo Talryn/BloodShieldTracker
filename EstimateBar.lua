@@ -16,7 +16,6 @@ local round = addon.round
 local max = _G.math.max
 
 -- Local versions of WoW API calls
-local UnitBuff = _G.UnitBuff
 local UnitHealth = _G.UnitHealth
 local UnitHealthMax = _G.UnitHealthMax
 local GetTime = _G.GetTime
@@ -24,6 +23,9 @@ local UnitGetTotalAbsorbs = _G.UnitGetTotalAbsorbs
 local UnitAttackPower = _G.UnitAttackPower
 local GetMasteryEffect = _G.GetMasteryEffect
 local GetSpellCooldown = _G.GetSpellCooldown
+
+-- Conditional for WoD/BfA
+local UnitBuff = addon.BfA and addon.UnitBuff or _G.UnitBuff
 
 local SpellIds = addon.SpellIds
 local SpellNames = addon.SpellNames

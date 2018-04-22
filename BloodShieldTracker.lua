@@ -51,6 +51,10 @@ local GetVersatilityBonus = _G.GetVersatilityBonus
 local GetCombatRatingBonus = _G.GetCombatRatingBonus
 local GetSpellCooldown = _G.GetSpellCooldown
 
+-- Conditional for WoD/BfA
+local UnitBuff = addon.BfA and addon.UnitBuff or _G.UnitBuff
+local UnitDebuff = addon.BfA and addon.UnitDebuff or _G.UnitDebuff
+
 BloodShieldTracker.loaded = false
 addon.playerName = UnitName("player")
 BloodShieldTracker.shieldbar = nil
@@ -772,7 +776,7 @@ function BloodShieldTracker:CreateDisplay()
 					local name, rank, icon, count, dispelType, duration, expires, 
 					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 					isBossDebuff, castByPlayer, new1, new2, value1 
-						= _G.UnitBuff("player", SpellNames["Blood Shield"])
+						= UnitBuff("player", SpellNames["Blood Shield"])
 					if name then
 						local timeLeft = expires - GetTime()
 						self.bar.timer = timeLeft
@@ -991,7 +995,7 @@ function BloodShieldTracker:CreateDisplay()
 					local name, rank, icon, count, dispelType, duration, expires, 
 					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 					isBossDebuff, castByPlayer, new1, new2, value1 
-						= _G.UnitDebuff("player", SpellNames["Shroud of Purgatory"])
+						= UnitDebuff("player", SpellNames["Shroud of Purgatory"])
 					if name then
 						--local timeLeft = expires - GetTime()
 						--self.bar.timer = timeLeft
@@ -1058,7 +1062,7 @@ function BloodShieldTracker:CreateDisplay()
 					local name, rank, icon, count, dispelType, duration, expires, 
 					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 					isBossDebuff, castByPlayer, new1, new2, value1 
-						= _G.UnitBuff("player", SpellNames["Bone Shield"])
+						= UnitBuff("player", SpellNames["Bone Shield"])
 					if name then
 						local timeLeft = expires - GetTime()
 						self.bar.timer = timeLeft
@@ -1175,7 +1179,7 @@ function BloodShieldTracker:CreateDisplay()
 					local name, rank, icon, count, dispelType, duration, expires, 
 					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 					isBossDebuff, castByPlayer, new1, new2, value1 
-						= _G.UnitBuff("player", SpellNames["Anti-Magic Shell"])
+						= UnitBuff("player", SpellNames["Anti-Magic Shell"])
 					if name then
 						local timeLeft = expires - GetTime()
 						self.bar.timer = timeLeft
