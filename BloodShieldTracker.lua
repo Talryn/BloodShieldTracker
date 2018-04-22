@@ -40,7 +40,7 @@ local tonumber = _G.tonumber
 local wipe = _G.wipe
 local type = _G.type
 
--- Local versions of WoW API calls
+-- Local versions of WoW API calls.
 local UnitAura = _G.UnitAura
 local GetTime = _G.GetTime
 local UnitHealthMax = _G.UnitHealthMax
