@@ -25,8 +25,8 @@ local GetMasteryEffect = _G.GetMasteryEffect
 local GetSpellCooldown = _G.GetSpellCooldown
 local CombatLogGetCurrentEventInfo = _G.CombatLogGetCurrentEventInfo
 
--- Conditional for WoD/BfA
-local UnitBuff = addon.BfA and addon.UnitBuff or _G.UnitBuff
+-- Use BfA+ version to search by name.
+local UnitBuff = addon.UnitBuff
 
 local SpellIds = addon.SpellIds
 local SpellNames = addon.SpellNames
@@ -731,26 +731,13 @@ function module:GetEffectiveHealingDebuffModifiers()
 end
 
 function module:COMBAT_LOG_EVENT_UNFILTERED(...)
-    local event, timestamp, eventtype, hideCaster, 
-        srcGUID, srcName, srcFlags, srcRaidFlags, 
-        destGUID, destName, destFlags, destRaidFlags, 
-        param9, param10, param11, param12, param13, param14, 
-        param15, param16, param17, param18, param19, param20
+	local event = "COMBAT_LOG_EVENT_UNFILTERED"
 
-	if addon.BfA then
-		timestamp, eventtype, hideCaster, 
-		srcGUID, srcName, srcFlags, srcRaidFlags,
-		destGUID, destName, destFlags, destRaidFlags,
-		param9, param10, param11, param12, param13, param14, 
-		param15, param16, param17, param18, param19, param20 = CombatLogGetCurrentEventInfo()
-		event = "COMBAT_LOG_EVENT_UNFILTERED"
-	else
-		event, timestamp, eventtype, hideCaster, 
-		srcGUID, srcName, srcFlags, srcRaidFlags,
-		destGUID, destName, destFlags, destRaidFlags,
-		param9, param10, param11, param12, param13, param14, 
-		param15, param16, param17, param18, param19, param20 = ...
-	end
+	local timestamp, eventtype, hideCaster, 
+	srcGUID, srcName, srcFlags, srcRaidFlags,
+	destGUID, destName, destFlags, destRaidFlags,
+	param9, param10, param11, param12, param13, param14, 
+	param15, param16, param17, param18, param19, param20 = CombatLogGetCurrentEventInfo()
 
     if not event or not eventtype or not destName then return end
 

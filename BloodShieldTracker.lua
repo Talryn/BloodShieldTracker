@@ -51,9 +51,9 @@ local GetVersatilityBonus = _G.GetVersatilityBonus
 local GetCombatRatingBonus = _G.GetCombatRatingBonus
 local GetSpellCooldown = _G.GetSpellCooldown
 
--- Conditional for WoD/BfA
-local UnitBuff = addon.BfA and addon.UnitBuff or _G.UnitBuff
-local UnitDebuff = addon.BfA and addon.UnitDebuff or _G.UnitDebuff
+-- Use BfA+ version to search by name.
+local UnitBuff = addon.UnitBuff
+local UnitDebuff = addon.UnitDebuff
 
 BloodShieldTracker.loaded = false
 addon.playerName = UnitName("player")
@@ -1906,20 +1906,12 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 		param9, param10, param11, param12, param13, param14, 
 		param15, param16, param17, param18, param19, param20
 
-	if addon.BfA then
-		timestamp, eventtype, hideCaster, 
-		srcGUID, srcName, srcFlags, srcRaidFlags,
-		destGUID, destName, destFlags, destRaidFlags,
-		param9, param10, param11, param12, param13, param14, 
-		param15, param16, param17, param18, param19, param20 = CombatLogGetCurrentEventInfo()
-		event = "COMBAT_LOG_EVENT_UNFILTERED"
-	else
-		event, timestamp, eventtype, hideCaster, 
-		srcGUID, srcName, srcFlags, srcRaidFlags,
-		destGUID, destName, destFlags, destRaidFlags,
-		param9, param10, param11, param12, param13, param14, 
-		param15, param16, param17, param18, param19, param20 = ...
-	end
+	timestamp, eventtype, hideCaster, 
+	srcGUID, srcName, srcFlags, srcRaidFlags,
+	destGUID, destName, destFlags, destRaidFlags,
+	param9, param10, param11, param12, param13, param14, 
+	param15, param16, param17, param18, param19, param20 = CombatLogGetCurrentEventInfo()
+	event = "COMBAT_LOG_EVENT_UNFILTERED"
 
 	if not event or not eventtype or not destName then return end
 
