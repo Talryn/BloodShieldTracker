@@ -165,11 +165,29 @@ function module.OnUpdate(self, elapsed)
 end
 
 function module.EventHandler(frame, event, _, message, _, srcGUID, source, srcFlgs, srcRFlgs, destGUID, dest, ...)
-	if srcGUID ~= UnitGUID("target") or destGUID ~= UnitGUID("player") then return end
+	local isOffHandBfA
+	local source, dest
+	if addon.BfA then
+		local timestamp, eventtype, hideCaster, 
+		srcGUID, srcName, srcFlags, srcRaidFlags,
+		destGUID, destName, destFlags, destRaidFlags,
+		param9, param10, param11, param12, param13, param14, 
+		param15, param16, param17, param18, param19, param20 = CombatLogGetCurrentEventInfo()
+		message = eventtype
+		source = srcGUID
+		dest = destGUID
+		if message == "SWING_DAMAGE" then
+			isOffHandBfA = param18
+		else
+			isOffHandBfA = param10
+		end
+	end
+	
+	if source ~= UnitGUID("target") or dest ~= UnitGUID("player") then return end
 	if message == "SWING_DAMAGE" or message == "SWING_MISSED" then
 		-- print(message, ...)
 		local pos = (message == "SWING_DAMAGE") and 12 or 4
-		local isOffHand = select(pos, ...)
+		local isOffHand = addon.BfA and isOffHandBfA or select(pos, ...)
 		local mainSpeed, ohSpeed = UnitAttackSpeed("target")
 		local bar = module.targetSwingBar
 		if not isOffHand then

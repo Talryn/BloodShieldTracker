@@ -211,6 +211,7 @@ local SpellIds = {
 	["Lana'thel's Lament"] = 212974,
 	["Divine Hymn"] = 64844,
 	["Haemostasis"] = 235559,
+	["Hemostasis"] = 273947,  -- Blood talent from BfA, passive buff
 	-- ICC Buffs for Horde
 	["Hellscream's Warsong 05"] = 73816,
 	["Hellscream's Warsong 10"] = 73818,
@@ -756,8 +757,7 @@ function BloodShieldTracker:CreateDisplay()
 			SetPoint = addon.SetPointWithAnchor,
 			SetSecondaryValuePoint = addon.SetSecondaryValuePoint,
 			IsEnabled = function(self)
-				return addon.IsBloodTank and self.db.enabled and 
-					_G.IsSpellKnown(SpellIds["Mastery: Blood Shield"])
+				return addon.IsBloodTank and self.db.enabled and hasBloodShield
 			end,
 			OnTalentUpdate = function(self)
 				if self.IsEnabled and self:IsEnabled() then
@@ -773,7 +773,7 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			UpdateDisplay = function(self)
 				if self.active then
-					local name, rank, icon, count, dispelType, duration, expires, 
+					local name, icon, count, dispelType, duration, expires, 
 					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 					isBossDebuff, castByPlayer, new1, new2, value1 
 						= UnitBuff("player", SpellNames["Blood Shield"])
@@ -992,7 +992,7 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			UpdateDisplay = function(self)
 				if self.active then
-					local name, rank, icon, count, dispelType, duration, expires, 
+					local name, icon, count, dispelType, duration, expires, 
 					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 					isBossDebuff, castByPlayer, new1, new2, value1 
 						= UnitDebuff("player", SpellNames["Shroud of Purgatory"])
@@ -1059,7 +1059,7 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			UpdateDisplay = function(self)
 				if self.active then
-					local name, rank, icon, count, dispelType, duration, expires, 
+					local name, icon, count, dispelType, duration, expires, 
 					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 					isBossDebuff, castByPlayer, new1, new2, value1 
 						= UnitBuff("player", SpellNames["Bone Shield"])
@@ -1176,7 +1176,7 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			UpdateDisplay = function(self)
 				if self.active then
-					local name, rank, icon, count, dispelType, duration, expires, 
+					local name, icon, count, dispelType, duration, expires, 
 					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 					isBossDebuff, castByPlayer, new1, new2, value1 
 						= UnitBuff("player", SpellNames["Anti-Magic Shell"])
@@ -1906,11 +1906,20 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 		param9, param10, param11, param12, param13, param14, 
 		param15, param16, param17, param18, param19, param20
 
+	if addon.BfA then
+		timestamp, eventtype, hideCaster, 
+		srcGUID, srcName, srcFlags, srcRaidFlags,
+		destGUID, destName, destFlags, destRaidFlags,
+		param9, param10, param11, param12, param13, param14, 
+		param15, param16, param17, param18, param19, param20 = CombatLogGetCurrentEventInfo()
+		event = "COMBAT_LOG_EVENT_UNFILTERED"
+	else
 		event, timestamp, eventtype, hideCaster, 
 		srcGUID, srcName, srcFlags, srcRaidFlags,
 		destGUID, destName, destFlags, destRaidFlags,
 		param9, param10, param11, param12, param13, param14, 
 		param15, param16, param17, param18, param19, param20 = ...
+	end
 
 	if not event or not eventtype or not destName then return end
 
@@ -2096,7 +2105,7 @@ addon.OtherShields = OtherShields
 
 local errorReadingFmt = "Error reading the %s value."
 function BloodShieldTracker:CheckAuras(unit)
-	local name, rank, icon, count, dispelType, duration, expires,
+	local name, icon, count, dispelType, duration, expires,
 		caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
 		castByPlayer, value, value2, value3
 	
@@ -2109,7 +2118,7 @@ function BloodShieldTracker:CheckAuras(unit)
 	-- Loop through unit auras to find ones of interest.
 	local i = 1
 	repeat
-		name, rank, icon, count, dispelType, duration, expires, caster, 
+		name, icon, count, dispelType, duration, expires, caster, 
 		stealable, consolidate, spellId, canApplyAura, isBossDebuff, 
 		castByPlayer, new1, new2, value = UnitAura("player", i)
 		if name == nil or spellId == nil then break end

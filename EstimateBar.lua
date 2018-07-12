@@ -23,6 +23,7 @@ local UnitGetTotalAbsorbs = _G.UnitGetTotalAbsorbs
 local UnitAttackPower = _G.UnitAttackPower
 local GetMasteryEffect = _G.GetMasteryEffect
 local GetSpellCooldown = _G.GetSpellCooldown
+local CombatLogGetCurrentEventInfo = _G.CombatLogGetCurrentEventInfo
 
 -- Conditional for WoD/BfA
 local UnitBuff = addon.BfA and addon.UnitBuff or _G.UnitBuff
@@ -74,8 +75,8 @@ local damageTaken = {}
 local removeList = {}
 
 -- Constants from abilities / gear.
-local dsHealModifier = 0.20  -- Percent of the DS Heal from the tooltip.
-local dsMinHealPercent = 0.10
+local dsHealModifier = 0.25  -- Percent of the DS Heal from the tooltip.
+local dsMinHealPercent = 0.07
 local dsMinHealPercentSuccor = 0.20
 local BONE_SHIELD_DMG_REDUCTION = 0.16
 local BaseVBHealingBonus = 0.30
@@ -89,6 +90,7 @@ local HealingBuffs = {
 	[SpellIds["Hellscream's Warsong 30"]] = 0.30,  -- Horde ICC Bonus
 	[SpellIds["Strength of Wrynn 30"]] = 0.30, -- Alliance ICC Bonus
 	[SpellIds["Haemostasis"]] = 0.2, -- Legendary shoulders, per stack
+	[SpellIds["Hemostasis"]] = 0.08, -- Talent
 }
 local CarrionFeast = {
 	powerId = 1481,
@@ -184,6 +186,7 @@ local UnitEvents = {
 		"MASTERY_UPDATE",
 		"ARTIFACT_UPDATE",
 		"ARTIFACT_XP_UPDATE",
+		"UNIT_SPELLCAST_SENT",
 	},
 	["player"] = {
 		"UNIT_SPELLCAST_SUCCEEDED",
@@ -200,6 +203,8 @@ local function EventFrame_OnEvent(frame, event, ...)
 		module:PLAYER_ALIVE(event, ...)
 	elseif event == "PLAYER_DEAD" then
 		module:PLAYER_DEAD(event, ...)
+	elseif event == "UNIT_SPELLCAST_SENT" then
+		module:UNIT_SPELLCAST_SENT(event, ...)
 	elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
 		module:UNIT_SPELLCAST_SUCCEEDED(event, ...)
 	elseif event == "PLAYER_ENTERING_WORLD" then
@@ -607,8 +612,8 @@ function module:UNIT_MAXHEALTH(event, unit)
 end
 
 local EstDSHealFmt = "Estimated DS Heal: %d"
-function module:UNIT_SPELLCAST_SENT(event, unit, spellName)
-	if unit == "player" and spellName == SpellNames["Death Strike"] then
+function module:UNIT_SPELLCAST_SENT(event, unit, target, castGUID, spellId)
+	if unit == "player" and spellId == SpellIds["Death Strike"] then
 		DS_SentTime = GetTime()
 		if addon.db.profile.debug then
 			addon:Print(EstDSHealFmt:format(estimatedDS))
@@ -616,9 +621,9 @@ function module:UNIT_SPELLCAST_SENT(event, unit, spellName)
 	end
 end
 
-function module:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, rank, lineId, spellId)
+function module:UNIT_SPELLCAST_SUCCEEDED(event, unit, castGUID, spellId)
     if unit == "player" then
-		if spellName == SpellNames["Death Strike"] then
+		if spellId == SpellIds["Death Strike"] then
 	        local succeededTime = GetTime()
 	        if DS_SentTime then
 	            local diff = succeededTime - DS_SentTime
@@ -639,7 +644,7 @@ function module:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellName, rank, lineId, s
 end
 
 function module:CheckAuras()
-    local name, rank, icon, count, dispelType, duration, expires,
+    local name, icon, count, dispelType, duration, expires,
         caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
 		castByPlayer, value, value2, value3
 
@@ -657,7 +662,7 @@ function module:CheckAuras()
     -- Loop through unit auras to find ones of interest.
 	local i = 1
 	repeat
-		name, rank, icon, count, dispelType, duration, expires, caster, 
+		name, icon, count, dispelType, duration, expires, caster, 
 			stealable, consolidate, spellId, canApplyAura, isBossDebuff, 
 			castByPlayer, value, value2, value3 = UnitAura("player", i)
 		if name == nil or spellId == nil then break end
@@ -732,11 +737,20 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
         param9, param10, param11, param12, param13, param14, 
         param15, param16, param17, param18, param19, param20
 
-    event, timestamp, eventtype, hideCaster, 
-    srcGUID, srcName, srcFlags, srcRaidFlags,
-    destGUID, destName, destFlags, destRaidFlags,
-    param9, param10, param11, param12, param13, param14, 
-    param15, param16, param17, param18, param19, param20 = ...
+	if addon.BfA then
+		timestamp, eventtype, hideCaster, 
+		srcGUID, srcName, srcFlags, srcRaidFlags,
+		destGUID, destName, destFlags, destRaidFlags,
+		param9, param10, param11, param12, param13, param14, 
+		param15, param16, param17, param18, param19, param20 = CombatLogGetCurrentEventInfo()
+		event = "COMBAT_LOG_EVENT_UNFILTERED"
+	else
+		event, timestamp, eventtype, hideCaster, 
+		srcGUID, srcName, srcFlags, srcRaidFlags,
+		destGUID, destName, destFlags, destRaidFlags,
+		param9, param10, param11, param12, param13, param14, 
+		param15, param16, param17, param18, param19, param20 = ...
+	end
 
     if not event or not eventtype or not destName then return end
 

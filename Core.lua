@@ -217,7 +217,7 @@ function addon:BarDisplayRemove(event, bar)
 end
 
 -- UnitBuff for BfA.  Scans buffs by name.
-addon.UnitBuff = function(unit, spellName, rank, filter)
+addon.UnitBuff = function(unit, spellName, filter)
 	local name, icon, count, dispelType, duration, expires, 
 	caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 	isBossDebuff, castByPlayer, value1, value2, value3
@@ -230,7 +230,7 @@ addon.UnitBuff = function(unit, spellName, rank, filter)
 		isBossDebuff, castByPlayer, value1, value2, value3
 			= _G.UnitBuff(unit, i, filter)
 		if name == spellName then
-			return name, nil, icon, count, dispelType, duration, expires, 
+			return name, icon, count, dispelType, duration, expires, 
 				caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 				isBossDebuff, castByPlayer, value1, value2, value3
 		end
@@ -240,7 +240,7 @@ addon.UnitBuff = function(unit, spellName, rank, filter)
 end
 
 -- UnitDebuff for BfA.  Scans debuffs by name.
-addon.UnitDebuff = function(unit, spellName, rank, filter)
+addon.UnitDebuff = function(unit, spellName, filter)
 	local name, icon, count, dispelType, duration, expires, 
 	caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 	isBossDebuff, castByPlayer, value1, value2, value3
@@ -253,7 +253,7 @@ addon.UnitDebuff = function(unit, spellName, rank, filter)
 		isBossDebuff, castByPlayer, value1, value2, value3
 			= _G.UnitDebuff(unit, i, filter)
 		if name == spellName then
-			return name, nil, icon, count, dispelType, duration, expires, 
+			return name, icon, count, dispelType, duration, expires, 
 				caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 				isBossDebuff, castByPlayer, value1, value2, value3
 		end
