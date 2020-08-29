@@ -23,7 +23,7 @@ externals:
         url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceTimer-3.0
 
     Libs/LibDataBroker-1.1:
-        url: git://git.wowace.com/wow/libdatabroker-1-1/mainline.git
+        url: https://repos.wowace.com/wow/libdatabroker-1-1
         tag: v1.1.4
 
     Libs/LibDBIcon-1.0:
@@ -31,7 +31,7 @@ externals:
         tag: latest
 
     Libs/LibQTip-1.0:
-        url: git://repos.wowace.com/wow/libqtip-1-0/mainline.git
+        url: https://repos.wowace.com/wow/libqtip-1-0
         tag: latest
 
     Libs/LibSharedMedia-3.0:
