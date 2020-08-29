@@ -32,6 +32,7 @@ externals:
 
     Libs/LibQTip-1.0:
         url: git://repos.wowace.com/wow/libqtip-1-0/mainline.git
+        tag: latest
 
     Libs/LibSharedMedia-3.0:
         url: svn://svn.wowace.com/wow/libsharedmedia-3-0/mainline/trunk/LibSharedMedia-3.0
