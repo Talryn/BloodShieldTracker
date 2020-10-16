@@ -77,7 +77,9 @@ local removeList = {}
 -- Constants from abilities / gear.
 local dsHealModifier = 0.25  -- Percent of the DS Heal from the tooltip.
 local dsMinHealPercent = 0.07
+local dsMinHealVoracious = 0.10
 local dsMinHealPercentSuccor = 0.20
+local voraciousTalentBonus = 0.20
 local BONE_SHIELD_DMG_REDUCTION = 0.16
 local BaseVBHealingBonus = 0.30
 local vbHealingBonus = BaseVBHealingBonus
@@ -118,6 +120,8 @@ local versatilityPercent = 0
 local shieldPercent = 0
 local luckOfTheDrawBuff = false
 local luckOfTheDrawAmt = 0
+local voraciousBonus = 0
+local dsMinHealCurrent = 0
 
 function module:SetProfile()
 	self.profile = addon.db.profile.bars.EstimateBar
@@ -258,9 +262,14 @@ function module:OnEnable()
 	addon:RegisterCallback("GearUpdate", module.name, module.GearUpdate)
 	addon:RegisterCallback("WeaponUpdate", module.name, module.WeaponUpdate)
 
+	dsMinHealCurrent = addon.HasActiveTalent("Voracious") and dsMinHealVoracious or dsMinHealPercent
+
 	vbHealingBonus = self:GetVBBonus()
+	voraciousBonus = self:GetVoraciousBonus()
 	if addon.db.profile.debug then
 		addon:Print("VB Healing Bonus: ".._G.tostring(vbHealingBonus))
+		addon:Print("DS Min Heal: ".._G.tostring(dsMinHealCurrent))
+		addon:Print("Voracious Bonus: ".._G.tostring(voraciousBonus))
 	end
 	self:UpdateRatings()
 
@@ -345,7 +354,8 @@ function module:UpdateEstimateBar(timestamp)
         local recentDamage = self:GetRecentDamageTaken(timestamp)
 
         local predictedValue, minimumValue = 0, 0
-		local baseValue = recentDamage * dsHealModifier * (1+versatilityPercent)
+				local baseValue = recentDamage * dsHealModifier * 
+					(1 + versatilityPercent) * (1 + voraciousBonus)
 
         if self.estimatebar.db.bar_mode == "BS" then
             predictedValue = round(baseValue * shieldPercent)
@@ -425,8 +435,8 @@ function module:UpdateMinHeal(event, unit)
 		local baseValue
 		local maxHealth = UnitHealthMax("player")
 		baseValue = maxHealth * 
-			(DarkSuccorBuff and dsMinHealPercentSuccor or dsMinHealPercent) * 
-			(1+versatilityPercent)
+			(DarkSuccorBuff and dsMinHealPercentSuccor or dsMinHealCurrent) * 
+			(1 + versatilityPercent)
 		dsHealMin = round(baseValue *
 			self:GetEffectiveHealingBuffModifiers() * 
 			self:GetEffectiveHealingDebuffModifiers())
@@ -563,6 +573,15 @@ function module:GetVBBonus()
 		end
 	end
 	return BaseVBHealingBonus
+end
+
+function module:GetVoraciousBonus()
+	if addon.currentSpec ~= "Blood" then return 0 end
+	if addon.HasActiveTalent("Voracious") then
+		return voraciousTalentBonus
+	else
+		return 0
+	end
 end
 
 local CR_VERSATILITY_DAMAGE_DONE = _G.CR_VERSATILITY_DAMAGE_DONE or 29
@@ -878,7 +897,8 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
             local predictedHeal = 0
             if healingDebuffMultiplier ~= 1 then 
                 predictedHeal = round(
-                    recentDmg * dsHealModifier * (1+versatilityPercent) *
+                    recentDmg * dsHealModifier * (1 + versatilityPercent) *
+										(1 + voraciousBonus) *
                     self:GetEffectiveHealingBuffModifiers() * 
                     self:GetEffectiveHealingDebuffModifiers())
             end
@@ -923,7 +943,8 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
                 isMinimum = true
                 shieldValue = bsMinimum
             end
-            predictedHeal = round(recentDmg * dsHealModifier * (1+versatilityPercent) *
+            predictedHeal = round(recentDmg * dsHealModifier * (1 + versatilityPercent) *
+								(1 + voraciousBonus) *
                 self:GetEffectiveHealingBuffModifiers() * 
                 self:GetEffectiveHealingDebuffModifiers())
         end
