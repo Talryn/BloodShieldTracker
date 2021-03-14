@@ -1,6 +1,8 @@
 local _G = getfenv(0)
 local ADDON_NAME, addon = ...
 
+addon.CurrentProfileVersion = 5
+
 addon.MIN_UPDATE_TIME = 0.05
 
 addon.DsHealAPModifiers = {

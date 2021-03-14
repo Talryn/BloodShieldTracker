@@ -4,25 +4,31 @@ local ADDON_NAME, addon = ...
 local BloodShieldTracker = LibStub("AceAddon-3.0"):GetAddon(addon.addonNameCondensed)
 
 function BloodShieldTracker:MigrateSettings()
-	local profile_version = self.db.profile.profile_version
+	local profile_version = self.db.profile.profile_version or 0
 
-	if profile_version == nil or profile_version < 3 then
+	if profile_version < 3 then
 		self:MigrateSkinningSettings3()
 	end
 
-	if profile_version == nil or profile_version < 2 then
+	if profile_version < 2 then
 		self:MigrateShieldBarSettings2()
-		self:MigrateEstimateBarSettings2()
 		self:MigratePWSBarSettings2()
 		self:MigrateIllumBarSettings2()
 		self:MigrateHealthBarSettings2()
 	end
 
-	if profile_version == nil or profile_version < 4 then
+	if profile_version < 4 then
 		self:MigrateSettings4()
 	end
 
-	self.db.profile.profile_version = 4
+	for name, obj in _G.pairs(addon.modules) do
+		if obj and obj.MigrateSettings and
+			_G.type(obj.MigrateSettings) == "function" then
+			obj:MigrateSettings(profile_version)
+		end
+	end
+
+	self.db.profile.profile_version = addon.CurrentProfileVersion
 end
 
 function BloodShieldTracker:MigrateSettings4()
@@ -259,87 +265,6 @@ function BloodShieldTracker:MigrateHealthBarSettings2()
 	self.db.profile.healthbar_low_bgcolor  = nil
 	self.db.profile.healthbar_low_percent = nil
 	self.db.profile.healthbar_text_format = nil
-end
-
-function BloodShieldTracker:MigrateEstimateBarSettings2()
-	local settings = self.db.profile.bars["EstimateBar"]
-	if self.db.profile.damage_bar_enabled ~= nil then
-		settings.enabled = self.db.profile.damage_bar_enabled
-	end
-	if self.db.profile.hide_damage_bar_ooc ~= nil then
-		settings.hide_ooc = self.db.profile.hide_damage_bar_ooc
-	end
-	if self.db.profile.lock_damage_bar ~= nil then
-		settings.locked = self.db.profile.lock_damage_bar
-	end
-	if self.db.profile.damage_bar_width ~= nil then
-		settings.width = self.db.profile.damage_bar_width
-	end
-	if self.db.profile.damage_bar_height ~= nil then
-		settings.height = self.db.profile.damage_bar_height
-	end
-	if self.db.profile.estheal_bar_texture ~= nil then
-		settings.texture = self.db.profile.estheal_bar_texture
-	end
-	if self.db.profile.estheal_bar_min_textcolor ~= nil then
-		settings.textcolor = self.db.profile.estheal_bar_min_textcolor
-	end
-	if self.db.profile.estheal_bar_min_color ~= nil then
-		settings.color = self.db.profile.estheal_bar_min_color
-	end
-	if self.db.profile.estheal_bar_min_bgcolor ~= nil then
-		settings.bgcolor = self.db.profile.estheal_bar_min_bgcolor
-	end
-	if self.db.profile.estheal_bar_opt_textcolor ~= nil then
-		settings.alt_textcolor = self.db.profile.estheal_bar_opt_textcolor
-	end
-	if self.db.profile.estheal_bar_opt_color ~= nil then
-		settings.alt_color = self.db.profile.estheal_bar_opt_color
-	end
-	if self.db.profile.estheal_bar_opt_bgcolor ~= nil then
-		settings.alt_bgcolor = self.db.profile.estheal_bar_opt_bgcolor
-	end
-	if self.db.profile.estimate_bar_mode ~= nil then
-		settings.bar_mode = self.db.profile.estimate_bar_mode
-	end
-	if self.db.profile.estheal_bar_border ~= nil then
-		settings.border = self.db.profile.estheal_bar_border
-	end
-	if self.db.profile.estheal_bar_shown ~= nil then
-		settings.shown = self.db.profile.estheal_bar_shown
-	end
-	if self.db.profile.estheal_bar_show_text ~= nil then
-		settings.show_text = self.db.profile.estheal_bar_show_text
-	end
-	if self.db.profile.est_heal_x ~= nil then
-		settings.x = self.db.profile.est_heal_x
-	end
-	if self.db.profile.est_heal_y ~= nil then
-		settings.y = self.db.profile.est_heal_y
-	end
-	if self.db.profile.estheal_bar_scale ~= nil then
-		settings.scale = self.db.profile.estheal_bar_scale
-	end
-
-    self.db.profile.damage_bar_enabled = nil
-    self.db.profile.hide_damage_bar_ooc = nil
-	self.db.profile.lock_damage_bar = nil
-	self.db.profile.damage_bar_width = nil
-	self.db.profile.damage_bar_height = nil
-	self.db.profile.estheal_bar_texture = nil
-	self.db.profile.estheal_bar_min_textcolor = nil
-	self.db.profile.estheal_bar_min_color = nil
-	self.db.profile.estheal_bar_min_bgcolor = nil
-	self.db.profile.estheal_bar_opt_textcolor = nil
-	self.db.profile.estheal_bar_opt_color = nil
-	self.db.profile.estheal_bar_opt_bgcolor = nil
-	self.db.profile.estimate_bar_mode = nil
-	self.db.profile.estheal_bar_border = nil
-	self.db.profile.estheal_bar_shown = nil
-	self.db.profile.estheal_bar_show_text = nil
-	self.db.profile.est_heal_x = nil
-	self.db.profile.est_heal_y = nil
-	self.db.profile.estheal_bar_scale = nil
 end
 
 function BloodShieldTracker:MigrateShieldBarSettings2()

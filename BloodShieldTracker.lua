@@ -8,7 +8,7 @@ local pairs = _G.pairs
 local ipairs = _G.ipairs
 local select = _G.select
 
-local BloodShieldTracker = _G.LibStub("AceAddon-3.0"):NewAddon(addon.addonNameCondensed, 
+local BloodShieldTracker = _G.LibStub("AceAddon-3.0"):NewAddon(addon.addonNameCondensed,
 	"AceConsole-3.0", "AceEvent-3.0","AceTimer-3.0")
 local BST = BloodShieldTracker
 addon.BloodShieldTracker = BloodShieldTracker
@@ -58,7 +58,6 @@ local UnitDebuff = addon.UnitDebuff
 BloodShieldTracker.loaded = false
 addon.playerName = UnitName("player")
 BloodShieldTracker.shieldbar = nil
-BloodShieldTracker.estimatebar = nil
 BloodShieldTracker.pwsbar = nil
 
 -- Player class, talent, and spec info
@@ -156,9 +155,6 @@ local shieldBarFormatFull = "%s/%s (%d%%)"
 local shieldBarFormatNoPer = "%s/%s"
 local shieldBarFormatCurrPerc = "%s (%d%%)"
 
-local estimateBarFormat = "%s%s%s"
-local estBarPercFmt = "%s%%"
-
 local LookupOrKeyMT = {__index = function (t,k) return k end}
 
 local ItemIds = {
@@ -210,7 +206,6 @@ local SpellIds = {
 	["Protection of Tyr"] = 200430,
 	["Lana'thel's Lament"] = 212974,
 	["Divine Hymn"] = 64844,
-	["Haemostasis"] = 235559,
 	["Hemostasis"] = 273947,  -- Blood talent from BfA, passive buff
 	-- ICC Buffs for Horde
 	["Hellscream's Warsong 05"] = 73816,
@@ -246,7 +241,7 @@ function addon.HasActiveTalent(talent)
 	local activeGroup = _G.GetActiveSpecGroup()
 	local talentId = addon.Talents[talent]
 	if not talentId or not activeGroup then return false end
-	local id, name, iconTexture, selected, available, _, _, _, _, active = 
+	local id, name, iconTexture, selected, available, _, _, _, _, active =
 		_G.GetTalentInfoByID(talentId, activeGroup)
 	return name and active
 end
@@ -284,8 +279,6 @@ local guardianSpiritHealBuff = 0.60
 
 -- Curent state information
 local DarkSuccorBuff = false
-local estimatedDS = 0
-local estimatedBS = 0
 local scentBloodStacks = 0
 local luckOfTheDrawBuff = false
 local luckOfTheDrawAmt = 0
@@ -388,25 +381,25 @@ local function AddStats(tooltip, stats)
     end
 
     tooltip:AddSeparator(1)
-    tooltip:AddLine(dataLine1, 
+    tooltip:AddLine(dataLine1,
         shieldDataLine1Fmt:format(
             stats.numShields,
-            stats.numRefreshedShields, 
+            stats.numRefreshedShields,
             stats.numRemovedShields))
-    tooltip:AddLine(shieldMaxValueLine1, 
+    tooltip:AddLine(shieldMaxValueLine1,
         rangeWithAvgFmt:format(
-            stats.minShield, 
-            stats.maxShield, 
+            stats.minShield,
+            stats.maxShield,
             avgShieldValue or 0))
-    tooltip:AddLine(shieldUsageLine1, 
+    tooltip:AddLine(shieldUsageLine1,
         valuesWithPercFmt:format(
-            addon.FormatNumber(stats.totalAbsorbs), 
+            addon.FormatNumber(stats.totalAbsorbs),
             addon.FormatNumber(stats.totalShields), shieldUsagePerc))
 end
 
 function Broker.obj:OnEnter()
 	local tooltip = LibQTip:Acquire("BloodShieldTrackerTooltip", 2, "LEFT", "RIGHT")
-	self.tooltip = tooltip 
+	self.tooltip = tooltip
 
     tooltip:AddHeader(addonHdr:format(addon.addonTitle, addon.addonVersion))
     tooltip:AddLine()
@@ -495,7 +488,7 @@ addon.defaults = {
 				color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
 				bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
 				textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-				x = 0, 
+				x = 0,
 				y = 0,
 				width = 75,
 				height = 15,
@@ -519,24 +512,6 @@ addon.defaults = {
 				width = 100,
 				y = -90,
 			},
-			["EstimateBar"] = {
-				enabled = true,
-				hide_ooc = false,
-				show_text = true,
-				bar_mode = "DS",
-				usePercent = false,
-				alternateMinimum = 0,
-				show_stacks = true,
-				stacks_pos = "LEFT",
-				color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
-				bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
-				alt_color = {r = 0.0, g = 1.0, b = 0.0, a = 1},
-				alt_bgcolor = {r = 0.0, g = 0.65, b = 0.0, a = 0.8},
-				alt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-				width = 90,
-				x = 0, 
-				y = -120,
-			},
 			["PWSBar"] = {
 				color = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
@@ -546,7 +521,7 @@ addon.defaults = {
 					["Spirit Shell"] = true,
 					["Clarity of Will"] = true,
 				},
-				x = 100, 
+				x = 100,
 				y = -120,
 			},
 			["TotalAbsorbsBar"] = {
@@ -566,7 +541,7 @@ addon.defaults = {
 					["Clarity of Will"] = true,
 					["Saved by the Light"] = true,
 				},
-				x = 100, 
+				x = 100,
 				y = -90,
 			},
 			["PurgatoryBar"] = {
@@ -713,7 +688,7 @@ function addon.SetPointWithAnchor(self)
 			addon:Print("Found anchor for bar '".._G.tostring(self.name).."'.")
 		end
 		self.bar:SetPoint(
-			self.db.anchorPt, anchorFrame, self.db.anchorFramePt, 
+			self.db.anchorPt, anchorFrame, self.db.anchorFramePt,
 			self.db.anchorX, self.db.anchorY)
 		self.anchorTries = 0
 	else
@@ -773,14 +748,14 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			UpdateDisplay = function(self)
 				if self.active then
-					local name, icon, count, dispelType, duration, expires, 
-					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
-					isBossDebuff, castByPlayer, new1, new2, value1 
+					local name, icon, count, dispelType, duration, expires,
+					caster, isStealable, shouldConsolidate, spellId, canApplyAura,
+					isBossDebuff, castByPlayer, new1, new2, value1
 						= UnitBuff("player", SpellNames["Blood Shield"])
 					if name then
 						local timeLeft = expires - GetTime()
 						self.bar.timer = timeLeft
-						self.bar.active = true 
+						self.bar.active = true
 						if value1 ~= self.bar.value1 then
 							self.bar.value:SetText(addon.FormatNumber(value1))
 						end
@@ -791,7 +766,7 @@ function BloodShieldTracker:CreateDisplay()
 						self.bar:Show()
 						self.bar:SetScript("OnUpdate", self.OnUpdate)
 					else
-						self.bar.active = false 
+						self.bar.active = false
 						self.bar.timer = 0
 						self.bar:SetScript("OnUpdate", nil)
 						self.bar:Hide()
@@ -975,7 +950,7 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			SetPoint = addon.SetPointWithAnchor,
 			IsEnabled = function(self)
-				return addon:IsTrackerEnabled() and self.db.enabled and 
+				return addon:IsTrackerEnabled() and self.db.enabled and
 					addon.HasActiveTalent("Purgatory")
 			end,
 			OnTalentUpdate = function(self)
@@ -992,14 +967,14 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			UpdateDisplay = function(self)
 				if self.active then
-					local name, icon, count, dispelType, duration, expires, 
-					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
-					isBossDebuff, castByPlayer, new1, new2, value1 
+					local name, icon, count, dispelType, duration, expires,
+					caster, isStealable, shouldConsolidate, spellId, canApplyAura,
+					isBossDebuff, castByPlayer, new1, new2, value1
 						= UnitDebuff("player", SpellNames["Shroud of Purgatory"])
 					if name then
 						--local timeLeft = expires - GetTime()
 						--self.bar.timer = timeLeft
-						--self.bar.active = true 
+						--self.bar.active = true
 						if value1 ~= self.bar.value1 then
 							self.bar.value:SetText(addon.FormatNumber(value1))
 						end
@@ -1010,7 +985,7 @@ function BloodShieldTracker:CreateDisplay()
 						self.bar:Show()
 						--self.bar:SetScript("OnUpdate", self.OnUpdate)
 					else
-						self.bar.active = false 
+						self.bar.active = false
 						--self.bar.timer = 0
 						--self.bar:SetScript("OnUpdate", nil)
 						self.bar:Hide()
@@ -1042,7 +1017,7 @@ function BloodShieldTracker:CreateDisplay()
 			SetPoint = addon.SetPointWithAnchor,
 			SetSecondaryValuePoint = addon.SetSecondaryValuePoint,
 			IsEnabled = function(self)
-				return addon.currentSpec == "Blood" and self.db.enabled and 
+				return addon.currentSpec == "Blood" and self.db.enabled and
 					_G.IsSpellKnown(SpellIds["Marrowrend"])
 			end,
 			OnTalentUpdate = function(self)
@@ -1059,14 +1034,14 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			UpdateDisplay = function(self)
 				if self.active then
-					local name, icon, count, dispelType, duration, expires, 
-					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
-					isBossDebuff, castByPlayer, new1, new2, value1 
+					local name, icon, count, dispelType, duration, expires,
+					caster, isStealable, shouldConsolidate, spellId, canApplyAura,
+					isBossDebuff, castByPlayer, new1, new2, value1
 						= UnitBuff("player", SpellNames["Bone Shield"])
 					if name then
 						local timeLeft = expires - GetTime()
 						self.bar.timer = timeLeft
-						self.bar.active = true 
+						self.bar.active = true
 						if count ~= self.bar.count then
 							self.bar.value:SetText(tostring(count))
 						end
@@ -1085,7 +1060,7 @@ function BloodShieldTracker:CreateDisplay()
 						self.bar:Show()
 						self.bar:SetScript("OnUpdate", self.OnUpdate)
 					else
-						self.bar.active = false 
+						self.bar.active = false
 						self.bar.timer = 0
 						self.bar:SetScript("OnUpdate", nil)
 						self.bar:Hide()
@@ -1159,7 +1134,7 @@ function BloodShieldTracker:CreateDisplay()
 			SetPoint = addon.SetPointWithAnchor,
 			SetSecondaryValuePoint = addon.SetSecondaryValuePoint,
 			IsEnabled = function(self)
-				return addon:IsTrackerEnabled() and self.db.enabled and 
+				return addon:IsTrackerEnabled() and self.db.enabled and
 					_G.IsSpellKnown(SpellIds["Anti-Magic Shell"])
 			end,
 			OnTalentUpdate = function(self)
@@ -1176,14 +1151,14 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			UpdateDisplay = function(self)
 				if self.active then
-					local name, icon, count, dispelType, duration, expires, 
-					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
-					isBossDebuff, castByPlayer, new1, new2, value1 
+					local name, icon, count, dispelType, duration, expires,
+					caster, isStealable, shouldConsolidate, spellId, canApplyAura,
+					isBossDebuff, castByPlayer, new1, new2, value1
 						= UnitBuff("player", SpellNames["Anti-Magic Shell"])
 					if name then
 						local timeLeft = expires - GetTime()
 						self.bar.timer = timeLeft
-						self.bar.active = true 
+						self.bar.active = true
 						if value1 ~= self.bar.value1 then
 							self.bar.value:SetText(addon.FormatNumber(value1))
 						end
@@ -1194,7 +1169,7 @@ function BloodShieldTracker:CreateDisplay()
 						self.bar:Show()
 						self.bar:SetScript("OnUpdate", self.OnUpdate)
 					else
-						self.bar.active = false 
+						self.bar.active = false
 						self.bar.timer = 0
 						self.bar:SetScript("OnUpdate", nil)
 						self.bar:Hide()
@@ -1245,7 +1220,7 @@ function BloodShieldTracker:OnInitialize()
 	if not addon.isDK then return end
 
   	-- Load the settings
-  	self.db = _G.LibStub("AceDB-3.0"):New(
+  self.db = _G.LibStub("AceDB-3.0"):New(
 		"BloodShieldTrackerDB", addon.defaults, "Default")
 	addon.db = self.db
 
@@ -1268,11 +1243,11 @@ function BloodShieldTracker:OnInitialize()
 	self.db.RegisterCallback(self, "OnProfileReset", "Reset")
 
     -- Set the LDB options
-    DataFeed.display = self.db.profile.ldb_data_feed
-    if DataFeed.display ~= "None" then
-        addon.LDBDataFeed = true
-    end
-    addon:SetBrokerLabel()
+  DataFeed.display = self.db.profile.ldb_data_feed
+  if DataFeed.display ~= "None" then
+    addon.LDBDataFeed = true
+  end
+  addon:SetBrokerLabel()
 
 	icon:Register("BloodShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
 	LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
@@ -1364,7 +1339,7 @@ function BloodShieldTracker:Skin()
             self:Print("Could not find Tukui config.")
         end
     end
-    
+
     if ElvUI and self.db.profile.skinning.elvui.enabled then
         local E, L, P, G = unpack(ElvUI)
         if E and E["media"] then
@@ -1525,12 +1500,12 @@ function BloodShieldTracker:OnEnable()
 	self:CheckTalents()
 	self:RegisterEvent("PLAYER_TALENT_UPDATE", "CheckTalents")
 	self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED","CheckTalents")
-	
+
 	-- TODO: Check if anything here needs to be updated or just removed.
 	--self:RegisterEvent("GLYPH_ADDED", "CheckGlyphs")
 	--self:RegisterEvent("GLYPH_REMOVED", "CheckGlyphs")
 	--self:RegisterEvent("GLYPH_UPDATED", "CheckGlyphs")
-	
+
 	for name, obj in pairs(addon.modules) do
 		if obj and obj.Enable then
 			obj:Enable()
@@ -1683,7 +1658,7 @@ function BloodShieldTracker:CheckTalents5()
 			else
 				if addon.db.profile.debug then
 					local fmt = "Could not detect player spec. [%s,%s,%s,%s]"
-					self:Print(fmt:format(_G.tostring(activeSpecNum), _G.tostring(id), 
+					self:Print(fmt:format(_G.tostring(activeSpecNum), _G.tostring(id),
 						_G.tostring(name), _G.tostring(texture)))
 				end
 				addon.currentSpec = addon.currentSpec or "Blood"
@@ -1706,7 +1681,7 @@ function BloodShieldTracker:CheckTalents5()
 				addon.IsBloodTank = false
 			end
 		end
-		dsHealAPMod = addon.DsHealAPModifiers[addon.currentSpec] or 1 
+		dsHealAPMod = addon.DsHealAPModifiers[addon.currentSpec] or 1
 		addon.Talents = addon.TalentsBySpec[addon.currentSpec] or {}
 		--self:CheckGlyphs()
 	end
@@ -1719,7 +1694,7 @@ function BloodShieldTracker:CheckTalents5()
 end
 
 function addon:IsTrackerEnabled()
-	if addon.IsBloodTank or (addon.isDK and 
+	if addon.IsBloodTank or (addon.isDK and
 		not addon.db.profile.enable_only_for_blood) then
 		return true
 	else
@@ -1731,7 +1706,7 @@ function BloodShieldTracker:CheckGlyphs()
 	hasVBGlyphed = false
 	--if not HasVampBlood then return end -- Dont bother with glyph check if he doesnt have the talent
 	for id = 1, _G.GetNumGlyphSockets() do
-		local enabled, glyphType, glyphTooltipIndex, 
+		local enabled, glyphType, glyphTooltipIndex,
 		glyphSpell, iconFilename = _G.GetGlyphSocketInfo(id, nil)
 		if enabled then
 			if glyphSpell == GlyphIds["Vampiric Blood"] then
@@ -1900,16 +1875,16 @@ function BloodShieldTracker:PLAYER_DEAD()
 end
 
 function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
-	local event, timestamp, eventtype, hideCaster, 
-		srcGUID, srcName, srcFlags, srcRaidFlags, 
-		destGUID, destName, destFlags, destRaidFlags, 
-		param9, param10, param11, param12, param13, param14, 
+	local event, timestamp, eventtype, hideCaster,
+		srcGUID, srcName, srcFlags, srcRaidFlags,
+		destGUID, destName, destFlags, destRaidFlags,
+		param9, param10, param11, param12, param13, param14,
 		param15, param16, param17, param18, param19, param20
 
-	timestamp, eventtype, hideCaster, 
+	timestamp, eventtype, hideCaster,
 	srcGUID, srcName, srcFlags, srcRaidFlags,
 	destGUID, destName, destFlags, destRaidFlags,
-	param9, param10, param11, param12, param13, param14, 
+	param9, param10, param11, param12, param13, param14,
 	param15, param16, param17, param18, param19, param20 = CombatLogGetCurrentEventInfo()
 	event = "COMBAT_LOG_EVENT_UNFILTERED"
 
@@ -1917,14 +1892,6 @@ function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
 
 	local spellName, spellAbsorb = "", ""
 
-	-- This event fires after the DS heal.
-	--if eventtype == "SPELL_CAST_SUCCESS" and srcName == self.playerName and 
-	--	param9 == SpellIds["Death Strike"] then
-	--	if self.db.profile.debug then
-	--		local dsHealFormat = "Estimated DS heal: %d"
-	--		self:Print(dsHealFormat:format(estimatedDS))
-	--	end
-	--end
 end
 
 function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, expires)
@@ -1951,7 +1918,7 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, expires)
         end
 
         if addon.DEBUG_OUTPUT then
-            addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. 
+            addon.DEBUG_BUFFER = addon.DEBUG_BUFFER ..
                 shieldFormat:format(shieldValue) .."\n"
         end
     end
@@ -2011,7 +1978,7 @@ function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current, expires
 
 			if addon.DEBUG_OUTPUT then
 				local shieldInd = ""
-				addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. 
+				addon.DEBUG_BUFFER = addon.DEBUG_BUFFER ..
 				shieldRefreshedFormat:format(added,shieldInd) .. "\n"
 			end
 
@@ -2100,7 +2067,7 @@ function BloodShieldTracker:CheckAuras(unit)
 	local name, icon, count, dispelType, duration, expires,
 		caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
 		castByPlayer, value, value2, value3
-	
+
 	-- Reset variables
 	wipe(AurasFound)
 	wipe(OtherShields)
@@ -2110,8 +2077,8 @@ function BloodShieldTracker:CheckAuras(unit)
 	-- Loop through unit auras to find ones of interest.
 	local i = 1
 	repeat
-		name, icon, count, dispelType, duration, expires, caster, 
-		stealable, consolidate, spellId, canApplyAura, isBossDebuff, 
+		name, icon, count, dispelType, duration, expires, caster,
+		stealable, consolidate, spellId, canApplyAura, isBossDebuff,
 		castByPlayer, new1, new2, value = UnitAura("player", i)
 		if name == nil or spellId == nil then break end
 
@@ -2137,8 +2104,8 @@ function BloodShieldTracker:CheckAuras(unit)
 					self:Print(errorReadingFmt:format(SpellNames[tracked]))
 				end
 			end
-			
-		end 
+
+		end
 		i = i + 1
 	until name == nil
 
@@ -2152,9 +2119,9 @@ function BloodShieldTracker:CheckAuras(unit)
 				end
 				self:NewBloodShield(GetTime(), data.value, data.expires)
 			else
-				if data.value ~= BSAuraValue or 
+				if data.value ~= BSAuraValue or
 					(data.expires ~= BSAuraExpires and data.value > 0) then
-					self:BloodShieldUpdated("refreshed", GetTime(), 
+					self:BloodShieldUpdated("refreshed", GetTime(),
 						data.value, data.expires)
 				end
 			end

@@ -48,9 +48,11 @@ addon.defaults.profile.bars["EstimateBar"] = {
 	show_text = true,
 	bar_mode = "DS",
 	usePercent = false,
-	alternateMinimum = 0,
-    show_stacks = true,
-    stacks_pos = "LEFT",
+	alternateMinimumMode = "None",
+	alternateMinimumValue = 0,
+	alternateMinimumPercent = 0,
+  show_stacks = true,
+  stacks_pos = "LEFT",
 	latencyMethod = "None",
 	latencyFixed = 0,
 	color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
@@ -59,7 +61,7 @@ addon.defaults.profile.bars["EstimateBar"] = {
 	alt_bgcolor = {r = 0.0, g = 0.65, b = 0.0, a = 0.8},
 	alt_textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
 	width = 90,
-	x = 0, 
+	x = 0,
 	y = -120,
 }
 
@@ -80,23 +82,17 @@ local dsMinHealPercent = 0.07
 local dsMinHealVoracious = 0.10
 local dsMinHealPercentSuccor = 0.20
 local voraciousTalentBonus = 0.20
-local BONE_SHIELD_DMG_REDUCTION = 0.16
 local BaseVBHealingBonus = 0.30
 local vbHealingBonus = BaseVBHealingBonus
 local guardianSpiritHealBuff = 0.40
 local HealingBuffs = {
 	[SpellIds["Guardian Spirit"]] = 0.40,
-	[SpellIds["Divine Hymn"]] = 0.10,
+	[SpellIds["Divine Hymn"]] = 0.04,
 	[SpellIds["Protection of Tyr"]] = 0.15,
 	[SpellIds["Lana'thel's Lament"]] = 0.05,
 	[SpellIds["Hellscream's Warsong 30"]] = 0.30,  -- Horde ICC Bonus
 	[SpellIds["Strength of Wrynn 30"]] = 0.30, -- Alliance ICC Bonus
-	[SpellIds["Haemostasis"]] = 0.2, -- Legendary shoulders, per stack
 	[SpellIds["Hemostasis"]] = 0.08, -- Talent
-}
-local CarrionFeast = {
-	powerId = 1481,
-	perRank = 0.05,
 }
 
 -- Curent state information
@@ -106,8 +102,12 @@ local DS_Latency = nil
 addon.maxHealth = 1
 local dsHealMin = 0
 local bsMinimum = 0
-local CarrionFeastTotal = 0
 -- End --
+
+-- Alternative minimum
+local altMinMode = ""
+local altMinValue = 0
+local altMinPercent = 0
 
 local vbBuff = false
 local vbHealingInc = 0.0
@@ -163,15 +163,6 @@ function module.GearUpdate()
 end
 
 function module:ArtifactUpdate()
-	-- Check Carrion Feast
-	local power = C_ArtifactUI.GetPowerInfo(CarrionFeast.powerId) or {}
-	local rank = power.currentRank or 0
-	CarrionFeastTotal = rank * CarrionFeast.perRank
-	if addon.db.profile.debug then
-		local fmt = "Carrion Feast: %d - %d%%"
-		addon:Print(fmt:format(rank, CarrionFeastTotal * 100))
-	end
-	self:UpdateMinHeal("ArtifactUpdate", "player")
 end
 
 function module.WeaponUpdate()
@@ -272,6 +263,7 @@ function module:OnEnable()
 		addon:Print("Voracious Bonus: ".._G.tostring(voraciousBonus))
 	end
 	self:UpdateRatings()
+	self:UpdateAlternateMinimum()
 
 	for unit, events in _G.pairs(UnitEvents) do
 		local frame = EventFrames[unit] or _G.CreateFrame("Frame",
@@ -339,60 +331,63 @@ end
 function module:UpdateBars(timestamp)
     if addon.idle then
     	if updateTimer then
-            updateTimer:Cancel()
-            updateTimer = nil
-			if not afterTimer then
-				afterTimer = _G.C_Timer.NewTimer(6.0, module.UpdateAfterCombat)
-			end
-        end
+        updateTimer:Cancel()
+        updateTimer = nil
+				if not afterTimer then
+					afterTimer = _G.C_Timer.NewTimer(6.0, module.UpdateAfterCombat)
+				end
+      end
     end
     module:UpdateEstimateBar(timestamp)
 end
 
 function module:UpdateEstimateBar(timestamp)
-    if self.estimatebar.db.enabled and not addon.idle then
-        local recentDamage = self:GetRecentDamageTaken(timestamp)
+  if self.estimatebar.db.enabled and not addon.idle then
+    local recentDamage = self:GetRecentDamageTaken(timestamp)
 
-        local predictedValue, minimumValue = 0, 0
-				local baseValue = recentDamage * dsHealModifier * 
-					(1 + versatilityPercent) * (1 + voraciousBonus)
+    local predictedValue, minimumValue = 0, 0
+		local baseValue = recentDamage * dsHealModifier *
+			(1 + versatilityPercent) * (1 + voraciousBonus)
 
-        if self.estimatebar.db.bar_mode == "BS" then
-            predictedValue = round(baseValue * shieldPercent)
-            minimumValue = bsMinimum
-        else
-            predictedValue = round(baseValue *
-                self:GetEffectiveHealingBuffModifiers() * 
-                self:GetEffectiveHealingDebuffModifiers())
-            minimumValue = dsHealMin
-        end
-
-        local estimate = minimumValue
-	    if predictedValue > minimumValue then
-    	    estimate = predictedValue
-		end
-
-        self:UpdateEstimateBarText(estimate)
-        self.estimatebar.bar:SetMinMaxValues(0, minimumValue)
-
-		local altMin = self.estimatebar.db.alternateMinimum or 0
-		if altMin > 0 and predictedValue >= altMin then
-            self.estimatebar.altcolor = true
-            self.estimatebar.bar:SetValue(predictedValue)
-		elseif altMin == 0 and predictedValue > minimumValue then
-            self.estimatebar.altcolor = true
-            self.estimatebar.bar:SetValue(minimumValue)
-        else
-            self.estimatebar.altcolor = false
-            self.estimatebar.bar:SetValue(predictedValue)
-		end
-        self.estimatebar:UpdateGraphics()
-
-        addon.DataFeed.estimateBar = estimate
-        if addon.LDBDataFeed then
-            addon:UpdateLDBData()
-        end
+    if self.estimatebar.db.bar_mode == "BS" then
+      predictedValue = round(baseValue * shieldPercent)
+      minimumValue = bsMinimum
+    else
+      predictedValue = round(baseValue *
+        self:GetEffectiveHealingBuffModifiers() *
+        self:GetEffectiveHealingDebuffModifiers())
+      minimumValue = dsHealMin
     end
+
+    local estimate = minimumValue
+    if predictedValue > minimumValue then
+	    estimate = predictedValue
+		end
+		local predictedPercent = predictedValue / addon.maxHealth
+
+    self:UpdateEstimateBarText(estimate)
+    self.estimatebar.bar:SetMinMaxValues(0, minimumValue)
+
+		if altMinMode == "V" and predictedValue >= altMinValue then
+      self.estimatebar.altcolor = true
+      self.estimatebar.bar:SetValue(predictedValue)
+		elseif altMinMode == "%" and predictedPercent >= altMinPercent then
+			self.estimatebar.altcolor = true
+			self.estimatebar.bar:SetValue(predictedValue)
+		elseif altMinMode == "" and predictedValue > minimumValue then
+      self.estimatebar.altcolor = true
+      self.estimatebar.bar:SetValue(minimumValue)
+    else
+      self.estimatebar.altcolor = false
+      self.estimatebar.bar:SetValue(predictedValue)
+		end
+    self.estimatebar:UpdateGraphics()
+
+    addon.DataFeed.estimateBar = estimate
+    if addon.LDBDataFeed then
+        addon:UpdateLDBData()
+    end
+  end
 end
 
 function module:UpdateEstimateBarText(estimate)
@@ -434,12 +429,23 @@ function module:UpdateMinHeal(event, unit)
 	if unit == "player" then
 		local baseValue
 		local maxHealth = UnitHealthMax("player")
-		baseValue = maxHealth * 
-			(DarkSuccorBuff and dsMinHealPercentSuccor or dsMinHealCurrent) * 
+		baseValue = maxHealth *
+			(DarkSuccorBuff and dsMinHealPercentSuccor or dsMinHealCurrent) *
 			(1 + versatilityPercent)
-		dsHealMin = round(baseValue *
-			self:GetEffectiveHealingBuffModifiers() * 
+		local newMin = round(baseValue *
+			self:GetEffectiveHealingBuffModifiers() *
 			self:GetEffectiveHealingDebuffModifiers())
+		if newMin ~= dsHealMin then
+			local newMinFnt = "DS Heal Min: %d"
+			if addon.db.profile.debug then
+				addon:Print(newMinFnt:format(newMin))
+			end
+			if addon.DEBUG_OUTPUT == true then
+				addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. currentTime .. "   " ..
+					newMinFnt:format(newMin) .. "\n"
+			end
+		end
+		dsHealMin = newMin
 		bsMinimum = round(baseValue * shieldPercent)
 		if addon.idle then
 			self:UpdateEstimateBarTextWithMin()
@@ -464,8 +470,8 @@ function module:PLAYER_REGEN_DISABLED()
 			afterTimer = nil
 		end
 		updateTimer = _G.C_Timer.NewTicker(UPDATE_TIMER_FREQUENCY, module.UpdateBars)
-        self.estimatebar.bar:Show()
-        self.estimatebar.bar:SetScript("OnUpdate", UpdateTime)
+    self.estimatebar.bar:Show()
+    self.estimatebar.bar:SetScript("OnUpdate", UpdateTime)
     end
 end
 
@@ -489,7 +495,7 @@ function module:GetRecentDamageTaken(timestamp)
     local latency = 0
     local damage = 0
     local current = timestamp
-    
+
     if not current or current <= 0 then
         current = currentTime
     end
@@ -507,29 +513,24 @@ function module:GetRecentDamageTaken(timestamp)
     end
 
     local diff
-    
+
     for i, v in ipairs(damageTaken) do
         if v and v[1] and v[2] then
             diff = current - v[1]
-            -- If the damage occured in the window, 
+            -- If the damage occured in the window,
             -- adjusted for latency above, then add it.
             if diff <= lastSeconds and diff >= 0 then
                 damage = damage + v[2]
             end
         end
     end
-    
+
     return damage
 end
 
-local boneShieldReduction = 1 - BONE_SHIELD_DMG_REDUCTION
 function module:AddDamageTaken(timestamp, damage)
-	-- As of 7.1.5 if Bone Shield is up, the damage was higher.
-	local name = UnitBuff("player", SpellNames["Bone Shield"])
-	local actualDmg = name and (damage / boneShieldReduction) or damage
-
     -- Add the new damage taken data
-    tinsert(damageTaken, {timestamp,actualDmg})
+    tinsert(damageTaken, {timestamp, damage})
     wipe(removeList)
     -- Remove any data older than lastSeconds
     for i, v in ipairs(damageTaken) do
@@ -539,13 +540,13 @@ function module:AddDamageTaken(timestamp, damage)
             end
         end
     end
-    
+
     for i, v in ipairs(removeList) do
         if v then
             tremove(damageTaken, v)
         end
     end
-    
+
     self:UpdateBars(timestamp)
 end
 
@@ -594,7 +595,7 @@ function module:UpdateRatings()
 		update = true
 	end
 
-	local vers = GetCombatRatingBonus(CR_VERSATILITY_DAMAGE_DONE) + 
+	local vers = GetCombatRatingBonus(CR_VERSATILITY_DAMAGE_DONE) +
 		GetVersatilityBonus(CR_VERSATILITY_DAMAGE_DONE)
 	if vers ~= versatilityBonus then
 		versatilityBonus = vers
@@ -603,11 +604,28 @@ function module:UpdateRatings()
 	end
 
 	if update then
-        if addon.db.profile.debug then
+    if addon.db.profile.debug then
 			local fmt = "Versatility: %0.4f%%"
 			addon:Print(fmt:format(versatilityBonus))
 		end
 		self:UpdateEstimates("UpdateRatings", "player")
+	end
+end
+
+function module:UpdateAlternateMinimum()
+	local bar = addon.db.profile.bars["EstimateBar"]
+	if bar.alternateMinimumMode == "Value" then
+		altMinMode = "V"
+		altMinValue = bar.alternateMinimumValue or 0
+		altMinPercent = 0
+	elseif bar.alternateMinimumMode == "Percent" then
+		altMinMode = "%"
+		altMinValue = 0
+		altMinPercent = bar.alternateMinimumPercent or 0
+	else
+		altMinMode = ""
+		altMinValue = 0
+		altMinPercent = 0
 	end
 end
 
@@ -652,7 +670,7 @@ function module:UNIT_SPELLCAST_SUCCEEDED(event, unit, castGUID, spellId)
 	                    addon:Print("DS Latency: "..DS_Latency)
 	                end
 	                -- If the latency appears overly large then cap it at 2 seconds.
-	                if DS_Latency > 2 then 
+	                if DS_Latency > 2 then
 	                    DS_Latency = 2
 	                end
 	                DS_SentTime = nil
@@ -681,8 +699,8 @@ function module:CheckAuras()
     -- Loop through unit auras to find ones of interest.
 	local i = 1
 	repeat
-		name, icon, count, dispelType, duration, expires, caster, 
-			stealable, consolidate, spellId, canApplyAura, isBossDebuff, 
+		name, icon, count, dispelType, duration, expires, caster,
+			stealable, consolidate, spellId, canApplyAura, isBossDebuff,
 			castByPlayer, value, value2, value3 = UnitAura("player", i)
 		if name == nil or spellId == nil then break end
 
@@ -708,10 +726,10 @@ function module:CheckAuras()
 			local amount = addon.HealingDebuffs[spellId]
 			if amount then
 				local stacks = max(count or 0, 1)
-				healingDebuff = amount * stacks 
+				healingDebuff = amount * stacks
 				if healingDebuff > healingDebuffMultiplier then
 					healingDebuffMultiplier = healingDebuff
-				end				
+				end
 			end
 		end
 
@@ -742,7 +760,7 @@ function module:GetEffectiveHealingBuffModifiers()
 			healingBuffs = healingBuffs * (1 + bonus)
 		end
 	end
-	return (1 + vbHealingInc) * (1 + luckOfTheDrawAmt) * healingBuffs * (1 + CarrionFeastTotal)
+	return (1 + vbHealingInc) * (1 + luckOfTheDrawAmt) * healingBuffs
 end
 
 function module:GetEffectiveHealingDebuffModifiers()
@@ -752,10 +770,10 @@ end
 function module:COMBAT_LOG_EVENT_UNFILTERED(...)
 	local event = "COMBAT_LOG_EVENT_UNFILTERED"
 
-	local timestamp, eventtype, hideCaster, 
+	local timestamp, eventtype, hideCaster,
 	srcGUID, srcName, srcFlags, srcRaidFlags,
 	destGUID, destName, destFlags, destRaidFlags,
-	param9, param10, param11, param12, param13, param14, 
+	param9, param10, param11, param12, param13, param14,
 	param15, param16, param17, param18, param19, param20 = CombatLogGetCurrentEventInfo()
 
     if not event or not eventtype or not destName then return end
@@ -771,21 +789,33 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
 			absorbed = param19
 			absorbId = param16
 			absorbName = param17
-	        local spellName = param10 or "n/a"
+	    local spellName = param10 or "n/a"
 			local school = param11
-	        local schoolName = addon.GetSpellSchool(school) or "N/A"
-	        if addon.db.profile.debug and addon.db.profile.debugdmg then
-	            local spellAbsFmt = "Spell Absorbed (%s-%s,%d) %d by %s"
-	            addon:Print(spellAbsFmt:format(spellName, schoolName, school, absorbed, absorbName))
-	        end
+      local schoolName = addon.GetSpellSchool(school) or "N/A"
+      if addon.db.profile.debugdmg then
+        local spellAbsFmt = "Spell Absorbed (%s-%s,%d) %d by %s"
+				if addon.db.profile.debug then
+          addon:Print(spellAbsFmt:format(spellName, schoolName, school, absorbed, absorbName))
+				end
+				if addon.DEBUG_OUTPUT == true then
+					addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. timestamp .. "   " ..
+						spellAbsFmt:format(spellName, schoolName, school, absorbed, absorbName) .. "\n"
+				end
+      end
 		else
 			absorbed = param16
 			absorbId = param13
 			absorbName = param14
-	        if addon.db.profile.debug and addon.db.profile.debugdmg then
-	            local spellAbsFmt = "Spell Absorbed (None) %d by %s"
-	            addon:Print(spellAbsFmt:format(absorbed, absorbName))
-	        end
+      if addon.db.profile.debugdmg then
+        local spellAbsFmt = "Spell Absorbed (None) %d by %s"
+				if addon.db.profile.debug then
+          addon:Print(spellAbsFmt:format(absorbed, absorbName))
+				end
+				if addon.DEBUG_OUTPUT == true then
+					addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. timestamp .. "   " ..
+						spellAbsFmt:format(absorbed, absorbName) .. "\n"
+				end
+      end
 		end
 
 		if absorbed and absorbId ~= SpellIds["Shroud of Purgatory"] then
@@ -815,16 +845,22 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
         if eventtype:find("SWING_") and param9 then
             local damage, absorb = param9, param14 or 0
 
-            if addon.db.profile.debug and addon.db.profile.debugdmg then
-                local swingDmgFmt = "Swing Damage for %d [%d absorbed, %s]"
+            if addon.db.profile.debugdmg then
+							local swingDmgFmt = "Swing Damage for %d [%d absorbed, %s]"
+							if addon.db.profile.debug then
                 addon:Print(swingDmgFmt:format(damage, absorb, eventtype))
+							end
+							if addon.DEBUG_OUTPUT == true then
+								addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. timestamp .. "   " ..
+									swingDmgFmt:format(damage, absorb, eventtype) .. "\n"
+							end
             end
 
             self:AddDamageTaken(timestamp, damage)
         elseif eventtype:find("SPELL_") or eventtype:find("RANGE_") then
             local type
             if eventtype:find("SPELL_") then type = "Spell" end
-            if eventtype:find("RANGE_") then type = "Range" end        
+            if eventtype:find("RANGE_") then type = "Range" end
             local damage, absorb, school = param12 or 0, param17 or 0, param14 or 0
             local spellName = param10 or "n/a"
             local schoolName = addon.GetSpellSchool(school) or "N/A"
@@ -835,13 +871,13 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
             if srcName == nil then
                 countDamage = false
                 if addon.db.profile.debug then
-                    BST:Print("Ignoring no source damage [" .. spellName .. 
+                    BST:Print("Ignoring no source damage [" .. spellName ..
                         "] of "..(damage or 0))
                 end
             end
 
             -- Do not count Spirit Link damage since it doesn't affect DS.
-            if spellName == SpellIds["Spirit Link"] and 
+            if spellName == SpellIds["Spirit Link"] and
 				srcName == SpellNames["Spirit Link Totem"] then
                 countDamage = false
                 if addon.db.profile.debug and addon.db.profile.debugdmg then
@@ -853,13 +889,20 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
                 self:AddDamageTaken(timestamp, damage)
             end
 
-            if addon.db.profile.debug and addon.db.profile.debugdmg then
-                local spellDmgFmt = "%s Damage (%s-%s,%d) for %d [%d absorbed]"
+            if addon.db.profile.debugdmg then
+              local spellDmgFmt = "%s Damage (%s-%s,%d) for %d [%d absorbed] cnt: %s"
+							if addon.db.profile.debug then
                 BST:Print(spellDmgFmt:format(
-                    type, spellName, schoolName, school, damage, absorb))
+                    type, spellName, schoolName, school, damage, absorb, tostring(countDamage)))
+							end
+							if addon.DEBUG_OUTPUT == true then
+								addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. timestamp .. "   " ..
+									spellDmgFmt:format(type, spellName, schoolName, school,
+										damage, absorb, tostring(countDamage)) .. "\n"
+							end
             end
         end
-    end    
+    end
 
     if eventtype:find("_MISSED") and destName == addon.playerName then
         if eventtype == "SWING_MISSED" then
@@ -867,9 +910,15 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
     			local damage = 0
    			    damage = param11 or 0
 
-                if addon.db.profile.debug and addon.db.profile.debugdmg then
+                if addon.db.profile.debugdmg then
                     local absorbFmt = "Absorbed swing for %d"
-                    BST:Print(absorbFmt:format(damage))
+										if addon.db.profile.debug then
+                    	BST:Print(absorbFmt:format(damage))
+										end
+										if addon.DEBUG_OUTPUT == true then
+						          addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. timestamp .. "   " ..
+						            absorbFmt:format(damage) .. "\n"
+						        end
                 end
             end
         elseif eventtype:find("SPELL_") then
@@ -880,35 +929,47 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
                 local spellName, school = param10 or "n/a", param11 or 0
                 local schoolName = addon.GetSpellSchool(school) or "N/A"
 
-                if addon.db.profile.debug and addon.db.profile.debugdmg then
+                if addon.db.profile.debugdmg then
                     local absorbFmt = "Absorbed spell (%s-%s,%d) for %d"
-                    BST:Print(absorbFmt:format(spellName, schoolName, school, damage))
+										if addon.db.profile.debug then
+                    	BST:Print(absorbFmt:format(spellName, schoolName, school, damage))
+										end
+										if addon.DEBUG_OUTPUT == true then
+						          addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. timestamp .. "   " ..
+						            absorbFmt:format(spellName, schoolName, school, damage) .. "\n"
+						        end
                 end
             end
         end
     end
 
-	if eventtype == "SPELL_CAST_SUCCESS" and srcName == addon.playerName and 
+	if eventtype == "SPELL_CAST_SUCCESS" and srcName == addon.playerName and
 	    param9 == SpellIds["Death Strike"] then
 
-        if addon.db.profile.debug then
-            local dsHealFormat = "Estimated damage: %d will be a heal for: %d"
-            local recentDmg = self:GetRecentDamageTaken(timestamp)
-            local predictedHeal = 0
-            if healingDebuffMultiplier ~= 1 then 
-                predictedHeal = round(
-                    recentDmg * dsHealModifier * (1 + versatilityPercent) *
-										(1 + voraciousBonus) *
-                    self:GetEffectiveHealingBuffModifiers() * 
-                    self:GetEffectiveHealingDebuffModifiers())
-            end
-    		BST:Print(dsHealFormat:format(recentDmg, predictedHeal))
+      if addon.db.profile.debug or addon.DEBUG_OUTPUT == true then
+        local dsHealFormat = "Estimated damage: %d will be a heal for: %d"
+        local recentDmg = self:GetRecentDamageTaken(timestamp)
+        local predictedHeal = 0
+        if healingDebuffMultiplier ~= 1 then
+            predictedHeal = round(
+                recentDmg * dsHealModifier * (1 + versatilityPercent) *
+                (1 + voraciousBonus) *
+                self:GetEffectiveHealingBuffModifiers() *
+                self:GetEffectiveHealingDebuffModifiers())
         end
+        if addon.db.profile.debug then
+        	BST:Print(dsHealFormat:format(recentDmg, predictedHeal))
+        end
+        if addon.DEBUG_OUTPUT == true then
+          addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. timestamp .. "   " ..
+            dsHealFormat:format(recentDmg, predictedHeal) .. "\n"
+        end
+      end
 	end
 
-    if eventtype == "SPELL_HEAL" and destName == addon.playerName 
+    if eventtype == "SPELL_HEAL" and destName == addon.playerName
         and param9 == SpellIds["Death Strike Heal"] then
-        
+
         local totalHeal = param12 or 0
         local overheal = param13 or 0
         local actualHeal = param12-param13
@@ -930,14 +991,14 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
         local isMinimum = false
         local recentDmg = self:GetRecentDamageTaken(timestamp)
         local minimumHeal = dsHealMin
-        
+
         if healingDebuffMultiplier == 1 then
             shieldValue = bsMinimum
             predictedHeal = 0
             isMinimum = true
         else
-            shieldValue = round(totalHeal * shieldPercent / 
-                self:GetEffectiveHealingBuffModifiers() / 
+            shieldValue = round(totalHeal * shieldPercent /
+                self:GetEffectiveHealingBuffModifiers() /
                 self:GetEffectiveHealingDebuffModifiers())
             if shieldValue <= bsMinimum then
                 isMinimum = true
@@ -945,23 +1006,42 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
             predictedHeal = round(recentDmg * dsHealModifier * (1 + versatilityPercent) *
 								(1 + voraciousBonus) *
-                self:GetEffectiveHealingBuffModifiers() * 
+                self:GetEffectiveHealingBuffModifiers() *
                 self:GetEffectiveHealingDebuffModifiers())
         end
 
         if addon.db.profile.debug then
-            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%]"
-            BST:Print(dsHealFormat:format(
-				totalHeal,actualHeal,overheal,predictedHeal,masteryRating, versatilityBonus))
+            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Recent: %d, Mast: %0.2f%%, Vers: %0.2f%%]"
+            BST:Print(dsHealFormat:format(totalHeal, actualHeal, overheal,
+							predictedHeal, recentDmg, masteryRating, versatilityBonus))
         end
-        
+
         if addon.DEBUG_OUTPUT == true then
-            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Mast: %0.2f%%, Vers: %0.2f%%]"
-            addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. timestamp .. "   " .. 
-                dsHealFormat:format(totalHeal,actualHeal,overheal, predictedHeal, 
-				masteryRating, versatilityBonus) .. "\n"
+            local dsHealFormat = "DS [Tot:%d, Act:%d, O:%d, Pred:%d, Recent: %d, Mast: %0.2f%%, Vers: %0.2f%%]"
+            addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. timestamp .. "   " ..
+                dsHealFormat:format(totalHeal, actualHeal, overheal,
+									predictedHeal, recentDmg, masteryRating, versatilityBonus) .. "\n"
         end
     end
+end
+
+function module:MigrateSettings(version)
+	if version < 2 then
+		self:MigrateEstimateBarSettings2()
+	end
+	if version < 5 then
+		self:MigrateAlternateMin()
+	end
+end
+
+function module:MigrateAlternateMin()
+	local bar = addon.db.profile.bars["EstimateBar"]
+	local value = bar.alternateMinimum
+	if value ~= nil and value > 0 then
+		addon.db.profile.bars["EstimateBar"].alternateMinimumMode = "Value"
+		addon.db.profile.bars["EstimateBar"].alternateMinimumValue = value
+	end
+	addon.db.profile.bars["EstimateBar"].alternateMinimum = nil
 end
 
 function module:GetOptions()
@@ -984,11 +1064,11 @@ function module:GetModuleOptions()
 		        type = "description",
 		        name = L["EstimatedHealingBar_Desc"],
 		    },
-	        generalOptions = {
-	            order = 10,
-	            type = "header",
-	            name = L["General Options"],
-	        },
+        generalOptions = {
+            order = 10,
+            type = "header",
+            name = L["General Options"],
+        },
 			enabled = {
 				name = L["Enabled"],
 				desc = L["Enable the Estimated Healing Bar."],
@@ -999,7 +1079,7 @@ function module:GetModuleOptions()
 					if val then self:OnEnable() else self:OnDisable() end
 				end,
 	            get = function(info)
-					return addon.db.profile.bars["EstimateBar"].enabled 
+					return addon.db.profile.bars["EstimateBar"].enabled
 				end,
 			},
 			lock_bar = {
@@ -1008,7 +1088,7 @@ function module:GetModuleOptions()
 				type = "toggle",
 				order = 30,
 				set = function(info, val)
-				    addon.db.profile.bars["EstimateBar"].locked = val 
+				    addon.db.profile.bars["EstimateBar"].locked = val
 					self.estimatebar:Lock(val)
 				end,
 	            get = function(info)
@@ -1072,12 +1152,40 @@ function module:GetModuleOptions()
 				    addon.db.profile.bars["EstimateBar"].usePercent = val
 				end,
 	            get = function(info)
-					return addon.db.profile.bars["EstimateBar"].usePercent 
+					return addon.db.profile.bars["EstimateBar"].usePercent
 				end,
 			},
-			alternateMinimum = {
-				order = 80,
+			altMinHdr = {
+				order = 100,
+				type = "header",
 				name = L["Alternate Minimum"],
+			},
+			altMinDescription = {
+					order = 105,
+					type = "description",
+					name = L["AlternateMinimumHdr_Desc"],
+			},
+			altMinMode = {
+				name = L["Mode"],
+				desc = L["AltMinMode_Desc"],
+				type = "select",
+				values = {
+			    ["None"] = L["None"],
+			    ["Value"] = L["Value"],
+			    ["Percent"] = L["Percent"],
+				},
+				order = 110,
+				set = function(info, val)
+				    addon.db.profile.bars["EstimateBar"].alternateMinimumMode = val
+						self:UpdateAlternateMinimum()
+				end,
+        get = function(info)
+            return addon.db.profile.bars["EstimateBar"].alternateMinimumMode
+        end,
+			},
+			alternateMinimumValue = {
+				order = 120,
+				name = L["Value"],
 				desc = L["AlternateMinimum_OptDesc"],
 				type = "range",
 				min = 0,
@@ -1085,17 +1193,42 @@ function module:GetModuleOptions()
 				step = 1,
 				bigStep = 1000,
 				set = function(info, val)
-				    addon.db.profile.bars["EstimateBar"].alternateMinimum = val
+				  addon.db.profile.bars["EstimateBar"].alternateMinimumValue = val
+					self:UpdateAlternateMinimum()
 				end,
-	            get = function(info)
-					return addon.db.profile.bars["EstimateBar"].alternateMinimum 
+	      get = function(info)
+					return addon.db.profile.bars["EstimateBar"].alternateMinimumValue
+				end,
+				disabled = function(info)
+					return addon.db.profile.bars["EstimateBar"].alternateMinimumMode ~= "Value"
 				end,
 			},
-	        colorsMinimum = {
-	            order = 400,
-	            type = "header",
-	            name = L["Colors for Minimum Heal"],
-	        },
+			alternateMinimumPercent = {
+				order = 130,
+				name = L["Percent"],
+				desc = L["AltMinPercent_OptDesc"],
+				type = "range",
+				isPercent = true,
+				min = 0.0,
+				max = 1,
+				step = 0.01,
+				bigStep = 0.05,
+				set = function(info, val)
+				  addon.db.profile.bars["EstimateBar"].alternateMinimumPercent = val
+					self:UpdateAlternateMinimum()
+				end,
+	      get = function(info)
+					return addon.db.profile.bars["EstimateBar"].alternateMinimumPercent
+				end,
+				disabled = function(info)
+					return addon.db.profile.bars["EstimateBar"].alternateMinimumMode ~= "Percent"
+				end,
+			},
+      colorsMinimum = {
+          order = 400,
+          type = "header",
+          name = L["Colors for Minimum Heal"],
+      },
 			min_textcolor = {
 				order = 410,
 				name = L["Minimum Text Color"],
@@ -1110,7 +1243,7 @@ function module:GetModuleOptions()
 				get = function(info)
 			        local c = addon.db.profile.bars["EstimateBar"].textcolor
 				    return c.r, c.g, c.b, c.a
-				end,					
+				end,
 			},
 			min_color = {
 				order = 420,
@@ -1126,7 +1259,7 @@ function module:GetModuleOptions()
 				get = function(info)
 			        local c = addon.db.profile.bars["EstimateBar"].color
 				    return c.r, c.g, c.b, c.a
-				end,					
+				end,
 			},
 			min_bgcolor = {
 				order = 430,
@@ -1142,7 +1275,7 @@ function module:GetModuleOptions()
 				get = function(info)
 			        local c = addon.db.profile.bars["EstimateBar"].bgcolor
 				    return c.r, c.g, c.b, c.a
-				end,					
+				end,
 			},
 	        colorsOptimal = {
 	            order = 500,
@@ -1163,7 +1296,7 @@ function module:GetModuleOptions()
 				get = function(info)
 			        local c = addon.db.profile.bars["EstimateBar"].alt_textcolor
 				    return c.r, c.g, c.b, c.a
-				end,					
+				end,
 			},
 			opt_color = {
 				order = 520,
@@ -1179,7 +1312,7 @@ function module:GetModuleOptions()
 				get = function(info)
 			        local c = addon.db.profile.bars["EstimateBar"].alt_color
 				    return c.r, c.g, c.b, c.a
-				end,					
+				end,
 			},
 	        latencyOptions = {
 	            order = 700,
@@ -1212,11 +1345,11 @@ function module:GetModuleOptions()
 				max = 2000,
 				step = 1,
 				set = function(info, val)
-				    addon.db.profile.bars["EstimateBar"].latencyFixed = val 
+				    addon.db.profile.bars["EstimateBar"].latencyFixed = val
 				end,
 				get = function(info, val)
 				    return addon.db.profile.bars["EstimateBar"].latencyFixed
-				end,					
+				end,
 			},
 		}
 	}
@@ -1226,4 +1359,84 @@ function module:GetModuleOptions()
 	BST:AddAppearanceOptions(estimateBarOpts, "EstimateBar")
 	BST:AddAdvancedPositioning(estimateBarOpts, "EstimateBar")
 	return estimateBarOpts
+end
+
+function module:MigrateEstimateBarSettings2()
+	local settings = addon.db.profile.bars["EstimateBar"]
+	if addon.db.profile.damage_bar_enabled ~= nil then
+		settings.enabled = addon.db.profile.damage_bar_enabled
+	end
+	if addon.db.profile.hide_damage_bar_ooc ~= nil then
+		settings.hide_ooc = addon.db.profile.hide_damage_bar_ooc
+	end
+	if addon.db.profile.lock_damage_bar ~= nil then
+		settings.locked = addon.db.profile.lock_damage_bar
+	end
+	if addon.db.profile.damage_bar_width ~= nil then
+		settings.width = addon.db.profile.damage_bar_width
+	end
+	if addon.db.profile.damage_bar_height ~= nil then
+		settings.height = addon.db.profile.damage_bar_height
+	end
+	if addon.db.profile.estheal_bar_texture ~= nil then
+		settings.texture = addon.db.profile.estheal_bar_texture
+	end
+	if addon.db.profile.estheal_bar_min_textcolor ~= nil then
+		settings.textcolor = addon.db.profile.estheal_bar_min_textcolor
+	end
+	if addon.db.profile.estheal_bar_min_color ~= nil then
+		settings.color = addon.db.profile.estheal_bar_min_color
+	end
+	if addon.db.profile.estheal_bar_min_bgcolor ~= nil then
+		settings.bgcolor = addon.db.profile.estheal_bar_min_bgcolor
+	end
+	if addon.db.profile.estheal_bar_opt_textcolor ~= nil then
+		settings.alt_textcolor = addon.db.profile.estheal_bar_opt_textcolor
+	end
+	if addon.db.profile.estheal_bar_opt_color ~= nil then
+		settings.alt_color = addon.db.profile.estheal_bar_opt_color
+	end
+	if addon.db.profile.estheal_bar_opt_bgcolor ~= nil then
+		settings.alt_bgcolor = addon.db.profile.estheal_bar_opt_bgcolor
+	end
+	if addon.db.profile.estimate_bar_mode ~= nil then
+		settings.bar_mode = addon.db.profile.estimate_bar_mode
+	end
+	if addon.db.profile.estheal_bar_border ~= nil then
+		settings.border = addon.db.profile.estheal_bar_border
+	end
+	if addon.db.profile.estheal_bar_shown ~= nil then
+		settings.shown = addon.db.profile.estheal_bar_shown
+	end
+	if addon.db.profile.estheal_bar_show_text ~= nil then
+		settings.show_text = addon.db.profile.estheal_bar_show_text
+	end
+	if addon.db.profile.est_heal_x ~= nil then
+		settings.x = addon.db.profile.est_heal_x
+	end
+	if addon.db.profile.est_heal_y ~= nil then
+		settings.y = addon.db.profile.est_heal_y
+	end
+	if addon.db.profile.estheal_bar_scale ~= nil then
+		settings.scale = addon.db.profile.estheal_bar_scale
+	end
+	addon.db.profile.damage_bar_enabled = nil
+  addon.db.profile.hide_damage_bar_ooc = nil
+	addon.db.profile.lock_damage_bar = nil
+	addon.db.profile.damage_bar_width = nil
+	addon.db.profile.damage_bar_height = nil
+	addon.db.profile.estheal_bar_texture = nil
+	addon.db.profile.estheal_bar_min_textcolor = nil
+	addon.db.profile.estheal_bar_min_color = nil
+	addon.db.profile.estheal_bar_min_bgcolor = nil
+	addon.db.profile.estheal_bar_opt_textcolor = nil
+	addon.db.profile.estheal_bar_opt_color = nil
+	addon.db.profile.estheal_bar_opt_bgcolor = nil
+	addon.db.profile.estimate_bar_mode = nil
+	addon.db.profile.estheal_bar_border = nil
+	addon.db.profile.estheal_bar_shown = nil
+	addon.db.profile.estheal_bar_show_text = nil
+	addon.db.profile.est_heal_x = nil
+	addon.db.profile.est_heal_y = nil
+	addon.db.profile.estheal_bar_scale = nil
 end
