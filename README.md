@@ -7,7 +7,7 @@ Please use the Ticket Tracker at Wowace to report bugs or request enhancements: 
 Blood Shield Tracker is an addon to track the value of the Death Knight Blood Shield. It can show bars for the following items:
 
 * The current Blood Shield value (when Blood Shield is up).
-* The estimated heal of a Death Strike or the Blood Shield value based on Resolve.
+* The estimated heal of a Death Strike or the Blood Shield value.
 * The current Power Word:Shield value on the player.
 * The current and maximum health of the player.
 
@@ -19,7 +19,7 @@ Blood Shield Tracker is an addon to track the value of the Death Knight Blood Sh
 
 ### Estimate Bar
 
-* Predicts the size of the Death Strike heal or Blood Shield based on Resolve.
+* Predicts the size of the Death Strike heal or Blood Shield.
 * The user can configure if the bar predicts the Death Strike heal or Blood Shield value.
 * The bar can be configured to show the estimated value as a percentage of maximum health instead of the absolute value.
 
