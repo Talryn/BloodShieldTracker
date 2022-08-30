@@ -1,4 +1,4 @@
-## Interface: 90200
+## Interface: 90205
 ## Title: Blood Shield Tracker
 ## Notes: Tracks the Blood Shield for Death Knights.
 ## Author: Talryn, kagaro
@@ -7,6 +7,7 @@
 ## OptionalDeps: Ace3, LibDataBroker-1.1, LibDBIcon-1.0, LibQTip-1.0, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets, CompactRunes, Tukui, ElvUI
 ## X-Curse-Project-ID: 26759
 ## X-WoWI-ID: 25918
+## X-Wago-ID: Qb6mL7NP
 
 embeds.xml
 
