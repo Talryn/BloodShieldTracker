@@ -311,7 +311,7 @@ Broker.obj = LDB:NewDataObject(addon.addonTitle, {
     barB = 1,
 	OnClick = function(clickedframe, button)
 		if button == "RightButton" then
-			local optionsFrame = _G.InterfaceOptionsFrame
+			local optionsFrame = self.optionsFrame
 
 			if optionsFrame:IsVisible() then
 				optionsFrame:Hide()
