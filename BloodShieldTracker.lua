@@ -311,10 +311,8 @@ Broker.obj = LDB:NewDataObject(addon.addonTitle, {
     barB = 1,
 	OnClick = function(clickedframe, button)
 		if button == "RightButton" then
-			local optionsFrame = self.optionsFrame
-
-			if optionsFrame:IsVisible() then
-				optionsFrame:Hide()
+			if addon.IsGameOptionsVisible() then
+				addon.HideGameOptions()
 			else
 				BloodShieldTracker:ShowOptions()
 			end
