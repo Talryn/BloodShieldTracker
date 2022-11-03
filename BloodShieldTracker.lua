@@ -206,6 +206,7 @@ local SpellIds = {
 	["Protection of Tyr"] = 200430,
 	["Lana'thel's Lament"] = 212974,
 	["Divine Hymn"] = 64844,
+	["Sanguine Ground"] = 391459, -- Talent
 	["Hemostasis"] = 273947,  -- Blood talent from BfA, passive buff
 	-- ICC Buffs for Horde
 	["Hellscream's Warsong 05"] = 73816,
@@ -236,15 +237,6 @@ end
 LoadSpellNames()
 addon.SpellIds = SpellIds
 addon.SpellNames = SpellNames
-
-function addon.HasActiveTalent(talent)
-	local activeGroup = _G.GetActiveSpecGroup()
-	local talentId = addon.Talents[talent]
-	if not talentId or not activeGroup then return false end
-	local id, name, iconTexture, selected, available, _, _, _, _, active =
-		_G.GetTalentInfoByID(talentId, activeGroup)
-	return name and active
-end
 
 local AbsorbShieldsOrdered = {
 	"Blood Shield",
@@ -1498,6 +1490,7 @@ function BloodShieldTracker:OnEnable()
 	self:CheckTalents()
 	self:RegisterEvent("PLAYER_TALENT_UPDATE", "CheckTalents")
 	self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED","CheckTalents")
+	self:RegisterEvent("TRAIT_CONFIG_UPDATED", "CheckTalents")
 
 	-- TODO: Check if anything here needs to be updated or just removed.
 	--self:RegisterEvent("GLYPH_ADDED", "CheckGlyphs")
@@ -1680,7 +1673,6 @@ function BloodShieldTracker:CheckTalents5()
 			end
 		end
 		dsHealAPMod = addon.DsHealAPModifiers[addon.currentSpec] or 1
-		addon.Talents = addon.TalentsBySpec[addon.currentSpec] or {}
 		--self:CheckGlyphs()
 	end
 

@@ -77,12 +77,26 @@ local damageTaken = {}
 local removeList = {}
 
 -- Constants from abilities / gear.
-local dsHealModifier = 0.25  -- Percent of the DS Heal from the tooltip.
+-- Base DS min heal is 7%
+-- Voracious min heal is 10.5% (50% increase and not 20%...)
+local dsHealModifierBase = 0.25  -- Percent of the DS Heal from the tooltip.
+local dsHealModifier = dsHealModifierBase
 local dsMinHealPercent = 0.07
-local dsMinHealVoracious = 0.10
+local dsMinHealVoracious = 0.105
 local dsMinHealPercentSuccor = 0.20
-local voraciousTalentBonus = 0.20
+local bsStaticModifier = 1.0
+local impDSModifierCurrent = 1.0
 local BaseVBHealingBonus = 0.30
+local staticModifiers = {
+	ds = {
+		["Voracious"] = 0.20,
+		["Improved Death Strike"] = 0.10,	
+	},
+	bs = {
+		["Gloom Ward"] = 0.15,
+		["Iron Heart"] = 0.20,	
+	},
+}
 local vbHealingBonus = BaseVBHealingBonus
 local guardianSpiritHealBuff = 0.40
 local HealingBuffs = {
@@ -93,6 +107,7 @@ local HealingBuffs = {
 	[SpellIds["Hellscream's Warsong 30"]] = 0.30,  -- Horde ICC Bonus
 	[SpellIds["Strength of Wrynn 30"]] = 0.30, -- Alliance ICC Bonus
 	[SpellIds["Hemostasis"]] = 0.08, -- Talent
+	[SpellIds["Sanguine Ground"]] = 0.05, -- Talent
 }
 
 -- Curent state information
@@ -247,19 +262,51 @@ function module:CreateDisplay()
 	self.estimatebar:Hide()
 end
 
+function module:GetDSModifier()
+	local modifier = dsHealModifierBase
+	for key, value in pairs(staticModifiers.ds) do
+		if addon.HasActiveTalent(key) then
+			if _G.type(value) == "number" then
+				modifier = modifier * (1 + value)
+			end
+		end
+	end
+	return modifier
+end
+
+function module:GetShieldModifier()
+	local modifier = 1.0
+	for key, value in pairs(staticModifiers.bs) do
+		if addon.HasActiveTalent(key) then
+			if _G.type(value) == "number" then
+				modifier = modifier * (1 + value)
+			end
+		end
+	end
+	return modifier
+end
+
 function module:OnEnable()
 	if not self.estimatebar then self:CreateDisplay() end
 	addon:RegisterCallback("Auras", module.name, module.CheckAuras)
 	addon:RegisterCallback("GearUpdate", module.name, module.GearUpdate)
 	addon:RegisterCallback("WeaponUpdate", module.name, module.WeaponUpdate)
 
-	dsMinHealCurrent = addon.HasActiveTalent("Voracious") and dsMinHealVoracious or dsMinHealPercent
-
 	vbHealingBonus = self:GetVBBonus()
 	voraciousBonus = self:GetVoraciousBonus()
+
+	impDSModifierCurrent = addon.HasActiveTalent("Improved Death Strike") and (1 + staticModifiers.ds["Improved Death Strike"]) or 1.0
+	dsMinHealCurrent = (addon.HasActiveTalent("Voracious") and dsMinHealVoracious or dsMinHealPercent) * 
+		impDSModifierCurrent
+
+	dsHealModifier = self:GetDSModifier()
+	bsStaticModifier = self:GetShieldModifier()
+
 	if addon.db.profile.debug then
-		addon:Print("VB Healing Bonus: ".._G.tostring(vbHealingBonus))
 		addon:Print("DS Min Heal: ".._G.tostring(dsMinHealCurrent))
+		addon:Print("DS Heal Modifier: ".._G.tostring(dsHealModifier))
+		addon:Print("BS Modifier: ".._G.tostring(bsStaticModifier))
+		addon:Print("VB Healing Bonus: ".._G.tostring(vbHealingBonus))
 		addon:Print("Voracious Bonus: ".._G.tostring(voraciousBonus))
 	end
 	self:UpdateRatings()
@@ -346,14 +393,14 @@ function module:UpdateEstimateBar(timestamp)
     local recentDamage = self:GetRecentDamageTaken(timestamp)
 
     local predictedValue, minimumValue = 0, 0
-		local baseValue = recentDamage * dsHealModifier *
-			(1 + versatilityPercent) * (1 + voraciousBonus)
+	local baseValue = recentDamage * dsHealModifier *
+		(1 + versatilityPercent)
 
     if self.estimatebar.db.bar_mode == "BS" then
-      predictedValue = round(baseValue * shieldPercent)
+      predictedValue = round(baseValue * shieldPercent * bsStaticModifier)
       minimumValue = bsMinimum
     else
-      predictedValue = round(baseValue *
+      predictedValue = round(baseValue * 
         self:GetEffectiveHealingBuffModifiers() *
         self:GetEffectiveHealingDebuffModifiers())
       minimumValue = dsHealMin
@@ -362,8 +409,8 @@ function module:UpdateEstimateBar(timestamp)
     local estimate = minimumValue
     if predictedValue > minimumValue then
 	    estimate = predictedValue
-		end
-		local predictedPercent = predictedValue / addon.maxHealth
+	end
+	local predictedPercent = predictedValue / addon.maxHealth
 
     self:UpdateEstimateBarText(estimate)
     self.estimatebar.bar:SetMinMaxValues(0, minimumValue)
@@ -435,10 +482,11 @@ function module:UpdateMinHeal(event, unit)
 		local newMin = round(baseValue *
 			self:GetEffectiveHealingBuffModifiers() *
 			self:GetEffectiveHealingDebuffModifiers())
+		bsMinimum = round(baseValue * shieldPercent * bsStaticModifier)
 		if newMin ~= dsHealMin then
-			local newMinFnt = "DS Heal Min: %d"
+			local newMinFnt = "DS Heal Min: %d, BS Min: %d"
 			if addon.db.profile.debug then
-				addon:Print(newMinFnt:format(newMin))
+				addon:Print(newMinFnt:format(newMin, bsMinimum))
 			end
 			if addon.DEBUG_OUTPUT == true then
 				addon.DEBUG_BUFFER = addon.DEBUG_BUFFER .. currentTime .. "   " ..
@@ -446,7 +494,6 @@ function module:UpdateMinHeal(event, unit)
 			end
 		end
 		dsHealMin = newMin
-		bsMinimum = round(baseValue * shieldPercent)
 		if addon.idle then
 			self:UpdateEstimateBarTextWithMin()
 		end
@@ -567,6 +614,10 @@ function module:GetVBBonus()
 	local matches = _G.string.gmatch(desc, "(%d%d)%%")
 	local healthBonus = matches()
 	local healingBonus = matches()
+	if addon.db.profile.debug then
+		local fmt = "Vampiric Blood healing bonus: %s"
+		addon:Print(fmt:format(_G.tostring(healingBonus)))
+	end
 	if healingBonus ~= nil then
 		local value = self.vampBloodBonuses[healingBonus]
 		if value ~= nil then
@@ -579,7 +630,7 @@ end
 function module:GetVoraciousBonus()
 	if addon.currentSpec ~= "Blood" then return 0 end
 	if addon.HasActiveTalent("Voracious") then
-		return voraciousTalentBonus
+		return staticModifiers.ds["Voracious"] or 0
 	else
 		return 0
 	end
@@ -952,8 +1003,8 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
         local predictedHeal = 0
         if healingDebuffMultiplier ~= 1 then
             predictedHeal = round(
-                recentDmg * dsHealModifier * (1 + versatilityPercent) *
-                (1 + voraciousBonus) *
+                recentDmg * dsHealModifier * 
+				(1 + versatilityPercent) *
                 self:GetEffectiveHealingBuffModifiers() *
                 self:GetEffectiveHealingDebuffModifiers())
         end
@@ -997,17 +1048,20 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
             predictedHeal = 0
             isMinimum = true
         else
-            shieldValue = round(totalHeal * shieldPercent /
+            shieldValue = round(totalHeal * shieldPercent *
+				bsStaticModifier /
                 self:GetEffectiveHealingBuffModifiers() /
                 self:GetEffectiveHealingDebuffModifiers())
             if shieldValue <= bsMinimum then
                 isMinimum = true
                 shieldValue = bsMinimum
             end
-            predictedHeal = round(recentDmg * dsHealModifier * (1 + versatilityPercent) *
-								(1 + voraciousBonus) *
+            predictedHeal = round(
+				recentDmg * dsHealModifier * 
+				(1 + versatilityPercent) *
                 self:GetEffectiveHealingBuffModifiers() *
-                self:GetEffectiveHealingDebuffModifiers())
+                self:GetEffectiveHealingDebuffModifiers()
+			)
         end
 
         if addon.db.profile.debug then
