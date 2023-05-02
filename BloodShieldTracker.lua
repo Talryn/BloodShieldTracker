@@ -291,6 +291,22 @@ local dsHealAPMod = 4
 
 local round = addon.round
 
+function BloodShieldTracker:OnClickIcon(button)
+	if button == "RightButton" then
+		if addon.IsGameOptionsVisible() then
+			addon.HideGameOptions()
+		else
+			self:ShowOptions()
+		end
+	elseif button == "LeftButton" and _G.IsShiftKeyDown() then
+		self:ResetStats()
+	end
+end
+
+function BloodShieldTracker_OnAddonCompartmentClick(addonName, buttonName)
+	BloodShieldTracker:OnClickIcon(buttonName)
+end
+
 local Broker = _G.CreateFrame("Frame")
 Broker.obj = LDB:NewDataObject(addon.addonTitle, {
     type = "data source",
@@ -302,15 +318,7 @@ Broker.obj = LDB:NewDataObject(addon.addonTitle, {
     barG = 0,
     barB = 1,
 	OnClick = function(clickedframe, button)
-		if button == "RightButton" then
-			if addon.IsGameOptionsVisible() then
-				addon.HideGameOptions()
-			else
-				BloodShieldTracker:ShowOptions()
-			end
-		elseif button == "LeftButton" and _G.IsShiftKeyDown() then
-		    BloodShieldTracker:ResetStats()
-        end
+		BloodShieldTracker:OnClickIcon(button)
 	end
 } )
 

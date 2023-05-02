@@ -1,10 +1,12 @@
-## Interface: 100000
+## Interface: 100100
 ## Title: Blood Shield Tracker
 ## Notes: Tracks the Blood Shield for Death Knights.
 ## Author: Talryn, kagaro
 ## Version: @project-version@
 ## SavedVariables: BloodShieldTrackerDB
 ## OptionalDeps: Ace3, LibDataBroker-1.1, LibDBIcon-1.0, LibQTip-1.0, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets, CompactRunes, Tukui, ElvUI
+## AddonCompartmentFunc: BloodShieldTracker_OnAddonCompartmentClick
+## IconTexture: Interface\Icons\Spell_DeathKnight_DeathStrike
 ## X-Curse-Project-ID: 26759
 ## X-WoWI-ID: 25918
 ## X-Wago-ID: Qb6mL7NP
