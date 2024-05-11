@@ -21,6 +21,20 @@ local MIN_UPDATE_TIME = addon.MIN_UPDATE_TIME
 local lastSwingMH, lastSwingOH = nil, nil
 local speedMH, speedOH = nil, nil
 
+local talentSpecs = {
+	[1] = "Blood",
+	[2] = "Frost",
+	[3] = "Unholy",
+}
+
+function addon.GetSpecLocalization(index)
+	if _G.GetSpecializationInfo then
+		return _G.select(2, _G.GetSpecializationInfo(index))
+	elseif _G.GetTalentTabInfo then
+		return _G.select(2, _G.GetTalentTabInfo(index))
+	end
+end
+
 function module:SetProfile()
 	self.profile = addon.db.profile.bars.TargetSwingTimerBar
 end
@@ -243,8 +257,8 @@ function module:GetModuleOptions()
 				name = L["Specializations"],
 			},
 			bloodSpec = {
-				name = _G.select(2, _G.GetSpecializationInfo(1)),
-				desc = _G.select(2, _G.GetSpecializationInfo(1)),
+				name = addon.GetSpecLocalization(1),
+				desc = addon.GetSpecLocalization(1),
 				type = "toggle",
 				order = 60,
 				set = function(info, val)
@@ -256,8 +270,8 @@ function module:GetModuleOptions()
 				end,
 			},
 			frostSpec = {
-				name = _G.select(2, _G.GetSpecializationInfo(2)),
-				desc = _G.select(2, _G.GetSpecializationInfo(2)),
+				name = addon.GetSpecLocalization(2),
+				desc = addon.GetSpecLocalization(2),
 				type = "toggle",
 				order = 70,
 				set = function(info, val)
@@ -269,8 +283,8 @@ function module:GetModuleOptions()
 				end,
 			},
 			unholySpec = {
-				name = _G.select(2, _G.GetSpecializationInfo(3)),
-				desc = _G.select(2, _G.GetSpecializationInfo(3)),
+				name = addon.GetSpecLocalization(3),
+				desc = addon.GetSpecLocalization(3),
 				type = "toggle",
 				order = 80,
 				set = function(info, val)

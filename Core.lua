@@ -15,6 +15,14 @@ addon.FrameNames = {
 	["Compact Runes"] = "CompactRunes_RunicPowerBar",
 }
 
+local function versionInRange(version, start, finish)
+	if _G.type(version) ~= "number" then return false end
+	local start = start or 0
+	local finish = finish or 100000000
+	if _G.type(start) ~= "number" or _G.type(finish) ~= "number" then return false end
+	return version >= start and version < finish
+end
+
 -- Try to remove the Git hash at the end, otherwise return the passed in value.
 local function cleanupVersion(version)
 	local iter = string.gmatch(version, "(.*)-[a-z0-9]+$")
@@ -33,6 +41,7 @@ addon.addonVersion = cleanupVersion("@project-version@")
 addon.CURRENT_BUILD, addon.CURRENT_INTERNAL, 
     addon.CURRENT_BUILD_DATE, addon.CURRENT_UI_VERSION = _G.GetBuildInfo()
 addon.BfA = addon.CURRENT_UI_VERSION >= 80000
+addon.Cata = versionInRange(addon.CURRENT_UI_VERSION, 40000, 50000)
 
 local function round(number)
     if not number then return 0 end
@@ -212,52 +221,6 @@ end
 function addon:BarDisplayRemove(event, bar)
 	local events = addon.UpdateDisplayEvents[event]
 	events[bar] = nil
-end
-
--- UnitBuff for BfA.  Scans buffs by name.
-addon.UnitBuff = function(unit, spellName, filter)
-	local name, icon, count, dispelType, duration, expires, 
-	caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
-	isBossDebuff, castByPlayer, value1, value2, value3
-	
-	local i = 1
-	name = ""
-	while name ~= nil and i < 100 do
-		name, icon, count, dispelType, duration, expires, 
-		caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
-		isBossDebuff, castByPlayer, value1, value2, value3
-			= _G.UnitBuff(unit, i, filter)
-		if name == spellName then
-			return name, icon, count, dispelType, duration, expires, 
-				caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
-				isBossDebuff, castByPlayer, value1, value2, value3
-		end
-		i = i + 1
-	end
-	return nil
-end
-
--- UnitDebuff for BfA.  Scans debuffs by name.
-addon.UnitDebuff = function(unit, spellName, filter)
-	local name, icon, count, dispelType, duration, expires, 
-	caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
-	isBossDebuff, castByPlayer, value1, value2, value3
-	
-	local i = 1
-	name = ""
-	while name ~= nil and i < 100 do
-		name, icon, count, dispelType, duration, expires, 
-		caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
-		isBossDebuff, castByPlayer, value1, value2, value3
-			= _G.UnitDebuff(unit, i, filter)
-		if name == spellName then
-			return name, icon, count, dispelType, duration, expires, 
-				caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
-				isBossDebuff, castByPlayer, value1, value2, value3
-		end
-		i = i + 1
-	end
-	return nil
 end
 
 function addon.IsGameOptionsVisible()

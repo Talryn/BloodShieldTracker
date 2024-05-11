@@ -51,10 +51,6 @@ local GetVersatilityBonus = _G.GetVersatilityBonus
 local GetCombatRatingBonus = _G.GetCombatRatingBonus
 local GetSpellCooldown = _G.GetSpellCooldown
 
--- Use BfA+ version to search by name.
-local UnitBuff = addon.UnitBuff
-local UnitDebuff = addon.UnitDebuff
-
 BloodShieldTracker.loaded = false
 addon.playerName = UnitName("player")
 BloodShieldTracker.shieldbar = nil
@@ -155,88 +151,8 @@ local shieldBarFormatFull = "%s/%s (%d%%)"
 local shieldBarFormatNoPer = "%s/%s"
 local shieldBarFormatCurrPerc = "%s (%d%%)"
 
-local LookupOrKeyMT = {__index = function (t,k) return k end}
-
-local ItemIds = {
-	["Indomitable Pride"] = 77211,
-}
-local ItemNames = {}
-local function LoadItemNames()
-	for k,v in pairs(ItemIds) do
-		local name = ItemNames[k]
-		if not name then
-			ItemNames[k] = (_G.GetItemInfo(ItemIds[k]))
-		end
-	end
-end
-LoadItemNames()
-addon.ItemNames = ItemNames
-
-local SpellIds = {
-	["Power Word: Shield"] = 17,
-	["Divine Aegis"] = 47753,
-	["Indomitable Pride"] = 108008,
-	["Scent of Blood"] = 50421,
-	["Dark Succor"] = 101568,
-	["Vampiric Blood"] = 55233,
-	["Blood Presence"] = 48263,
-	["Unholy Presence"] = 48265,
-	["Frost Presence"] = 48266,
-	["Blood Shield"] = 77535,
-	["Death Strike"] = 49998,
-	["Death Strike Heal"] = 45470,
-	["Luck of the Draw"] = 72221,
-	["Spirit Link"] = 98017,
-	["Spirit Link Totem"] = 98007,
-	["Guardian Spirit"] = 47788,
-	["Mastery: Blood Shield"] = 77513,
-	["Life Cocoon"] = 116849,
-	["Spirit Shell"] = 114908,
-	["Guard"] = 118604, -- via the Brewmaster's Black Ox Statue
-	["Shroud of Purgatory"] = 116888,
-	["Anti-Magic Shell"] = 48707,
-	["Bone Shield"] = 195181,
-	["Bone Wall"] = 144948,
-	["Heart Strike"] = 55050,
-	["Death Coil"] = 47541,
-	["Rune Strike"] = 56815,
-	["Blood Boil"] = 48721,
-	["Sacred Shield"] = 65148,
-	["Marrowrend"] = 195182,
-	["Protection of Tyr"] = 200430,
-	["Lana'thel's Lament"] = 212974,
-	["Divine Hymn"] = 64844,
-	["Sanguine Ground"] = 391459, -- Talent
-	["Hemostasis"] = 273947,  -- Blood talent from BfA, passive buff
-	-- ICC Buffs for Horde
-	["Hellscream's Warsong 05"] = 73816,
-	["Hellscream's Warsong 10"] = 73818,
-	["Hellscream's Warsong 15"] = 73819,
-	["Hellscream's Warsong 20"] = 73820,
-	["Hellscream's Warsong 25"] = 73821,
-	["Hellscream's Warsong 30"] = 73822,
-	-- ICC Buffs for Alliance
-	["Strength of Wrynn 05"] = 73762,
-	["Strength of Wrynn 10"] = 73824,
-	["Strength of Wrynn 15"] = 73825,
-	["Strength of Wrynn 20"] = 73826,
-	["Strength of Wrynn 25"] = 73827,
-	["Strength of Wrynn 30"] = 73828,
-	["Clarity of Will"] = 152118,
-	["Saved by the Light"] = 157047,
-}
-local SpellNames = {}
-_G.setmetatable(SpellNames, LookupOrKeyMT)
-local function LoadSpellNames()
-	for k, v in pairs(SpellIds) do
-		if _G.rawget(SpellNames, k) == nil then
-			SpellNames[k] = _G.GetSpellInfo(v)
-		end
-	end
-end
-LoadSpellNames()
-addon.SpellIds = SpellIds
-addon.SpellNames = SpellNames
+local SpellIds = addon.SpellIds
+local SpellNames = addon.SpellNames
 
 local AbsorbShieldsOrdered = {
 	"Blood Shield",
@@ -258,9 +174,7 @@ end
 addon.AbsorbShieldsOrdered = AbsorbShieldsOrdered
 addon.AbsorbShields = AbsorbShields
 
-local GlyphIds = {
-	["Vampiric Blood"] = 58676,
-}
+local GlyphIds = addon.GlyphIds
 
 local scentBloodStackBuff = 0.2
 local vbGlyphedHealthInc = 0.0
@@ -748,16 +662,16 @@ function BloodShieldTracker:CreateDisplay()
 				if self.active then
 					local name, icon, count, dispelType, duration, expires,
 					caster, isStealable, shouldConsolidate, spellId, canApplyAura,
-					isBossDebuff, castByPlayer, new1, new2, value1
-						= UnitBuff("player", SpellNames["Blood Shield"])
+					isBossDebuff, castByPlayer, value1, value2, value3, value4
+						= AuraUtil.FindAuraByName(SpellNames["Blood Shield"], "player")
 					if name then
 						local timeLeft = expires - GetTime()
 						self.bar.timer = timeLeft
 						self.bar.active = true
-						if value1 ~= self.bar.value1 then
-							self.bar.value:SetText(addon.FormatNumber(value1))
+						if value4 ~= self.bar.value1 then
+							self.bar.value:SetText(addon.FormatNumber(value4))
 						end
-						self.bar.value1 = value1
+						self.bar.value1 = value4
 						self.bar:SetMinMaxValues(0, duration)
 						self.bar:SetAlpha(1)
 						self.bar.value:Show()
@@ -968,7 +882,7 @@ function BloodShieldTracker:CreateDisplay()
 					local name, icon, count, dispelType, duration, expires,
 					caster, isStealable, shouldConsolidate, spellId, canApplyAura,
 					isBossDebuff, castByPlayer, new1, new2, value1
-						= UnitDebuff("player", SpellNames["Shroud of Purgatory"])
+						= AuraUtil.FindAuraByName(SpellNames["Shroud of Purgatory"], "player", "HARMFUL")
 					if name then
 						--local timeLeft = expires - GetTime()
 						--self.bar.timer = timeLeft
@@ -1035,7 +949,7 @@ function BloodShieldTracker:CreateDisplay()
 					local name, icon, count, dispelType, duration, expires,
 					caster, isStealable, shouldConsolidate, spellId, canApplyAura,
 					isBossDebuff, castByPlayer, new1, new2, value1
-						= UnitBuff("player", SpellNames["Bone Shield"])
+						= AuraUtil.FindAuraByName(SpellNames["Bone Shield"], "player")
 					if name then
 						local timeLeft = expires - GetTime()
 						self.bar.timer = timeLeft
@@ -1152,7 +1066,7 @@ function BloodShieldTracker:CreateDisplay()
 					local name, icon, count, dispelType, duration, expires,
 					caster, isStealable, shouldConsolidate, spellId, canApplyAura,
 					isBossDebuff, castByPlayer, new1, new2, value1
-						= UnitBuff("player", SpellNames["Anti-Magic Shell"])
+						= AuraUtil.FindAuraByName(SpellNames["Anti-Magic Shell"], "player")
 					if name then
 						local timeLeft = expires - GetTime()
 						self.bar.timer = timeLeft
@@ -1448,8 +1362,8 @@ function BloodShieldTracker:OnEnable()
 	if not addon.isDK then return end
 
 	-- Try to load the spell and item names one more time.
-	LoadItemNames()
-	LoadSpellNames()
+	addon.LoadItemNames()
+	addon.LoadSpellNames()
 	if not self.optionsFrame then
 		-- Register Options
 		local displayName = addon.addonTitle
@@ -1617,6 +1531,44 @@ function BloodShieldTracker:CheckClass()
 	end
 end
 
+-- New method to check talents for MoP
+function BloodShieldTracker:CheckTalents5()
+	if addon.isDK == nil then
+		self:CheckClass()
+	end
+
+	if addon.isDK then
+		-- Check spec: Blood, Frost, or Unholy spec?
+		addon.currentSpec = self:GetSpec() or "Blood"
+
+		if addon.currentSpec == "Blood" then
+			addon.IsBloodTank = true
+			-- For 6.0+, the Mastery spell isn't known, just use level for now
+			if _G.UnitLevel("player") >= 80 then
+				hasBloodShield = true
+			end
+			-- Check for Mastery so we know if BS is active
+			if _G.IsSpellKnown(SpellIds["Mastery: Blood Shield"]) then
+				hasBloodShield = true
+			end
+			-- Check for VB
+			if _G.IsSpellKnown(SpellIds["Vampiric Blood"]) then
+				HasVampBlood = true
+			end
+		else
+			addon.IsBloodTank = false
+		end
+		dsHealAPMod = addon.DsHealAPModifiers[addon.currentSpec] or 1
+		--self:CheckGlyphs()
+	end
+
+	if addon:IsTrackerEnabled() then
+		self:Load()
+	else
+		self:Unload()
+	end
+end
+
 function BloodShieldTracker:CheckTalents(event)
 	addon.IsBloodTank = false
 	hasBloodShield = false
@@ -1637,57 +1589,52 @@ function BloodShieldTracker:CheckTalents(event)
 	end
 end
 
--- New method to check talents for MoP
-function BloodShieldTracker:CheckTalents5()
-	if addon.isDK == nil then
-		self:CheckClass()
-	end
-
-	if addon.isDK then
-		-- Check spec: Blood, Frost, or Unholy spec?
-		local activeSpecNum = _G.GetSpecialization()
-		if activeSpecNum and activeSpecNum > 0 then
-			local id, name, desc, texture = _G.GetSpecializationInfo(activeSpecNum)
-			if id == 250 then
-				addon.currentSpec = "Blood"
-			elseif id == 251 then
-				addon.currentSpec = "Frost"
-			elseif id == 252 then
-				addon.currentSpec = "Unholy"
-			else
-				if addon.db.profile.debug then
-					local fmt = "Could not detect player spec. [%s,%s,%s,%s]"
-					self:Print(fmt:format(_G.tostring(activeSpecNum), _G.tostring(id),
-						_G.tostring(name), _G.tostring(texture)))
-				end
-				addon.currentSpec = addon.currentSpec or "Blood"
-			end
-			if addon.currentSpec == "Blood" then
-				addon.IsBloodTank = true
-				-- For 6.0+, the Mastery spell isn't known, just use level for now
-				if _G.UnitLevel("player") >= 80 then
-					hasBloodShield = true
-				end
-				-- Check for Mastery so we know if BS is active
-				if _G.IsSpellKnown(SpellIds["Mastery: Blood Shield"]) then
-					hasBloodShield = true
-				end
-				-- Check for VB
-				if _G.IsSpellKnown(SpellIds["Vampiric Blood"]) then
-					HasVampBlood = true
-				end
-			else
-				addon.IsBloodTank = false
-			end
-		end
-		dsHealAPMod = addon.DsHealAPModifiers[addon.currentSpec] or 1
-		--self:CheckGlyphs()
-	end
-
-	if addon:IsTrackerEnabled() then
-		self:Load()
+function BloodShieldTracker:GetSpec()
+	if _G.GetSpecialization and _G.GetSpecializationInfo then
+		return self:GetSpec5()
+	elseif _G.GetPrimaryTalentTree then
+		return self:GetSpec4()
 	else
-		self:Unload()
+		return nil
+	end
+end
+
+-- For Classic Cata API
+function BloodShieldTracker:GetSpec4()
+	local id = _G.GetPrimaryTalentTree()
+	if id == 1 then
+		return "Blood"
+	elseif id == 2 then
+		return "Frost"
+	elseif id == 3 then
+		return "Unholy"
+	else
+		if addon.db.profile.debug then
+			local fmt = "Could not detect player spec. [%s]"
+			self:Print(fmt:format(_G.tostring(id)))
+		end
+	end
+end
+
+-- MoP+ check
+function BloodShieldTracker:GetSpec5()
+	local activeSpecNum = _G.GetSpecialization()
+	if activeSpecNum and activeSpecNum > 0 then
+		local id, name, desc, texture = _G.GetSpecializationInfo(activeSpecNum)
+		if id == 250 then
+			return "Blood"
+		elseif id == 251 then
+			return "Frost"
+		elseif id == 252 then
+			return "Unholy"
+		else
+			if addon.db.profile.debug then
+				local fmt = "Could not detect player spec. [%s,%s,%s,%s]"
+				self:Print(fmt:format(_G.tostring(activeSpecNum), _G.tostring(id),
+					_G.tostring(name), _G.tostring(texture)))
+			end
+			addon.currentSpec = addon.currentSpec or "Blood"
+		end
 	end
 end
 
@@ -2077,7 +2024,7 @@ function BloodShieldTracker:CheckAuras(unit)
 	repeat
 		name, icon, count, dispelType, duration, expires, caster,
 		stealable, consolidate, spellId, canApplyAura, isBossDebuff,
-		castByPlayer, new1, new2, value = UnitAura("player", i)
+		castByPlayer, value1, value2, value3, value4 = UnitAura("player", i)
 		if name == nil or spellId == nil then break end
 
 		local tracked = AbsorbShields[spellId]
@@ -2089,15 +2036,15 @@ function BloodShieldTracker:CheckAuras(unit)
 		elseif tracked or trackedWithData then
 			if trackedWithData then
 				AurasFound[trackedWithData] = true
-				AuraData[trackedWithData].value = value
+				AuraData[trackedWithData].value = value4
 				AuraData[trackedWithData].expires = expires
 				AuraData[trackedWithData].duration = duration
 				AuraData[trackedWithData].count = count
 			end
 			if tracked then
 				AurasFound[tracked] = true
-				if value then
-					OtherShields[tracked] = (OtherShields[tracked] or 0) + value
+				if value4 then
+					OtherShields[tracked] = (OtherShields[tracked] or 0) + value4
 				elseif self.db.profile.debug == true then
 					self:Print(errorReadingFmt:format(SpellNames[tracked]))
 				end

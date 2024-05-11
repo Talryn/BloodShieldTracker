@@ -17,6 +17,7 @@ locale.xml
 
 Core.lua
 Constants.lua
+Spells.lua
 Talents.lua
 Bar.lua
 BloodShieldTracker.lua

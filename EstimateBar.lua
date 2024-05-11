@@ -21,12 +21,10 @@ local UnitHealthMax = _G.UnitHealthMax
 local GetTime = _G.GetTime
 local UnitGetTotalAbsorbs = _G.UnitGetTotalAbsorbs
 local UnitAttackPower = _G.UnitAttackPower
+local GetMastery = _G.GetMastery
 local GetMasteryEffect = _G.GetMasteryEffect
 local GetSpellCooldown = _G.GetSpellCooldown
 local CombatLogGetCurrentEventInfo = _G.CombatLogGetCurrentEventInfo
-
--- Use BfA+ version to search by name.
-local UnitBuff = addon.UnitBuff
 
 local SpellIds = addon.SpellIds
 local SpellNames = addon.SpellNames
@@ -90,7 +88,7 @@ local BaseVBHealingBonus = 0.30
 local staticModifiers = {
 	ds = {
 		["Voracious"] = 0.20,
-		["Improved Death Strike"] = 0.10,	
+		["Improved Death Strike"] = 0.05,
 	},
 	bs = {
 		["Gloom Ward"] = 0.15,
@@ -184,7 +182,26 @@ function module.WeaponUpdate()
 	module:ArtifactUpdate()
 end
 
-local UnitEvents = {
+local UnitEventsClassic = {
+	["any"] = {
+		"PLAYER_REGEN_DISABLED",
+		"PLAYER_REGEN_ENABLED",
+		"PLAYER_ALIVE",
+		"PLAYER_DEAD",
+		"COMBAT_LOG_EVENT_UNFILTERED",
+		"PLAYER_ENTERING_WORLD",
+		"COMBAT_RATING_UPDATE",
+		"MASTERY_UPDATE",
+		"UNIT_SPELLCAST_SENT",
+	},
+	["player"] = {
+		"UNIT_SPELLCAST_SUCCEEDED",
+		"UNIT_MAXHEALTH",
+		-- "UNIT_AURA",
+	},
+}
+
+local UnitEventsCurrent = {
 	["any"] = {
 		"PLAYER_REGEN_DISABLED",
 		"PLAYER_REGEN_ENABLED",
@@ -204,6 +221,8 @@ local UnitEvents = {
 		-- "UNIT_AURA",
 	},
 }
+local UnitEvents = addon.Cata and UnitEventsClassic or UnitEventsCurrent
+
 local function EventFrame_OnEvent(frame, event, ...)
 	if event == "PLAYER_REGEN_DISABLED" then
 		module:PLAYER_REGEN_DISABLED(event, ...)
@@ -309,6 +328,7 @@ function module:OnEnable()
 		addon:Print("VB Healing Bonus: ".._G.tostring(vbHealingBonus))
 		addon:Print("Voracious Bonus: ".._G.tostring(voraciousBonus))
 	end
+	module.UpdateRatings = addon.Cata and module.UpdateRatingsClassic or module.UpdateRatingsCurrent
 	self:UpdateRatings()
 	self:UpdateAlternateMinimum()
 
@@ -637,7 +657,7 @@ function module:GetVoraciousBonus()
 end
 
 local CR_VERSATILITY_DAMAGE_DONE = _G.CR_VERSATILITY_DAMAGE_DONE or 29
-function module:UpdateRatings()
+function module:UpdateRatingsCurrent()
 	local update = false
 	local mastery = GetMasteryEffect()
 	if mastery ~= masteryRating then
@@ -655,12 +675,25 @@ function module:UpdateRatings()
 	end
 
 	if update then
-    if addon.db.profile.debug then
+    	if addon.db.profile.debug then
 			local fmt = "Versatility: %0.4f%%"
 			addon:Print(fmt:format(versatilityBonus))
 		end
 		self:UpdateEstimates("UpdateRatings", "player")
 	end
+end
+
+function module:UpdateRatingsClassic()
+	local update = false
+	local mastery = GetMastery()
+	if mastery ~= masteryRating then
+		masteryRating = mastery
+		shieldPercent = masteryRating / 100 * 6.25
+		update = true
+	end
+	if update then
+		self:UpdateEstimates("UpdateRatings", "player")
+	end	
 end
 
 function module:UpdateAlternateMinimum()
