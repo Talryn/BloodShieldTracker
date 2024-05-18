@@ -668,10 +668,11 @@ function BloodShieldTracker:CreateDisplay()
 						local timeLeft = expires - GetTime()
 						self.bar.timer = timeLeft
 						self.bar.active = true
-						if value4 ~= self.bar.value1 then
-							self.bar.value:SetText(addon.FormatNumber(value4))
+						local shieldValue = addon.Cata and value4 or value3
+						if shieldValue ~= self.bar.value1 then
+							self.bar.value:SetText(addon.FormatNumber(shieldValue))
 						end
-						self.bar.value1 = value4
+						self.bar.value1 = shieldValue
 						self.bar:SetMinMaxValues(0, duration)
 						self.bar:SetAlpha(1)
 						self.bar.value:Show()
