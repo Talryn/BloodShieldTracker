@@ -75,19 +75,16 @@ local damageTaken = {}
 local removeList = {}
 
 -- Constants from abilities / gear.
--- Base DS min heal is 7%
--- Voracious min heal is 10.5% (50% increase and not 20%...)
-local dsHealModifierBase = 0.25  -- Percent of the DS Heal from the tooltip.
+local dsHealModifierBase = addon.Cata and 0.20 or 0.25  -- Percent of the DS Heal from the tooltip.
 local dsHealModifier = dsHealModifierBase
 local dsMinHealPercent = 0.07
-local dsMinHealVoracious = 0.105
 local dsMinHealPercentSuccor = 0.20
 local bsStaticModifier = 1.0
 local impDSModifierCurrent = 1.0
 local BaseVBHealingBonus = 0.30
 local staticModifiers = {
 	ds = {
-		["Voracious"] = 0.20,
+		["Voracious"] = 0.15,
 		["Improved Death Strike"] = 0.05,
 	},
 	bs = {
@@ -290,6 +287,18 @@ function module:GetDSModifier()
 			end
 		end
 	end
+	if addon.Cata then
+		-- Add the appropriate modifier for damage-based heals.
+		local impDSRanks = _G.select(5, _G.GetTalentInfo(1,12)) or 0
+		if _G.type(impDSRanks) == "number" and impDSRanks <= 3 then
+			local impDSMod = impDSRanks * 0.15
+			modifier = modifier * (1 + impDSMod)
+		else
+			if addon.db.profile.debug then
+				addon:Print("Invalid Improved Death Strike ranks!")
+			end
+		end
+	end
 	return modifier
 end
 
@@ -314,9 +323,14 @@ function module:OnEnable()
 	vbHealingBonus = self:GetVBBonus()
 	voraciousBonus = self:GetVoraciousBonus()
 
-	impDSModifierCurrent = addon.HasActiveTalent("Improved Death Strike") and (1 + staticModifiers.ds["Improved Death Strike"]) or 1.0
-	dsMinHealCurrent = (addon.HasActiveTalent("Voracious") and dsMinHealVoracious or dsMinHealPercent) * 
-		impDSModifierCurrent
+	if addon.Cata then
+		-- Cata's Improved DS does not affect minimum heal
+		impDSModifierCurrent = 1.0
+		dsMinHealCurrent = dsMinHealPercent
+	else
+		impDSModifierCurrent = addon.HasActiveTalent("Improved Death Strike") and (1 + staticModifiers.ds["Improved Death Strike"]) or 1.0
+		dsMinHealCurrent = dsMinHealPercent * (1 + voraciousBonus) * impDSModifierCurrent
+	end
 
 	dsHealModifier = self:GetDSModifier()
 	bsStaticModifier = self:GetShieldModifier()

@@ -2028,6 +2028,7 @@ function BloodShieldTracker:CheckAuras(unit)
 		castByPlayer, value1, value2, value3, value4 = UnitAura("player", i)
 		if name == nil or spellId == nil then break end
 
+		local shieldValue = addon.Cata and value4 or value3
 		local tracked = AbsorbShields[spellId]
 		local trackedWithData = TrackWithData[spellId]
 
@@ -2037,15 +2038,15 @@ function BloodShieldTracker:CheckAuras(unit)
 		elseif tracked or trackedWithData then
 			if trackedWithData then
 				AurasFound[trackedWithData] = true
-				AuraData[trackedWithData].value = value4
+				AuraData[trackedWithData].value = shieldValue
 				AuraData[trackedWithData].expires = expires
 				AuraData[trackedWithData].duration = duration
 				AuraData[trackedWithData].count = count
 			end
 			if tracked then
 				AurasFound[tracked] = true
-				if value4 then
-					OtherShields[tracked] = (OtherShields[tracked] or 0) + value4
+				if shieldValue then
+					OtherShields[tracked] = (OtherShields[tracked] or 0) + shieldValue
 				elseif self.db.profile.debug == true then
 					self:Print(errorReadingFmt:format(SpellNames[tracked]))
 				end
