@@ -630,6 +630,14 @@ function module:AddDamageTaken(timestamp, damage)
     self:UpdateBars(timestamp)
 end
 
+local function GetSpellDescription(name)
+	if C_Spell.GetSpellDescription then
+		return C_Spell.GetSpellDescription(name)
+	else
+		return _G.GetSpellDescription(name)
+	end
+end
+
 module.vampBloodBonuses = {
 	["30"] = 0.3,
 	["35"] = 0.35,
@@ -643,7 +651,7 @@ module.vampBloodBonuses = {
 function module:GetVBBonus()
 	if addon.currentSpec ~= "Blood" then return 0 end
 
-	local desc = C_Spell.GetSpellDescription(SpellIds["Vampiric Blood"])
+	local desc = GetSpellDescription(SpellIds["Vampiric Blood"])
 	local matches = _G.string.gmatch(desc, "(%d%d)%%")
 	local healthBonus = matches()
 	local healingBonus = matches()

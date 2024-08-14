@@ -61,9 +61,14 @@ _G.setmetatable(SpellNames, LookupOrKeyMT)
 function addon.LoadSpellNames()
 	for k, v in pairs(SpellIds) do
 		if _G.rawget(SpellNames, k) == nil then
-			local info = C_Spell.GetSpellInfo(v)
-			if info then
-				SpellNames[k] = info.name
+			if C_Spell.GetSpellInfo then
+				local info = C_Spell.GetSpellInfo(v)
+				if info then
+					SpellNames[k] = info.name
+				end
+			else
+				local name = _G.GetSpellInfo(v)
+				SpellNames[k] = name
 			end
 		end
 	end
