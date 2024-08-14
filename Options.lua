@@ -39,7 +39,7 @@ function BloodShieldTracker:GetOptions()
 	if not addon.options then
 		addon.options = {
 	    	type = "group",
-			name = _G.GetAddOnMetadata(ADDON_NAME, "Title"),
+			name = C_AddOns.GetAddOnMetadata(ADDON_NAME, "Title"),
 			args = {
 				core = self:GetGeneralOptions(),
 				shieldBarOpts = self:GetShieldBarOptions(),
@@ -296,7 +296,7 @@ local function GetAnchorFrames(frames, barName)
 		end
 	end
 
-	if addon.GetAddOnInfoByName("CompactRunes") or 
+	if C_AddOns.GetAddOnInfo("CompactRunes") or 
 		BloodShieldTracker.db.profile.bars[barName].anchorFrame == "Compact Runes" then
 		frames["Compact Runes"] = L["Compact Runes"]
 	end

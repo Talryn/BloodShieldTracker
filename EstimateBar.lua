@@ -23,7 +23,6 @@ local UnitGetTotalAbsorbs = _G.UnitGetTotalAbsorbs
 local UnitAttackPower = _G.UnitAttackPower
 local GetMastery = _G.GetMastery
 local GetMasteryEffect = _G.GetMasteryEffect
-local GetSpellCooldown = _G.GetSpellCooldown
 local CombatLogGetCurrentEventInfo = _G.CombatLogGetCurrentEventInfo
 
 local SpellIds = addon.SpellIds
@@ -644,7 +643,7 @@ module.vampBloodBonuses = {
 function module:GetVBBonus()
 	if addon.currentSpec ~= "Blood" then return 0 end
 
-	local desc = _G.GetSpellDescription(SpellIds["Vampiric Blood"])
+	local desc = C_Spell.GetSpellDescription(SpellIds["Vampiric Blood"])
 	local matches = _G.string.gmatch(desc, "(%d%d)%%")
 	local healthBonus = matches()
 	local healingBonus = matches()
@@ -779,10 +778,6 @@ function module:UNIT_SPELLCAST_SUCCEEDED(event, unit, castGUID, spellId)
 end
 
 function module:CheckAuras()
-    local name, icon, count, dispelType, duration, expires,
-        caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
-		castByPlayer, value, value2, value3
-
 	wipe(AurasFound)
 	wipe(HealingBuffsFound)
 
@@ -797,20 +792,17 @@ function module:CheckAuras()
     -- Loop through unit auras to find ones of interest.
 	local i = 1
 	repeat
-		name, icon, count, dispelType, duration, expires, caster,
-			stealable, consolidate, spellId, canApplyAura, isBossDebuff,
-			castByPlayer, value, value2, value3 = UnitAura("player", i)
-		if name == nil or spellId == nil then break end
+		local aura = C_UnitAuras.GetAuraDataByIndex("player", i)
+		if not aura then break end
+		local spellId = aura.spellId
 
 		if spellId == SpellIds["Dark Succor"] then
 			DarkSuccorBuff = true
 
 		elseif spellId == SpellIds["Luck of the Draw"] then
 			luckOfTheDrawBuff = true
-			if not count or count == 0 then
-				count = 1
-            end
-			luckOfTheDrawAmt = addon.LUCK_OF_THE_DRAW_MOD * count
+			local stacks = max(aura.applications or 0, 1)			
+			luckOfTheDrawAmt = addon.LUCK_OF_THE_DRAW_MOD * stacks
 
         elseif spellId == SpellIds["Vampiric Blood"] then
 			vampBloodFound = true
@@ -818,12 +810,12 @@ function module:CheckAuras()
 			vbHealingInc = vbHealingBonus
 
 		elseif HealingBuffs[spellId] then
-			local stacks = max(count or 0, 1)
+			local stacks = max(aura.applications or 0, 1)
 			HealingBuffsFound[spellId] = HealingBuffs[spellId] * stacks
 		else
 			local amount = addon.HealingDebuffs[spellId]
 			if amount then
-				local stacks = max(count or 0, 1)
+				local stacks = max(aura.applications or 0, 1)
 				healingDebuff = amount * stacks
 				if healingDebuff > healingDebuffMultiplier then
 					healingDebuffMultiplier = healingDebuff
@@ -832,7 +824,7 @@ function module:CheckAuras()
 		end
 
 		i = i + 1
-	until name == nil
+	until aura == nil
 
     if not vampBloodFound then
         vbBuff = false

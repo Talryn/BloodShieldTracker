@@ -41,7 +41,6 @@ local wipe = _G.wipe
 local type = _G.type
 
 -- Local versions of WoW API calls.
-local UnitAura = _G.UnitAura
 local GetTime = _G.GetTime
 local UnitHealthMax = _G.UnitHealthMax
 local UnitGetTotalAbsorbs = _G.UnitGetTotalAbsorbs
@@ -49,7 +48,6 @@ local UnitAttackPower = _G.UnitAttackPower
 local GetMasteryEffect = _G.GetMasteryEffect
 local GetVersatilityBonus = _G.GetVersatilityBonus
 local GetCombatRatingBonus = _G.GetCombatRatingBonus
-local GetSpellCooldown = _G.GetSpellCooldown
 
 BloodShieldTracker.loaded = false
 addon.playerName = UnitName("player")
@@ -660,20 +658,17 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			UpdateDisplay = function(self)
 				if self.active then
-					local name, icon, count, dispelType, duration, expires,
-					caster, isStealable, shouldConsolidate, spellId, canApplyAura,
-					isBossDebuff, castByPlayer, value1, value2, value3, value4
-						= AuraUtil.FindAuraByName(SpellNames["Blood Shield"], "player")
-					if name then
-						local timeLeft = expires - GetTime()
+					local aura = C_UnitAuras.GetAuraDataBySpellName("player", SpellNames["Blood Shield"])
+					if aura then
+						local timeLeft = aura.expirationTime - GetTime()
 						self.bar.timer = timeLeft
 						self.bar.active = true
-						local shieldValue = addon.Cata and value4 or value3
-						if shieldValue ~= self.bar.value1 then
+						local shieldValue = aura.points and aura.points[1] or 0
+						if shieldValue ~= self.bar.shieldValue then
 							self.bar.value:SetText(addon.FormatNumber(shieldValue))
 						end
-						self.bar.value1 = shieldValue
-						self.bar:SetMinMaxValues(0, duration)
+						self.bar.shieldValue = shieldValue
+						self.bar:SetMinMaxValues(0, aura.duration)
 						self.bar:SetAlpha(1)
 						self.bar.value:Show()
 						self.bar:Show()
@@ -880,18 +875,16 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			UpdateDisplay = function(self)
 				if self.active then
-					local name, icon, count, dispelType, duration, expires,
-					caster, isStealable, shouldConsolidate, spellId, canApplyAura,
-					isBossDebuff, castByPlayer, new1, new2, value1
-						= AuraUtil.FindAuraByName(SpellNames["Shroud of Purgatory"], "player", "HARMFUL")
-					if name then
+					local aura = C_UnitAuras.GetAuraDataBySpellName("player", SpellNames["Shroud of Purgatory"], "HARMFUL")
+					if aura then
 						--local timeLeft = expires - GetTime()
 						--self.bar.timer = timeLeft
 						--self.bar.active = true
-						if value1 ~= self.bar.value1 then
-							self.bar.value:SetText(addon.FormatNumber(value1))
+						local shieldValue = aura.points and aura.points[1] or 0
+						if shieldValue ~= self.bar.shieldValue then
+							self.bar.value:SetText(addon.FormatNumber(shieldValue))
 						end
-						self.bar.value1 = value1
+						self.bar.shieldValue = shieldValue
 						--self.bar:SetMinMaxValues(0, duration)
 						self.bar:SetAlpha(1)
 						self.bar.value:Show()
@@ -947,21 +940,18 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			UpdateDisplay = function(self)
 				if self.active then
-					local name, icon, count, dispelType, duration, expires,
-					caster, isStealable, shouldConsolidate, spellId, canApplyAura,
-					isBossDebuff, castByPlayer, new1, new2, value1
-						= AuraUtil.FindAuraByName(SpellNames["Bone Shield"], "player")
-					if name then
-						local timeLeft = expires - GetTime()
+					local aura = C_UnitAuras.GetAuraDataBySpellName("player", SpellNames["Bone Shield"])
+					if aura then
+						local timeLeft = aura.expirationTime - GetTime()
 						self.bar.timer = timeLeft
 						self.bar.active = true
-						if count ~= self.bar.count then
-							self.bar.value:SetText(tostring(count))
+						if aura.applications ~= self.bar.applications then
+							self.bar.value:SetText(tostring(aura.applications))
 						end
-						self.bar.count = count
+						self.bar.applications = aura.applications
 
 						if self.db.progress == "Time" then
-							self.bar:SetMinMaxValues(0, duration)
+							self.bar:SetMinMaxValues(0, aura.duration)
 						elseif self.db.progress == "Charges" then
 							self.bar:SetMinMaxValues(0, addon.MAX_BONESHIELD_CHARGES)
 						else
@@ -1064,19 +1054,17 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			UpdateDisplay = function(self)
 				if self.active then
-					local name, icon, count, dispelType, duration, expires,
-					caster, isStealable, shouldConsolidate, spellId, canApplyAura,
-					isBossDebuff, castByPlayer, new1, new2, value1
-						= AuraUtil.FindAuraByName(SpellNames["Anti-Magic Shell"], "player")
-					if name then
-						local timeLeft = expires - GetTime()
+					local aura = C_UnitAuras.GetAuraDataBySpellName("player", SpellNames["Anti-Magic Shell"])
+					if aura then
+						local timeLeft = aura.expirationTime - GetTime()
 						self.bar.timer = timeLeft
 						self.bar.active = true
-						if value1 ~= self.bar.value1 then
-							self.bar.value:SetText(addon.FormatNumber(value1))
+						local shieldValue = aura.points and aura.points[1] or 0
+						if shieldValue ~= self.bar.shieldValue then
+							self.bar.value:SetText(addon.FormatNumber(shieldValue))
 						end
-						self.bar.value1 = value1
-						self.bar:SetMinMaxValues(0, duration)
+						self.bar.shieldValue = shieldValue
+						self.bar:SetMinMaxValues(0, aura.duration)
 						self.bar:SetAlpha(1)
 						self.bar.value:Show()
 						self.bar:Show()
@@ -2010,10 +1998,6 @@ addon.OtherShields = OtherShields
 
 local errorReadingFmt = "Error reading the %s value."
 function BloodShieldTracker:CheckAuras(unit)
-	local name, icon, count, dispelType, duration, expires,
-		caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
-		castByPlayer, value, value2, value3
-
 	-- Reset variables
 	wipe(AurasFound)
 	wipe(OtherShields)
@@ -2023,25 +2007,23 @@ function BloodShieldTracker:CheckAuras(unit)
 	-- Loop through unit auras to find ones of interest.
 	local i = 1
 	repeat
-		name, icon, count, dispelType, duration, expires, caster,
-		stealable, consolidate, spellId, canApplyAura, isBossDebuff,
-		castByPlayer, value1, value2, value3, value4 = UnitAura("player", i)
-		if name == nil or spellId == nil then break end
+		local aura = C_UnitAuras.GetAuraDataByIndex("player", i)
+		if not aura then break end
 
-		local shieldValue = addon.Cata and value4 or value3
-		local tracked = AbsorbShields[spellId]
-		local trackedWithData = TrackWithData[spellId]
+		local shieldValue = aura.points and aura.points[1] or 0
+		local tracked = AbsorbShields[aura.spellId]
+		local trackedWithData = TrackWithData[aura.spellId]
 
-		if spellId == SpellIds["Scent of Blood"] then
-			scentBloodStacks = count
+		if aura.spellId == SpellIds["Scent of Blood"] then
+			scentBloodStacks = aura.applications
 
 		elseif tracked or trackedWithData then
 			if trackedWithData then
 				AurasFound[trackedWithData] = true
 				AuraData[trackedWithData].value = shieldValue
-				AuraData[trackedWithData].expires = expires
-				AuraData[trackedWithData].duration = duration
-				AuraData[trackedWithData].count = count
+				AuraData[trackedWithData].expires = aura.expirationTime
+				AuraData[trackedWithData].duration = aura.duration
+				AuraData[trackedWithData].applications = aura.applications
 			end
 			if tracked then
 				AurasFound[tracked] = true

@@ -35,7 +35,7 @@ local function cleanupVersion(version)
 	return version
 end
 
-addon.addonTitle = _G.GetAddOnMetadata(ADDON_NAME,"Title")
+addon.addonTitle = C_AddOns.GetAddOnMetadata(ADDON_NAME,"Title")
 addon.addonVersion = cleanupVersion("@project-version@")
 
 addon.CURRENT_BUILD, addon.CURRENT_INTERNAL, 
@@ -48,17 +48,6 @@ local function round(number)
     return floor(number+0.5)
 end
 addon.round = round
-
-function addon.GetAddOnInfoByName(name)
-	local addonName, title, notes, enabled, loadable, reason, security
-	for i = 1, _G.GetNumAddOns() do
-		addonName, title, notes, enabled, loadable, reason, security = 
-			_G.GetAddOnInfo(i)
-		if addonName == name then
-			return addonName, title, notes, enabled, loadable, reason, security
-		end
-	end
-end
 
 addon.callbacks = {
 	["Auras"] = {},
