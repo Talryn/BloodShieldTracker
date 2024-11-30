@@ -792,7 +792,7 @@ function BloodShieldTracker:CreateDisplay()
 			end,
 			SetPoint = addon.SetPointWithAnchor,
 			IsEnabled = function(self)
-				return addon.IsBloodTank and self.db.enabled
+				return addon.IsBloodTank and self.db.enabled and UnitGetTotalAbsorbs
 			end,
 			OnTalentUpdate = function(self)
 				if self.IsEnabled and self:IsEnabled() then

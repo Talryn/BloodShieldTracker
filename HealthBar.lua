@@ -296,8 +296,10 @@ function module:GetModuleOptions()
 				type = "toggle",
 				order = 20,
 				set = function(info, val)
-				    addon.db.profile.bars["HealthBar"].locked = val 
-					self.healthbar:Lock(val)
+				    addon.db.profile.bars["HealthBar"].locked = val
+					if self.healthbar then
+						self.healthbar:Lock(val)
+					end
 				end,
                 get = function(info)
                     return addon.db.profile.bars["HealthBar"].locked
@@ -310,7 +312,7 @@ function module:GetModuleOptions()
 				order = 30,
 				set = function(info, val)
 				    addon.db.profile.bars["HealthBar"].hide_ooc = val
-					if not _G.InCombatLockdown() then
+					if not _G.InCombatLockdown() and self.healthbar then
 					    if val then
 					        self.healthbar.bar:Hide()
 				        elseif addon:IsTrackerEnabled() and
@@ -373,7 +375,9 @@ function module:GetModuleOptions()
 				set = function(info, r, g, b, a)
 				    local c = addon.db.profile.bars["HealthBar"].textcolor
 				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.healthbar:UpdateGraphics()
+					if self.healthbar then
+			        	self.healthbar:UpdateGraphics()
+					end
 				end,
 				get = function(info)
 			        local c = addon.db.profile.bars["HealthBar"].textcolor
@@ -389,7 +393,9 @@ function module:GetModuleOptions()
 				set = function(info, r, g, b, a)
 				    local c = addon.db.profile.bars["HealthBar"].color
 				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.healthbar:UpdateGraphics()
+					if self.healthbar then
+			        	self.healthbar:UpdateGraphics()
+					end
 				end,
 				get = function(info)
 			        local c = addon.db.profile.bars["HealthBar"].color
@@ -405,7 +411,9 @@ function module:GetModuleOptions()
 				set = function(info, r, g, b, a)
 				    local c = addon.db.profile.bars["HealthBar"].bgcolor
 				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.healthbar:UpdateGraphics()
+					if self.healthbar then
+			        	self.healthbar:UpdateGraphics()
+					end
 				end,
 				get = function(info)
 			        local c = addon.db.profile.bars["HealthBar"].bgcolor
@@ -426,7 +434,9 @@ function module:GetModuleOptions()
 				set = function(info, r, g, b, a)
 				    local c = addon.db.profile.bars["HealthBar"].alt_textcolor
 				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.healthbar:UpdateGraphics()
+					if self.healthbar then
+			        	self.healthbar:UpdateGraphics()
+					end
 				end,
 				get = function(info)
 			        local c = addon.db.profile.bars["HealthBar"].alt_textcolor
@@ -442,7 +452,9 @@ function module:GetModuleOptions()
 				set = function(info, r, g, b, a)
 				    local c = addon.db.profile.bars["HealthBar"].alt_color
 				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.healthbar:UpdateGraphics()
+					if self.healthbar then
+			        	self.healthbar:UpdateGraphics()
+					end
 				end,
 				get = function(info)
 			        local c = addon.db.profile.bars["HealthBar"].alt_color
@@ -458,7 +470,9 @@ function module:GetModuleOptions()
 				set = function(info, r, g, b, a)
 				    local c = addon.db.profile.bars["HealthBar"].alt_bgcolor
 				    c.r, c.g, c.b, c.a = r, g, b, a
-			        self.healthbar:UpdateGraphics()
+					if self.healthbar then
+			        	self.healthbar:UpdateGraphics()
+					end
 				end,
 				get = function(info)
 			        local c = addon.db.profile.bars["HealthBar"].alt_bgcolor
