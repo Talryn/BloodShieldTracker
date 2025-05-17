@@ -1,4 +1,3 @@
-local _G = getfenv(0)
 local ADDON_NAME, addon = ...
 
 local BloodShieldTracker = LibStub("AceAddon-3.0"):GetAddon(addon.addonNameCondensed)

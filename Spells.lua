@@ -1,4 +1,3 @@
-local _G = getfenv(0)
 local ADDON_NAME, addon = ...
 
 local LookupOrKeyMT = { __index = function(t, k) return k end }
@@ -38,7 +37,7 @@ local SpellIds = {
     ["Lana'thel's Lament"] = 212974,
     ["Divine Hymn"] = 64844,
     ["Sanguine Ground"] = 391459, -- Talent
-    ["Hemostasis"] = 273947,   -- Blood talent from BfA, passive buff
+    ["Hemostasis"] = 273947,      -- Blood talent from BfA, passive buff
     -- ICC Buffs for Horde
     ["Hellscream's Warsong 05"] = 73816,
     ["Hellscream's Warsong 10"] = 73818,

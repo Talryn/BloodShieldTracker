@@ -1,4 +1,3 @@
-local _G = getfenv(0)
 local ADDON_NAME, addon = ...
 local LibStub = _G.LibStub
 local BST = LibStub("AceAddon-3.0"):GetAddon(addon.addonNameCondensed)
@@ -99,9 +98,9 @@ local HealingBuffs = {
     [SpellIds["Protection of Tyr"]] = 0.15,
     [SpellIds["Lana'thel's Lament"]] = 0.05,
     [SpellIds["Hellscream's Warsong 30"]] = 0.30, -- Horde ICC Bonus
-    [SpellIds["Strength of Wrynn 30"]] = 0.30, -- Alliance ICC Bonus
-    [SpellIds["Hemostasis"]] = 0.08,           -- Talent
-    [SpellIds["Sanguine Ground"]] = 0.05,      -- Talent
+    [SpellIds["Strength of Wrynn 30"]] = 0.30,    -- Alliance ICC Bonus
+    [SpellIds["Hemostasis"]] = 0.08,              -- Talent
+    [SpellIds["Sanguine Ground"]] = 0.05,         -- Talent
 }
 
 -- Curent state information
@@ -328,7 +327,7 @@ function module:OnEnable()
         dsMinHealCurrent = dsMinHealPercent
     else
         impDSModifierCurrent = addon.HasActiveTalent("Improved Death Strike") and
-        (1 + staticModifiers.ds["Improved Death Strike"]) or 1.0
+            (1 + staticModifiers.ds["Improved Death Strike"]) or 1.0
         dsMinHealCurrent = dsMinHealPercent * (1 + voraciousBonus) * impDSModifierCurrent
     end
 
