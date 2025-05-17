@@ -1,4 +1,4 @@
-## Interface: 40401
+## Interface: 40402
 ## Title: Blood Shield Tracker
 ## Notes: Tracks the Blood Shield for Death Knights.
 ## Author: Talryn, kagaro
