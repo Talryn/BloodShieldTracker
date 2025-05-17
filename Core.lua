@@ -12,82 +12,85 @@ addon.addonNameCondensed = "BloodShieldTracker"
 
 -- Add an external frame for anchoring.
 addon.FrameNames = {
-	["Compact Runes"] = "CompactRunes_RunicPowerBar",
+    ["Compact Runes"] = "CompactRunes_RunicPowerBar",
 }
 
 local function versionInRange(version, start, finish)
-	if _G.type(version) ~= "number" then return false end
-	local start = start or 0
-	local finish = finish or 100000000
-	if _G.type(start) ~= "number" or _G.type(finish) ~= "number" then return false end
-	return version >= start and version < finish
+    if _G.type(version) ~= "number" then return false end
+    local start = start or 0
+    local finish = finish or 100000000
+    if _G.type(start) ~= "number" or _G.type(finish) ~= "number" then return false end
+    return version >= start and version < finish
 end
 
 -- Try to remove the Git hash at the end, otherwise return the passed in value.
 local function cleanupVersion(version)
-	local iter = string.gmatch(version, "(.*)-[a-z0-9]+$")
-	if iter then
-		local ver = iter()
-		if ver and #ver >= 3 then
-			return ver
-		end
-	end
-	return version
+    local iter = string.gmatch(version, "(.*)-[a-z0-9]+$")
+    if iter then
+        local ver = iter()
+        if ver and #ver >= 3 then
+            return ver
+        end
+    end
+    return version
 end
 
-addon.addonTitle = C_AddOns.GetAddOnMetadata(ADDON_NAME,"Title")
+addon.addonTitle = C_AddOns.GetAddOnMetadata(ADDON_NAME, "Title")
 addon.addonVersion = cleanupVersion("@project-version@")
 
-addon.CURRENT_BUILD, addon.CURRENT_INTERNAL, 
-    addon.CURRENT_BUILD_DATE, addon.CURRENT_UI_VERSION = _G.GetBuildInfo()
+addon.CURRENT_BUILD, addon.CURRENT_INTERNAL,
+addon.CURRENT_BUILD_DATE, addon.CURRENT_UI_VERSION = _G.GetBuildInfo()
 addon.BfA = addon.CURRENT_UI_VERSION >= 80000
 addon.Cata = versionInRange(addon.CURRENT_UI_VERSION, 40000, 50000)
 
 local function round(number)
     if not number then return 0 end
-    return floor(number+0.5)
+    return floor(number + 0.5)
 end
 addon.round = round
 
 addon.callbacks = {
-	["Auras"] = {},
-	["GearUpdate"] = {},
-	["WeaponUpdate"] = {},
-	["TalentUpdate"] = {},
-	["CombatStart"] = {},
-	["CombatEnd"] = {},
-	["ProfileUpdate"] = {},
-	["PlayerAlive"] = {},
-	["PlayerDead"] = {},
+    ["Auras"] = {},
+    ["GearUpdate"] = {},
+    ["WeaponUpdate"] = {},
+    ["TalentUpdate"] = {},
+    ["CombatStart"] = {},
+    ["CombatEnd"] = {},
+    ["ProfileUpdate"] = {},
+    ["PlayerAlive"] = {},
+    ["PlayerDead"] = {},
 }
 function addon:RegisterCallback(event, name, func)
-	local callbacks = addon.callbacks[event]
-	if not callbacks then return end
-	if name and func and _G.type(func) == "function" then
-		callbacks[name] = func
-	end
+    local callbacks = addon.callbacks[event]
+    if not callbacks then return end
+    if name and func and _G.type(func) == "function" then
+        callbacks[name] = func
+    end
 end
+
 function addon:UnregisterCallback(event, name)
-	local callbacks = addon.callbacks[event]
-	if not callbacks then return end
-	if name then
-		callbacks[name] = nil
-	end
+    local callbacks = addon.callbacks[event]
+    if not callbacks then return end
+    if name then
+        callbacks[name] = nil
+    end
 end
+
 function addon:FireCallback(event)
-	local callbacks = addon.callbacks[event]
-	if not callbacks then return end
-	for name, func in pairs(callbacks) do
-		if func then func() end
-	end
+    local callbacks = addon.callbacks[event]
+    if not callbacks then return end
+    for name, func in pairs(callbacks) do
+        if func then func() end
+    end
 end
 
 addon.modules = {}
 function addon:RegisterModule(name, obj)
-	addon.modules[name] = obj
+    addon.modules[name] = obj
 end
+
 function addon:UnregisterModule(name)
-	addon.modules[name] = nil
+    addon.modules[name] = nil
 end
 
 local millFmtOne = "%.1fm"
@@ -100,30 +103,31 @@ local baseFmtOne = "%.1f"
 local baseFmtZero = "%.0f"
 local baseFmt = baseFmtZero
 
-local ThousandsDelim = ('%.1f'):format(1/5):match('([^0-9])') == '.' and ',' or '.'
+local ThousandsDelim = ('%.1f'):format(1 / 5):match('([^0-9])') == '.' and ',' or '.'
 local BillionDelimFmt = '%s%d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d'
 local MillionDelimFmt = '%s%d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d'
-local ThousandDelimFmt = '%s%d' .. ThousandsDelim..'%03d'
+local ThousandDelimFmt = '%s%d' .. ThousandsDelim .. '%03d'
 
 addon.FormatNumberDelimited = function(number)
     if tonumber(number) == nil then
         return number
     end
 
-	local sign = ""
-	if number < 0 then
-		sign = "-"
-		number = abs(number)
-	end
+    local sign = ""
+    if number < 0 then
+        sign = "-"
+        number = abs(number)
+    end
 
     if number >= 1000000000 then
-      return BillionDelimFmt:format(sign, number / 1000000000, (number / 1000000) % 1000, (number / 1000) % 1000, number % 1000)
+        return BillionDelimFmt:format(sign, number / 1000000000, (number / 1000000) % 1000, (number / 1000) % 1000,
+            number % 1000)
     elseif number >= 1000000 then
-      return MillionDelimFmt:format(sign, number / 1000000, (number / 1000) % 1000, number % 1000)
+        return MillionDelimFmt:format(sign, number / 1000000, (number / 1000) % 1000, number % 1000)
     elseif number >= 1000 then
-      return ThousandDelimFmt:format(sign, number / 1000, number % 1000)
+        return ThousandDelimFmt:format(sign, number / 1000, number % 1000)
     else
-      return tostring(number)
+        return tostring(number)
     end
 end
 
@@ -142,36 +146,36 @@ addon.FormatNumberAbbreviated = function(number)
 end
 
 addon.FormatNumberRaw = function(number)
-	return tostring(number)
+    return tostring(number)
 end
 
 addon.FormatNumber = FormatNumberAbbreviated
 
 function addon:SetNumberFormat(format)
-	if format == "Delimited" then
-		addon.FormatNumber = addon.FormatNumberDelimited
-	elseif format == "Raw" then
-		addon.FormatNumber = addon.FormatNumberRaw
-	else
-		addon.FormatNumber = addon.FormatNumberAbbreviated
-	end
-	return addon.FormatNumber
+    if format == "Delimited" then
+        addon.FormatNumber = addon.FormatNumberDelimited
+    elseif format == "Raw" then
+        addon.FormatNumber = addon.FormatNumberRaw
+    else
+        addon.FormatNumber = addon.FormatNumberAbbreviated
+    end
+    return addon.FormatNumber
 end
 
 function addon:SetNumberPrecision()
     if self.db.profile.precision == "One" then
         millFmt = millFmtOne
         thousandFmt = thousandFmtOne
-		baseFmt = baseFmtOne
+        baseFmt = baseFmtOne
     else
         millFmt = millFmtZero
         thousandFmt = thousandFmtZero
-		baseFmt = baseFmtZero
+        baseFmt = baseFmtZero
     end
 end
 
 function addon.FormatWithPrecision(value)
-	return baseFmt:format(value)
+    return baseFmt:format(value)
 end
 
 function addon.GetSpellSchool(school)
@@ -188,47 +192,47 @@ function addon.GetSpellSchool(school)
 end
 
 addon.UpdateDisplayEvents = {
-	["PlayerAura"] = {},
-	["SpellCooldown"] = {},
-	["CombatStart"] = {},
-	["CombatEnd"] = {},
+    ["PlayerAura"] = {},
+    ["SpellCooldown"] = {},
+    ["CombatStart"] = {},
+    ["CombatEnd"] = {},
 }
 
 function addon:BarDisplayUpdateForEvent(event)
-	for bar, enabled in pairs(addon.UpdateDisplayEvents[event] or {}) do
-		if bar and enabled and bar.UpdateDisplay then
-			bar:UpdateDisplay(event)
-		end
-	end
+    for bar, enabled in pairs(addon.UpdateDisplayEvents[event] or {}) do
+        if bar and enabled and bar.UpdateDisplay then
+            bar:UpdateDisplay(event)
+        end
+    end
 end
 
 function addon:BarDisplayAdd(event, bar)
-	local events = addon.UpdateDisplayEvents[event]
-	events[bar] = true
+    local events = addon.UpdateDisplayEvents[event]
+    events[bar] = true
 end
 
 function addon:BarDisplayRemove(event, bar)
-	local events = addon.UpdateDisplayEvents[event]
-	events[bar] = nil
+    local events = addon.UpdateDisplayEvents[event]
+    events[bar] = nil
 end
 
 function addon.IsGameOptionsVisible()
-	local optionsFrame = _G.SettingsPanel or _G.InterfaceOptionsFrame
+    local optionsFrame = _G.SettingsPanel or _G.InterfaceOptionsFrame
     return optionsFrame and optionsFrame:IsVisible() or false
 end
 
 function addon.ShowGameOptions()
-	local optionsFrame = _G.SettingsPanel or _G.InterfaceOptionsFrame
+    local optionsFrame = _G.SettingsPanel or _G.InterfaceOptionsFrame
     optionsFrame:Show()
 end
 
 function addon.HideGameOptions()
-	local optionsFrame = _G.SettingsPanel or _G.InterfaceOptionsFrame
-	if _G.SettingsPanel then
-		if not _G.UnitAffectingCombat("player") then
-			_G.HideUIPanel(optionsFrame)
-		end
-	else
-		optionsFrame:Hide()
-	end
+    local optionsFrame = _G.SettingsPanel or _G.InterfaceOptionsFrame
+    if _G.SettingsPanel then
+        if not _G.UnitAffectingCombat("player") then
+            _G.HideUIPanel(optionsFrame)
+        end
+    else
+        optionsFrame:Hide()
+    end
 end

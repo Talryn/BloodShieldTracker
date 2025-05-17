@@ -9,7 +9,7 @@ local ipairs = _G.ipairs
 local select = _G.select
 
 local BloodShieldTracker = _G.LibStub("AceAddon-3.0"):NewAddon(addon.addonNameCondensed,
-	"AceConsole-3.0", "AceEvent-3.0","AceTimer-3.0")
+    "AceConsole-3.0", "AceEvent-3.0", "AceTimer-3.0")
 local BST = BloodShieldTracker
 addon.BloodShieldTracker = BloodShieldTracker
 
@@ -60,8 +60,8 @@ addon.currentSpec = ""
 addon.IsBloodTank = false
 local hasBloodShield = false
 addon.tierCount = {
-	["T14 Tank"] = 0,
-	["T16 Tank"] = 0,
+    ["T14 Tank"] = 0,
+    ["T16 Tank"] = 0,
 }
 
 -- Settings to allow custom fonts and textures which override the
@@ -81,54 +81,54 @@ local ShieldStats = {}
 ShieldStats.__index = ShieldStats
 
 function ShieldStats:new()
-	local stats = {}
-	_G.setmetatable(stats, ShieldStats)
-	stats:Reset()
-	return stats
+    local stats = {}
+    _G.setmetatable(stats, ShieldStats)
+    stats:Reset()
+    return stats
 end
 
 function ShieldStats:NewShield(value, isMinimum, isRefresh)
-	self.numShields = self.numShields + 1
-	self.totalShields = self.totalShields + value
+    self.numShields = self.numShields + 1
+    self.totalShields = self.totalShields + value
 
-	if isRefresh then
-		self.numRefreshedShields = self.numRefreshedShields + 1
-	end
+    if isRefresh then
+        self.numRefreshedShields = self.numRefreshedShields + 1
+    end
 
-	if self.minShield == 0 or value < self.minShield then
-		self.minShield = value
-	end
-	if value > self.maxShield then
-		self.maxShield = value
-	end
+    if self.minShield == 0 or value < self.minShield then
+        self.minShield = value
+    end
+    if value > self.maxShield then
+        self.maxShield = value
+    end
 end
 
 function ShieldStats:RemoveShield()
-	self.numRemovedShields = self.numRemovedShields + 1
+    self.numRemovedShields = self.numRemovedShields + 1
 end
 
 function ShieldStats:ShieldAbsorb(value)
-	self.totalAbsorbs = self.totalAbsorbs + value
+    self.totalAbsorbs = self.totalAbsorbs + value
 end
 
 function ShieldStats:StartCombat()
-	self.startTime = GetTime()
+    self.startTime = GetTime()
 end
 
 function ShieldStats:EndCombat()
-	self.endTime = GetTime()
+    self.endTime = GetTime()
 end
 
 function ShieldStats:Reset()
-	self.numShields = 0
-	self.numRemovedShields = 0
-	self.numRefreshedShields = 0
-	self.minShield = 0
-	self.maxShield = 0
-	self.totalShields = 0
-	self.totalAbsorbs = 0
-	self.startTime = 0
-	self.endTime = 0
+    self.numShields = 0
+    self.numRemovedShields = 0
+    self.numRefreshedShields = 0
+    self.minShield = 0
+    self.maxShield = 0
+    self.totalShields = 0
+    self.totalAbsorbs = 0
+    self.startTime = 0
+    self.endTime = 0
 end
 
 -- Stats for all fights
@@ -153,21 +153,21 @@ local SpellIds = addon.SpellIds
 local SpellNames = addon.SpellNames
 
 local AbsorbShieldsOrdered = {
-	"Blood Shield",
-	"Power Word: Shield",
-	"Clarity of Will",
-	--"Divine Aegis",
-	"Life Cocoon",
-	--"Spirit Shell",
-	--"Guard",
-	--"Saved by the Light",
-	--"Sacred Shield",
-	"Anti-Magic Shell",
-	--"Indomitable Pride",
+    "Blood Shield",
+    "Power Word: Shield",
+    "Clarity of Will",
+    --"Divine Aegis",
+    "Life Cocoon",
+    --"Spirit Shell",
+    --"Guard",
+    --"Saved by the Light",
+    --"Sacred Shield",
+    "Anti-Magic Shell",
+    --"Indomitable Pride",
 }
 local AbsorbShields = {}
 for i, k in ipairs(AbsorbShieldsOrdered) do
-	AbsorbShields[SpellIds[k]] = k
+    AbsorbShields[SpellIds[k]] = k
 end
 addon.AbsorbShieldsOrdered = AbsorbShieldsOrdered
 addon.AbsorbShields = AbsorbShields
@@ -204,19 +204,19 @@ local dsHealAPMod = 4
 local round = addon.round
 
 function BloodShieldTracker:OnClickIcon(button)
-	if button == "RightButton" then
-		if addon.IsGameOptionsVisible() then
-			addon.HideGameOptions()
-		else
-			self:ShowOptions()
-		end
-	elseif button == "LeftButton" and _G.IsShiftKeyDown() then
-		self:ResetStats()
-	end
+    if button == "RightButton" then
+        if addon.IsGameOptionsVisible() then
+            addon.HideGameOptions()
+        else
+            self:ShowOptions()
+        end
+    elseif button == "LeftButton" and _G.IsShiftKeyDown() then
+        self:ResetStats()
+    end
 end
 
 function BloodShieldTracker_OnAddonCompartmentClick(addonName, buttonName)
-	BloodShieldTracker:OnClickIcon(buttonName)
+    BloodShieldTracker:OnClickIcon(buttonName)
 end
 
 local Broker = _G.CreateFrame("Frame")
@@ -229,55 +229,55 @@ Broker.obj = LDB:NewDataObject(addon.addonTitle, {
     barR = 0,
     barG = 0,
     barB = 1,
-	OnClick = function(clickedframe, button)
-		BloodShieldTracker:OnClickIcon(button)
-	end
-} )
+    OnClick = function(clickedframe, button)
+        BloodShieldTracker:OnClickIcon(button)
+    end
+})
 
 -- Track stats that are used for the LDB data feed.
 addon.LDBDataFeed = false
 addon.DataFeed = {
-	display = "",
-	lastDS = 0,
-	lastBS = 0,
-	estimateBar = 0,
+    display = "",
+    lastDS = 0,
+    lastBS = 0,
+    estimateBar = 0,
 }
 local DataFeed = addon.DataFeed
 
 local percentFormat = "%.1f%%"
 
 function addon:UpdateLDBData()
-	if DataFeed.display == "LastBS" then
-		Broker.obj.text = addon.FormatNumber(DataFeed.lastBS)
-	elseif DataFeed.display == "LastDS" then
-		Broker.obj.text = addon.FormatNumber(DataFeed.lastDS)
-	elseif DataFeed.display == "EstimateBar" then
-		Broker.obj.text = addon.FormatNumber(DataFeed.estimateBar)
-	else
-		Broker.obj.text = addon.addonTitle
-	end
+    if DataFeed.display == "LastBS" then
+        Broker.obj.text = addon.FormatNumber(DataFeed.lastBS)
+    elseif DataFeed.display == "LastDS" then
+        Broker.obj.text = addon.FormatNumber(DataFeed.lastDS)
+    elseif DataFeed.display == "EstimateBar" then
+        Broker.obj.text = addon.FormatNumber(DataFeed.estimateBar)
+    else
+        Broker.obj.text = addon.addonTitle
+    end
 end
 
 function addon:SetBrokerLabel()
-	if addon.db.profile.ldb_short_label then
-		Broker.obj.label = L["BST"]
-	else
-		Broker.obj.label = addon.addonTitle
-	end
+    if addon.db.profile.ldb_short_label then
+        Broker.obj.label = L["BST"]
+    else
+        Broker.obj.label = addon.addonTitle
+    end
 end
 
-local addonHdr = GREEN.."%s %s"
-local totalDataHdr = ORANGE..L["Total Data"]
-local dataLine1 = YELLOW..L["Shields Total/Refreshed/Removed:"]
+local addonHdr = GREEN .. "%s %s"
+local totalDataHdr = ORANGE .. L["Total Data"]
+local dataLine1 = YELLOW .. L["Shields Total/Refreshed/Removed:"]
 local shieldDataLine1Fmt = "%d / %d / %d"
-local shieldMaxValueLine1 = YELLOW..L["Min - Max / Avg:"]
+local shieldMaxValueLine1 = YELLOW .. L["Min - Max / Avg:"]
 local rangeWithAvgFmt = "%d - %d / %d"
 local valuesWithPercFmt = "%s / %s - %.1f%%"
-local shieldUsageLine1 = YELLOW..L["Absorbed/Total Shields/Percent:"]
+local shieldUsageLine1 = YELLOW .. L["Absorbed/Total Shields/Percent:"]
 local secondsFormat = "%.1f " .. L["seconds"]
-local durationLine = YELLOW..L["Fight Duration:"]
-local shieldFreqLine = YELLOW..L["Shield Frequency:"]
-local lastFightValueHdr = ORANGE..L["Last Fight Data"]
+local durationLine = YELLOW .. L["Fight Duration:"]
+local shieldFreqLine = YELLOW .. L["Shield Frequency:"]
+local lastFightValueHdr = ORANGE .. L["Last Fight Data"]
 
 local function AddStats(tooltip, stats)
     local avgShieldValue
@@ -308,8 +308,8 @@ local function AddStats(tooltip, stats)
 end
 
 function Broker.obj:OnEnter()
-	local tooltip = LibQTip:Acquire("BloodShieldTrackerTooltip", 2, "LEFT", "RIGHT")
-	self.tooltip = tooltip
+    local tooltip = LibQTip:Acquire("BloodShieldTrackerTooltip", 2, "LEFT", "RIGHT")
+    self.tooltip = tooltip
 
     tooltip:AddHeader(addonHdr:format(addon.addonTitle, addon.addonVersion))
     tooltip:AddLine()
@@ -339,841 +339,844 @@ function Broker.obj:OnEnter()
         end
     end
 
-	tooltip:SmartAnchorTo(self)
-	tooltip:Show()
+    tooltip:SmartAnchorTo(self)
+    tooltip:Show()
 end
 
 function Broker.obj:OnLeave()
-	LibQTip:Release(self.tooltip)
-	self.tooltip = nil
+    LibQTip:Release(self.tooltip)
+    self.tooltip = nil
 end
 
 addon.defaults = {
     profile = {
-		minimap = {
-			hide = true,
-		},
+        minimap = {
+            hide = true,
+        },
         verbose = false,
-		debug = false,
-		debugdmg = false,
+        debug = false,
+        debugdmg = false,
         enable_only_for_blood = true,
         precision = "Zero",
-		numberFormat = "Abbreviated",
-		-- Font Settings
-		font_size = 12,
-		font_face = "Friz Quadrata TT",
-		font_outline = true,
-		font_monochrome = false,
-		font_thickoutline = false,
+        numberFormat = "Abbreviated",
+        -- Font Settings
+        font_size = 12,
+        font_face = "Friz Quadrata TT",
+        font_outline = true,
+        font_monochrome = false,
+        font_thickoutline = false,
         -- Skinning options
-		skinning = {
-			elvui = {
-		        enabled = true,
-		        borders = true,
-		        texture = true,
-		        font = true,
-		        font_flags = true,
-			},
-			tukui = {
-		        enabled = true,
-		        borders = true,
-		        texture = true,
-		        font = true,
-		        font_flags = true,
-			},
-		},
+        skinning = {
+            elvui = {
+                enabled = true,
+                borders = true,
+                texture = true,
+                font = true,
+                font_flags = true,
+            },
+            tukui = {
+                enabled = true,
+                borders = true,
+                texture = true,
+                font = true,
+                font_flags = true,
+            },
+        },
         -- LDB Display
         ldb_data_feed = "None",
         ldb_short_label = false,
-		-- Bars
-		bars = {
-			-- Provide defaults for all bars.
-			-- These are inherited if no bar or no value is set.
-			['**'] = {
-				enabled = false,
-				shown = true,
-				locked = false,
-				texture = "Blizzard",
-				border = true,
-				color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
-				bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
-				textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-				x = 0,
-				y = 0,
-				width = 75,
-				height = 15,
-				scale = 1,
-				anchorFrame = "None",
-				anchorFrameCustom = "",
-				anchorFramePt = "BOTTOM",
-				anchorPt = "TOP",
-				anchorX = 0,
-				anchorY = -8,
-			},
-			["ShieldBar"] = {
-				enabled = true,
-		        progress = "Time",
-		        show_time = true,
-		        time_pos = "RIGHT",
-		        sound_enabled = false,
-		        sound_applied = "None",
-		        sound_removed = "None",
-		        text_format = "OnlyCurrent",
-				width = 100,
-				y = -90,
-			},
-			["PWSBar"] = {
-				color = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-				bgcolor = {r = 0.96, g = 0.55, b = 0.73, a = 0.7},
-				included = {
-					["Power Word: Shield"] = true,
-					["Divine Aegis"] = true,
-					["Spirit Shell"] = true,
-					["Clarity of Will"] = true,
-				},
-				x = 100,
-				y = -120,
-			},
-			["TotalAbsorbsBar"] = {
-				color = {r = 0.58, g = 0.51, b = 0.79, a = 1},
-				bgcolor = {r = 0.58, g = 0.51, b = 0.79, a = 0.7},
-				tracked = "Selected",
-				included = {
-					["Blood Shield"] = false,
-					["Power Word: Shield"] = true,
-					["Divine Aegis"] = true,
-					["Life Cocoon"] = true,
-					["Guard"] = true,
-					["Indomitable Pride"] = true,
-					["Spirit Shell"] = true,
-					["Sacred Shield"] = true,
-					["Anti-Magic Shell"] = false,
-					["Clarity of Will"] = true,
-					["Saved by the Light"] = true,
-				},
-				x = 100,
-				y = -90,
-			},
-			["PurgatoryBar"] = {
-				color = {r = 0.03, g = 0.54, b = 0.03, a = 1},
-				bgcolor = {r = 0.05, g = 0.70, b = 0.05, a = 0.7},
-				width = 100,
-				height = 30,
-			},
-			["AMSBar"] = {
-				color = {r = 0.83, g = 0.94, b = 0.15, a = 1},
-				bgcolor = {r = 0.75, g = 0.9, b = 0.13, a = 0.7},
-				x = 200,
-				y = 0,
-			},
-			["BoneShieldBar"] = {
-				enabled = false,
-			    progress = "Time",
-			    show_time = false,
-			    time_pos = "RIGHT",
-				color = {r = 0.03, g = 0.54, b = 0.03, a = 1},
-				bgcolor = {r = 0.02, g = 0.4, b = 0.01, a = 0.7},
-				x = -90,
-				y = -90,
-			},
-			["TargetSwingTimerBar"] = {
-				enabled = false,
-				color = { r = 0.7, g = 0.7, b = 0.7, a = 1.0 },
-				bgcolor = { r = 0.2, g = 0.2, b = 0.2, a = 1.0 },
-				userPlaced = true,
-				x = 0,
-				y = -30,
-				width = 100,
-				height = 15,
-				numericTimer = true,
-				specs = {
-					["Blood"] = true,
-					["Frost"] = false,
-					["Unholy"] = false,
-				},
-			},
-		},
-	}
+        -- Bars
+        bars = {
+            -- Provide defaults for all bars.
+            -- These are inherited if no bar or no value is set.
+            ['**'] = {
+                enabled = false,
+                shown = true,
+                locked = false,
+                texture = "Blizzard",
+                border = true,
+                color = { r = 1.0, g = 0.0, b = 0.0, a = 1 },
+                bgcolor = { r = 0.65, g = 0.0, b = 0.0, a = 0.8 },
+                textcolor = { r = 1.0, g = 1.0, b = 1.0, a = 1 },
+                x = 0,
+                y = 0,
+                width = 75,
+                height = 15,
+                scale = 1,
+                anchorFrame = "None",
+                anchorFrameCustom = "",
+                anchorFramePt = "BOTTOM",
+                anchorPt = "TOP",
+                anchorX = 0,
+                anchorY = -8,
+            },
+            ["ShieldBar"] = {
+                enabled = true,
+                progress = "Time",
+                show_time = true,
+                time_pos = "RIGHT",
+                sound_enabled = false,
+                sound_applied = "None",
+                sound_removed = "None",
+                text_format = "OnlyCurrent",
+                width = 100,
+                y = -90,
+            },
+            ["PWSBar"] = {
+                color = { r = 1.0, g = 1.0, b = 1.0, a = 1 },
+                bgcolor = { r = 0.96, g = 0.55, b = 0.73, a = 0.7 },
+                included = {
+                    ["Power Word: Shield"] = true,
+                    ["Divine Aegis"] = true,
+                    ["Spirit Shell"] = true,
+                    ["Clarity of Will"] = true,
+                },
+                x = 100,
+                y = -120,
+            },
+            ["TotalAbsorbsBar"] = {
+                color = { r = 0.58, g = 0.51, b = 0.79, a = 1 },
+                bgcolor = { r = 0.58, g = 0.51, b = 0.79, a = 0.7 },
+                tracked = "Selected",
+                included = {
+                    ["Blood Shield"] = false,
+                    ["Power Word: Shield"] = true,
+                    ["Divine Aegis"] = true,
+                    ["Life Cocoon"] = true,
+                    ["Guard"] = true,
+                    ["Indomitable Pride"] = true,
+                    ["Spirit Shell"] = true,
+                    ["Sacred Shield"] = true,
+                    ["Anti-Magic Shell"] = false,
+                    ["Clarity of Will"] = true,
+                    ["Saved by the Light"] = true,
+                },
+                x = 100,
+                y = -90,
+            },
+            ["PurgatoryBar"] = {
+                color = { r = 0.03, g = 0.54, b = 0.03, a = 1 },
+                bgcolor = { r = 0.05, g = 0.70, b = 0.05, a = 0.7 },
+                width = 100,
+                height = 30,
+            },
+            ["AMSBar"] = {
+                color = { r = 0.83, g = 0.94, b = 0.15, a = 1 },
+                bgcolor = { r = 0.75, g = 0.9, b = 0.13, a = 0.7 },
+                x = 200,
+                y = 0,
+            },
+            ["BoneShieldBar"] = {
+                enabled = false,
+                progress = "Time",
+                show_time = false,
+                time_pos = "RIGHT",
+                color = { r = 0.03, g = 0.54, b = 0.03, a = 1 },
+                bgcolor = { r = 0.02, g = 0.4, b = 0.01, a = 0.7 },
+                x = -90,
+                y = -90,
+            },
+            ["TargetSwingTimerBar"] = {
+                enabled = false,
+                color = { r = 0.7, g = 0.7, b = 0.7, a = 1.0 },
+                bgcolor = { r = 0.2, g = 0.2, b = 0.2, a = 1.0 },
+                userPlaced = true,
+                x = 0,
+                y = -30,
+                width = 100,
+                height = 15,
+                numericTimer = true,
+                specs = {
+                    ["Blood"] = true,
+                    ["Frost"] = false,
+                    ["Unholy"] = false,
+                },
+            },
+        },
+    }
 }
 
 local DebugOutputFrame = nil
 function BloodShieldTracker:ShowDebugOutput()
-	if DebugOutputFrame then return end
+    if DebugOutputFrame then return end
 
-	local frame = AGU:Create("Frame")
-	frame:SetTitle("Debug Output")
-	frame:SetWidth(650)
-	frame:SetHeight(400)
-	frame:SetLayout("Flow")
-	frame:SetCallback("OnClose", function(widget)
-		widget:ReleaseChildren()
-		widget:Release()
-		DebugOutputFrame = nil
-	end)
+    local frame = AGU:Create("Frame")
+    frame:SetTitle("Debug Output")
+    frame:SetWidth(650)
+    frame:SetHeight(400)
+    frame:SetLayout("Flow")
+    frame:SetCallback("OnClose", function(widget)
+        widget:ReleaseChildren()
+        widget:Release()
+        DebugOutputFrame = nil
+    end)
 
-	DebugOutputFrame = frame
+    DebugOutputFrame = frame
 
-	local multiline = AGU:Create("MultiLineEditBox")
-	multiline:SetLabel("Output")
-	multiline:SetNumLines(20)
-	multiline:SetMaxLetters(0)
-	multiline:SetFullWidth(true)
-	multiline:DisableButton(true)
-	frame:AddChild(multiline)
-	frame.multiline = multiline
+    local multiline = AGU:Create("MultiLineEditBox")
+    multiline:SetLabel("Output")
+    multiline:SetNumLines(20)
+    multiline:SetMaxLetters(0)
+    multiline:SetFullWidth(true)
+    multiline:DisableButton(true)
+    frame:AddChild(multiline)
+    frame.multiline = multiline
 
-	multiline:SetText(addon.DEBUG_BUFFER)
+    multiline:SetText(addon.DEBUG_BUFFER)
 end
 
 local function splitWords(str)
-  local w = {}
-  local function helper(word) table.insert(w, word) return nil end
-  str:gsub("(%w+)", helper)
-  return w
+    local w = {}
+    local function helper(word)
+        table.insert(w, word)
+        return nil
+    end
+    str:gsub("(%w+)", helper)
+    return w
 end
 
 function BloodShieldTracker:ChatCommand(input)
-	if not input or input:trim() == "" then
-  	self:ShowOptions()
-  else
-		local cmds = splitWords(input)
-		if cmds[1] and cmds[1] == "debug" then
-			if cmds[2] and cmds[2] == "on" then
-				self.db.profile.debug = true
-				self:Print("Debugging on.  Use '/bst debug off' to disable.")
-			elseif cmds[2] and cmds[2] == "off" then
-				self.db.profile.debug = false
-				self:Print("Debugging off.")
-			elseif cmds[2] and cmds[2] == "dmg" then
-				if cmds[3] and cmds[3] == "on" then
-					self.db.profile.debugdmg = true
-					self:Print("Debugging: damage on.")
-				elseif cmds[3] and cmds[3] == "off" then
-					self.db.profile.debugdmg = false
-					self:Print("Debugging: damage off.")
-				else
-					self:Print("Debugging: damage is "..(self.db.profile.debugdmg and "on." or "off."))
-				end
-			else
-				self:Print("Debugging is "..(self.db.profile.debug and "on." or "off."))
-			end
-		elseif cmds[1] and cmds[1] == "log" then
-			if cmds[2] and cmds[2] == "on" then
-				addon.DEBUG_OUTPUT = true
-				self:Print("Logging on.")
-			elseif cmds[2] and cmds[2] == "off" then
-				addon.DEBUG_OUTPUT = false
-				self:Print("Logging off.")
-			elseif cmds[2] and cmds[2] == "show" then
-				self:ShowDebugOutput()
-			else
-				self:Print("Logging is "..(addon.DEBUG_OUTPUT and "on." or "off."))
-			end
-		end
-	end
+    if not input or input:trim() == "" then
+        self:ShowOptions()
+    else
+        local cmds = splitWords(input)
+        if cmds[1] and cmds[1] == "debug" then
+            if cmds[2] and cmds[2] == "on" then
+                self.db.profile.debug = true
+                self:Print("Debugging on.  Use '/bst debug off' to disable.")
+            elseif cmds[2] and cmds[2] == "off" then
+                self.db.profile.debug = false
+                self:Print("Debugging off.")
+            elseif cmds[2] and cmds[2] == "dmg" then
+                if cmds[3] and cmds[3] == "on" then
+                    self.db.profile.debugdmg = true
+                    self:Print("Debugging: damage on.")
+                elseif cmds[3] and cmds[3] == "off" then
+                    self.db.profile.debugdmg = false
+                    self:Print("Debugging: damage off.")
+                else
+                    self:Print("Debugging: damage is " .. (self.db.profile.debugdmg and "on." or "off."))
+                end
+            else
+                self:Print("Debugging is " .. (self.db.profile.debug and "on." or "off."))
+            end
+        elseif cmds[1] and cmds[1] == "log" then
+            if cmds[2] and cmds[2] == "on" then
+                addon.DEBUG_OUTPUT = true
+                self:Print("Logging on.")
+            elseif cmds[2] and cmds[2] == "off" then
+                addon.DEBUG_OUTPUT = false
+                self:Print("Logging off.")
+            elseif cmds[2] and cmds[2] == "show" then
+                self:ShowDebugOutput()
+            else
+                self:Print("Logging is " .. (addon.DEBUG_OUTPUT and "on." or "off."))
+            end
+        end
+    end
 end
 
 function addon.IsFrame(frame)
-	if frame and _G.type(frame) == "string" then
-		local f = _G.GetClickFrame(frame)
-		if f and _G.type(f) == "table" and f.SetPoint and f.GetName then
-			return true
-		end
-	end
-	return false
+    if frame and _G.type(frame) == "string" then
+        local f = _G.GetClickFrame(frame)
+        if f and _G.type(f) == "table" and f.SetPoint and f.GetName then
+            return true
+        end
+    end
+    return false
 end
 
 function addon.SetPointWithAnchor(self)
-	local anchorFrame = addon.FrameNames[self.db.anchorFrame]
-	if not anchorFrame and self.db.anchorFrame == "Custom" then
-		anchorFrame = self.db.anchorFrameCustom
-	end
+    local anchorFrame = addon.FrameNames[self.db.anchorFrame]
+    if not anchorFrame and self.db.anchorFrame == "Custom" then
+        anchorFrame = self.db.anchorFrameCustom
+    end
 
-	self.anchorTries = self.anchorTries or 0
-	self.bar:ClearAllPoints()
+    self.anchorTries = self.anchorTries or 0
+    self.bar:ClearAllPoints()
 
-	local isFrame = addon.IsFrame(anchorFrame)
-	if anchorFrame and isFrame then
-		if addon.db.profile.debug then
-			addon:Print("Found anchor for bar '".._G.tostring(self.name).."'.")
-		end
-		self.bar:SetPoint(
-			self.db.anchorPt, anchorFrame, self.db.anchorFramePt,
-			self.db.anchorX, self.db.anchorY)
-		self.anchorTries = 0
-	else
-		self.bar:SetPoint("CENTER", _G.UIParent, "CENTER", self.db.x, self.db.y)
-		if anchorFrame and not isFrame and self.anchorTries < 13 then
-			if addon.db.profile.debug then
-				addon:Print("Waiting for anchor for bar '".._G.tostring(self.name).."'.")
-			end
-	    	_G.C_Timer.After(5, function()
-				self:SetPoint()
-			end)
-			self.anchorTries = (self.anchorTries or 0) + 1
-		else
-			self.anchorTries = 0
-		end
-	end
+    local isFrame = addon.IsFrame(anchorFrame)
+    if anchorFrame and isFrame then
+        if addon.db.profile.debug then
+            addon:Print("Found anchor for bar '" .. _G.tostring(self.name) .. "'.")
+        end
+        self.bar:SetPoint(
+            self.db.anchorPt, anchorFrame, self.db.anchorFramePt,
+            self.db.anchorX, self.db.anchorY)
+        self.anchorTries = 0
+    else
+        self.bar:SetPoint("CENTER", _G.UIParent, "CENTER", self.db.x, self.db.y)
+        if anchorFrame and not isFrame and self.anchorTries < 13 then
+            if addon.db.profile.debug then
+                addon:Print("Waiting for anchor for bar '" .. _G.tostring(self.name) .. "'.")
+            end
+            _G.C_Timer.After(5, function()
+                self:SetPoint()
+            end)
+            self.anchorTries = (self.anchorTries or 0) + 1
+        else
+            self.anchorTries = 0
+        end
+    end
 end
 
 function addon.SetSecondaryValuePoint(self)
-	self.bar.secondaryValue:SetPoint(self.db.time_pos or "RIGHT")
-	self.bar.secondaryValue:SetJustifyH(self.db.time_pos or "RIGHT")
+    self.bar.secondaryValue:SetPoint(self.db.time_pos or "RIGHT")
+    self.bar.secondaryValue:SetJustifyH(self.db.time_pos or "RIGHT")
 end
 
 function BloodShieldTracker:CreateDisplay()
-	-- Create the bars
-	self.shieldbar = Bar:Create({
-		name = "ShieldBar",
-		friendlyName = "Shield Bar",
-		initTimer = true,
-		disableAnchor = true,
-		hasSecondaryValue = true,
-		hasBorder = true,
-		hasOwnTexture = true,
-		functions = {
-			GetWidth = function(self)
-				return self.db.width
-			end,
-			GetHeight = function(self)
-				return self.db.height
-			end,
-			SetPoint = addon.SetPointWithAnchor,
-			SetSecondaryValuePoint = addon.SetSecondaryValuePoint,
-			IsEnabled = function(self)
-				return addon.IsBloodTank and self.db.enabled and hasBloodShield
-			end,
-			OnTalentUpdate = function(self)
-				if self.IsEnabled and self:IsEnabled() then
-					self.active = true
-					addon:BarDisplayAdd("PlayerAura", self)
-					self:UpdateBarConfig()
-					self:UpdateDisplay()
-				else
-					self.active = false
-					addon:BarDisplayRemove("PlayerAura", self)
-					self:Hide()
-				end
-			end,
-			UpdateDisplay = function(self)
-				if self.active then
-					local aura = C_UnitAuras.GetAuraDataBySpellName("player", SpellNames["Blood Shield"])
-					if aura then
-						local timeLeft = aura.expirationTime - GetTime()
-						self.bar.timer = timeLeft
-						self.bar.active = true
-						local shieldValue = aura.points and aura.points[1] or 0
-						if shieldValue ~= self.bar.shieldValue then
-							self.bar.value:SetText(addon.FormatNumber(shieldValue))
-						end
-						self.bar.shieldValue = shieldValue
-						self.bar:SetMinMaxValues(0, aura.duration)
-						self.bar:SetAlpha(1)
-						self.bar.value:Show()
-						self.bar:Show()
-						self.bar:SetScript("OnUpdate", self.OnUpdate)
-					else
-						self.bar.active = false
-						self.bar.timer = 0
-						self.bar:SetScript("OnUpdate", nil)
-						self.bar:Hide()
-					end
-				else
-					self.bar:Hide()
-				end
-			end,
-			UpdateBarConfig = function(self)
-				if self.db.show_time then
-					self.bar.secondaryValue:Show()
-				else
-					self.bar.secondaryValue:Hide()
-				end
-				self:SetSecondaryValuePoint()
-			end,
-			OnUpdate = function(self, elapsed)
-				self.lastUpdate = (self.lastUpdate or 0) + elapsed
-				self.timer = self.timer - elapsed
-				if self.lastUpdate >= 0.1 then
-					if self.active then
-						local profile = self.parent.db
-						if self.timer < 0 then
-							self.timer = 0
-							self.active = false
-							self:SetScript("OnUpdate", nil)
-							self:Hide()
-						else
-							if profile.show_time then
-								self.secondaryValue:SetText(tostring(round(self.timer)))
-							end
-							self:SetValue(self.timer)
-							self:Show()
-						end
-					else
-						self:Hide()
-					end
-					self.lastUpdate = 0
-				end
-			end,
-		},
-	})
+    -- Create the bars
+    self.shieldbar = Bar:Create({
+        name = "ShieldBar",
+        friendlyName = "Shield Bar",
+        initTimer = true,
+        disableAnchor = true,
+        hasSecondaryValue = true,
+        hasBorder = true,
+        hasOwnTexture = true,
+        functions = {
+            GetWidth = function(self)
+                return self.db.width
+            end,
+            GetHeight = function(self)
+                return self.db.height
+            end,
+            SetPoint = addon.SetPointWithAnchor,
+            SetSecondaryValuePoint = addon.SetSecondaryValuePoint,
+            IsEnabled = function(self)
+                return addon.IsBloodTank and self.db.enabled and hasBloodShield
+            end,
+            OnTalentUpdate = function(self)
+                if self.IsEnabled and self:IsEnabled() then
+                    self.active = true
+                    addon:BarDisplayAdd("PlayerAura", self)
+                    self:UpdateBarConfig()
+                    self:UpdateDisplay()
+                else
+                    self.active = false
+                    addon:BarDisplayRemove("PlayerAura", self)
+                    self:Hide()
+                end
+            end,
+            UpdateDisplay = function(self)
+                if self.active then
+                    local aura = C_UnitAuras.GetAuraDataBySpellName("player", SpellNames["Blood Shield"])
+                    if aura then
+                        local timeLeft = aura.expirationTime - GetTime()
+                        self.bar.timer = timeLeft
+                        self.bar.active = true
+                        local shieldValue = aura.points and aura.points[1] or 0
+                        if shieldValue ~= self.bar.shieldValue then
+                            self.bar.value:SetText(addon.FormatNumber(shieldValue))
+                        end
+                        self.bar.shieldValue = shieldValue
+                        self.bar:SetMinMaxValues(0, aura.duration)
+                        self.bar:SetAlpha(1)
+                        self.bar.value:Show()
+                        self.bar:Show()
+                        self.bar:SetScript("OnUpdate", self.OnUpdate)
+                    else
+                        self.bar.active = false
+                        self.bar.timer = 0
+                        self.bar:SetScript("OnUpdate", nil)
+                        self.bar:Hide()
+                    end
+                else
+                    self.bar:Hide()
+                end
+            end,
+            UpdateBarConfig = function(self)
+                if self.db.show_time then
+                    self.bar.secondaryValue:Show()
+                else
+                    self.bar.secondaryValue:Hide()
+                end
+                self:SetSecondaryValuePoint()
+            end,
+            OnUpdate = function(self, elapsed)
+                self.lastUpdate = (self.lastUpdate or 0) + elapsed
+                self.timer = self.timer - elapsed
+                if self.lastUpdate >= 0.1 then
+                    if self.active then
+                        local profile = self.parent.db
+                        if self.timer < 0 then
+                            self.timer = 0
+                            self.active = false
+                            self:SetScript("OnUpdate", nil)
+                            self:Hide()
+                        else
+                            if profile.show_time then
+                                self.secondaryValue:SetText(tostring(round(self.timer)))
+                            end
+                            self:SetValue(self.timer)
+                            self:Show()
+                        end
+                    else
+                        self:Hide()
+                    end
+                    self.lastUpdate = 0
+                end
+            end,
+        },
+    })
 
-	self.pwsbar = Bar:Create({
-		name = "PWSBar",
-		friendlyName = "PW:S Bar",
-		initTimer = true,
-		disableAnchor = false,
-		hasBorder = true,
-		hasOwnTexture = true,
-		functions = {
-			GetWidth = function(self)
-				return self.db.width
-			end,
-			GetHeight = function(self)
-				return self.db.height
-			end,
-			SetPoint = addon.SetPointWithAnchor,
-			IsEnabled = function(self)
-				return addon.IsBloodTank and self.db.enabled
-			end,
-			OnTalentUpdate = function(self)
-				if self.IsEnabled and self:IsEnabled() then
-					self.active = true
-					addon:BarDisplayAdd("PlayerAura", self)
-					self:UpdateBarConfig()
-					self:UpdateDisplay()
-				else
-					self.active = false
-					addon:BarDisplayRemove("PlayerAura", self)
-					self:Hide()
-				end
-			end,
-			UpdateDisplay = function(self)
-				if self.active then
-					local shields = 0
-					local OtherShields = addon.OtherShields
-					local included = self.db.included
-					for k,v in pairs(included) do
-						if v then
-							shields = shields + (OtherShields[k] or 0)
-						end
-					end
-					if shields > 0 then
-						if shields ~= self.shields then
-							self.bar.value:SetText(addon.FormatNumber(shields))
-						end
-						self.bar:Show()
-					else
-						self.bar:Hide()
-					end
-					self.shields = shields
-				else
-					self.bar:Hide()
-				end
-			end,
-			UpdateBarConfig = function(self)
-			end,
-		},
-	})
+    self.pwsbar = Bar:Create({
+        name = "PWSBar",
+        friendlyName = "PW:S Bar",
+        initTimer = true,
+        disableAnchor = false,
+        hasBorder = true,
+        hasOwnTexture = true,
+        functions = {
+            GetWidth = function(self)
+                return self.db.width
+            end,
+            GetHeight = function(self)
+                return self.db.height
+            end,
+            SetPoint = addon.SetPointWithAnchor,
+            IsEnabled = function(self)
+                return addon.IsBloodTank and self.db.enabled
+            end,
+            OnTalentUpdate = function(self)
+                if self.IsEnabled and self:IsEnabled() then
+                    self.active = true
+                    addon:BarDisplayAdd("PlayerAura", self)
+                    self:UpdateBarConfig()
+                    self:UpdateDisplay()
+                else
+                    self.active = false
+                    addon:BarDisplayRemove("PlayerAura", self)
+                    self:Hide()
+                end
+            end,
+            UpdateDisplay = function(self)
+                if self.active then
+                    local shields = 0
+                    local OtherShields = addon.OtherShields
+                    local included = self.db.included
+                    for k, v in pairs(included) do
+                        if v then
+                            shields = shields + (OtherShields[k] or 0)
+                        end
+                    end
+                    if shields > 0 then
+                        if shields ~= self.shields then
+                            self.bar.value:SetText(addon.FormatNumber(shields))
+                        end
+                        self.bar:Show()
+                    else
+                        self.bar:Hide()
+                    end
+                    self.shields = shields
+                else
+                    self.bar:Hide()
+                end
+            end,
+            UpdateBarConfig = function(self)
+            end,
+        },
+    })
 
-	self.absorbsbar = Bar:Create({
-		name = "TotalAbsorbsBar",
-		friendlyName = "Total Absorbs Bar",
-		initTimer = true,
-		disableAnchor = false,
-		hasBorder = true,
-		hasOwnTexture = true,
-		functions = {
-			GetWidth = function(self)
-				return self.db.width
-			end,
-			GetHeight = function(self)
-				return self.db.height
-			end,
-			SetPoint = addon.SetPointWithAnchor,
-			IsEnabled = function(self)
-				return addon.IsBloodTank and self.db.enabled and UnitGetTotalAbsorbs
-			end,
-			OnTalentUpdate = function(self)
-				if self.IsEnabled and self:IsEnabled() then
-					self.active = true
-					addon:BarDisplayAdd("PlayerAura", self)
-					self:UpdateBarConfig()
-					self:UpdateDisplay()
-				else
-					self.active = false
-					addon:BarDisplayRemove("PlayerAura", self)
-					self:Hide()
-				end
-			end,
-			UpdateDisplay = function(self)
-				if self.active then
-					local shields = 0
-					local OtherShields = addon.OtherShields
-					local tracked = self.db.tracked
-					if tracked ~= "All" then
-						local included = self.db.included
-						for k,v in pairs(OtherShields) do
-							if included[k] == true then
-								shields = shields + v
-							end
-						end
-					end
-					if tracked == "All" then
-						shields = UnitGetTotalAbsorbs("player") or 0
-					elseif tracked == "Excluding" then
-						shields = (UnitGetTotalAbsorbs("player") or 0) - shields
-					end
-					if shields > 0 then
-						if shields ~= self.shields then
-							self.bar.value:SetText(addon.FormatNumber(shields))
-						end
-						self.bar:Show()
-					else
-						self.bar:Hide()
-					end
-					self.shields = shields
-				else
-					self.bar:Hide()
-				end
-			end,
-			UpdateBarConfig = function(self)
-			end,
-		},
-	})
+    self.absorbsbar = Bar:Create({
+        name = "TotalAbsorbsBar",
+        friendlyName = "Total Absorbs Bar",
+        initTimer = true,
+        disableAnchor = false,
+        hasBorder = true,
+        hasOwnTexture = true,
+        functions = {
+            GetWidth = function(self)
+                return self.db.width
+            end,
+            GetHeight = function(self)
+                return self.db.height
+            end,
+            SetPoint = addon.SetPointWithAnchor,
+            IsEnabled = function(self)
+                return addon.IsBloodTank and self.db.enabled and UnitGetTotalAbsorbs
+            end,
+            OnTalentUpdate = function(self)
+                if self.IsEnabled and self:IsEnabled() then
+                    self.active = true
+                    addon:BarDisplayAdd("PlayerAura", self)
+                    self:UpdateBarConfig()
+                    self:UpdateDisplay()
+                else
+                    self.active = false
+                    addon:BarDisplayRemove("PlayerAura", self)
+                    self:Hide()
+                end
+            end,
+            UpdateDisplay = function(self)
+                if self.active then
+                    local shields = 0
+                    local OtherShields = addon.OtherShields
+                    local tracked = self.db.tracked
+                    if tracked ~= "All" then
+                        local included = self.db.included
+                        for k, v in pairs(OtherShields) do
+                            if included[k] == true then
+                                shields = shields + v
+                            end
+                        end
+                    end
+                    if tracked == "All" then
+                        shields = UnitGetTotalAbsorbs("player") or 0
+                    elseif tracked == "Excluding" then
+                        shields = (UnitGetTotalAbsorbs("player") or 0) - shields
+                    end
+                    if shields > 0 then
+                        if shields ~= self.shields then
+                            self.bar.value:SetText(addon.FormatNumber(shields))
+                        end
+                        self.bar:Show()
+                    else
+                        self.bar:Hide()
+                    end
+                    self.shields = shields
+                else
+                    self.bar:Hide()
+                end
+            end,
+            UpdateBarConfig = function(self)
+            end,
+        },
+    })
 
-	self.purgatorybar = Bar:Create({
-		name = "PurgatoryBar",
-		friendlyName = "Purgatory Bar",
-		initTimer = false,
-		disableAnchor = false,
-		hasBorder = true,
-		hasOwnTexture = true,
-		functions = {
-			GetWidth = function(self)
-				return self.db.width
-			end,
-			GetHeight = function(self)
-				return self.db.height
-			end,
-			SetPoint = addon.SetPointWithAnchor,
-			IsEnabled = function(self)
-				return addon:IsTrackerEnabled() and self.db.enabled and
-					addon.HasActiveTalent("Purgatory")
-			end,
-			OnTalentUpdate = function(self)
-				if self.IsEnabled and self:IsEnabled() then
-					self.active = true
-					addon:BarDisplayAdd("PlayerAura", self)
-					self:UpdateBarConfig()
-					self:UpdateDisplay()
-				else
-					self.active = false
-					addon:BarDisplayRemove("PlayerAura", self)
-					self:Hide()
-				end
-			end,
-			UpdateDisplay = function(self)
-				if self.active then
-					local aura = C_UnitAuras.GetAuraDataBySpellName("player", SpellNames["Shroud of Purgatory"], "HARMFUL")
-					if aura then
-						--local timeLeft = expires - GetTime()
-						--self.bar.timer = timeLeft
-						--self.bar.active = true
-						local shieldValue = aura.points and aura.points[1] or 0
-						if shieldValue ~= self.bar.shieldValue then
-							self.bar.value:SetText(addon.FormatNumber(shieldValue))
-						end
-						self.bar.shieldValue = shieldValue
-						--self.bar:SetMinMaxValues(0, duration)
-						self.bar:SetAlpha(1)
-						self.bar.value:Show()
-						self.bar:Show()
-						--self.bar:SetScript("OnUpdate", self.OnUpdate)
-					else
-						self.bar.active = false
-						--self.bar.timer = 0
-						--self.bar:SetScript("OnUpdate", nil)
-						self.bar:Hide()
-					end
-				else
-					self.bar:Hide()
-				end
-			end,
-			UpdateBarConfig = function(self)
-			end,
-		},
-	})
+    self.purgatorybar = Bar:Create({
+        name = "PurgatoryBar",
+        friendlyName = "Purgatory Bar",
+        initTimer = false,
+        disableAnchor = false,
+        hasBorder = true,
+        hasOwnTexture = true,
+        functions = {
+            GetWidth = function(self)
+                return self.db.width
+            end,
+            GetHeight = function(self)
+                return self.db.height
+            end,
+            SetPoint = addon.SetPointWithAnchor,
+            IsEnabled = function(self)
+                return addon:IsTrackerEnabled() and self.db.enabled and
+                    addon.HasActiveTalent("Purgatory")
+            end,
+            OnTalentUpdate = function(self)
+                if self.IsEnabled and self:IsEnabled() then
+                    self.active = true
+                    addon:BarDisplayAdd("PlayerAura", self)
+                    self:UpdateBarConfig()
+                    self:UpdateDisplay()
+                else
+                    self.active = false
+                    addon:BarDisplayRemove("PlayerAura", self)
+                    self:Hide()
+                end
+            end,
+            UpdateDisplay = function(self)
+                if self.active then
+                    local aura = C_UnitAuras.GetAuraDataBySpellName("player", SpellNames["Shroud of Purgatory"],
+                        "HARMFUL")
+                    if aura then
+                        --local timeLeft = expires - GetTime()
+                        --self.bar.timer = timeLeft
+                        --self.bar.active = true
+                        local shieldValue = aura.points and aura.points[1] or 0
+                        if shieldValue ~= self.bar.shieldValue then
+                            self.bar.value:SetText(addon.FormatNumber(shieldValue))
+                        end
+                        self.bar.shieldValue = shieldValue
+                        --self.bar:SetMinMaxValues(0, duration)
+                        self.bar:SetAlpha(1)
+                        self.bar.value:Show()
+                        self.bar:Show()
+                        --self.bar:SetScript("OnUpdate", self.OnUpdate)
+                    else
+                        self.bar.active = false
+                        --self.bar.timer = 0
+                        --self.bar:SetScript("OnUpdate", nil)
+                        self.bar:Hide()
+                    end
+                else
+                    self.bar:Hide()
+                end
+            end,
+            UpdateBarConfig = function(self)
+            end,
+        },
+    })
 
-	self.boneshieldbar = Bar:Create({
-		name = "BoneShieldBar",
-		friendlyName = "Bone Shield Bar",
-		initTimer = true,
-		disableAnchor = true,
-		hasSecondaryValue = true,
-		hasBorder = true,
-		hasOwnTexture = true,
-		functions = {
-			GetWidth = function(self)
-				return self.db.width
-			end,
-			GetHeight = function(self)
-				return self.db.height
-			end,
-			SetPoint = addon.SetPointWithAnchor,
-			SetSecondaryValuePoint = addon.SetSecondaryValuePoint,
-			IsEnabled = function(self)
-				return addon.currentSpec == "Blood" and self.db.enabled and
-					_G.IsSpellKnown(SpellIds["Marrowrend"])
-			end,
-			OnTalentUpdate = function(self)
-				if self.IsEnabled and self:IsEnabled() then
-					self.active = true
-					addon:BarDisplayAdd("PlayerAura", self)
-					self:UpdateBarConfig()
-					self:UpdateDisplay()
-				else
-					self.active = false
-					addon:BarDisplayRemove("PlayerAura", self)
-					self:Hide()
-				end
-			end,
-			UpdateDisplay = function(self)
-				if self.active then
-					local aura = C_UnitAuras.GetAuraDataBySpellName("player", SpellNames["Bone Shield"])
-					if aura then
-						local timeLeft = aura.expirationTime - GetTime()
-						self.bar.timer = timeLeft
-						self.bar.active = true
-						if aura.applications ~= self.bar.applications then
-							self.bar.value:SetText(tostring(aura.applications))
-						end
-						self.bar.applications = aura.applications
+    self.boneshieldbar = Bar:Create({
+        name = "BoneShieldBar",
+        friendlyName = "Bone Shield Bar",
+        initTimer = true,
+        disableAnchor = true,
+        hasSecondaryValue = true,
+        hasBorder = true,
+        hasOwnTexture = true,
+        functions = {
+            GetWidth = function(self)
+                return self.db.width
+            end,
+            GetHeight = function(self)
+                return self.db.height
+            end,
+            SetPoint = addon.SetPointWithAnchor,
+            SetSecondaryValuePoint = addon.SetSecondaryValuePoint,
+            IsEnabled = function(self)
+                return addon.currentSpec == "Blood" and self.db.enabled and
+                    _G.IsSpellKnown(SpellIds["Marrowrend"])
+            end,
+            OnTalentUpdate = function(self)
+                if self.IsEnabled and self:IsEnabled() then
+                    self.active = true
+                    addon:BarDisplayAdd("PlayerAura", self)
+                    self:UpdateBarConfig()
+                    self:UpdateDisplay()
+                else
+                    self.active = false
+                    addon:BarDisplayRemove("PlayerAura", self)
+                    self:Hide()
+                end
+            end,
+            UpdateDisplay = function(self)
+                if self.active then
+                    local aura = C_UnitAuras.GetAuraDataBySpellName("player", SpellNames["Bone Shield"])
+                    if aura then
+                        local timeLeft = aura.expirationTime - GetTime()
+                        self.bar.timer = timeLeft
+                        self.bar.active = true
+                        if aura.applications ~= self.bar.applications then
+                            self.bar.value:SetText(tostring(aura.applications))
+                        end
+                        self.bar.applications = aura.applications
 
-						if self.db.progress == "Time" then
-							self.bar:SetMinMaxValues(0, aura.duration)
-						elseif self.db.progress == "Charges" then
-							self.bar:SetMinMaxValues(0, addon.MAX_BONESHIELD_CHARGES)
-						else
-							self.bar:SetMinMaxValues(0, 1)
-							self.bar:SetValue(1)
-						end
-						self.bar:SetAlpha(1)
-						self.bar.value:Show()
-						self.bar:Show()
-						self.bar:SetScript("OnUpdate", self.OnUpdate)
-					else
-						self.bar.active = false
-						self.bar.timer = 0
-						self.bar:SetScript("OnUpdate", nil)
-						self.bar:Hide()
-					end
-				else
-					self.bar:Hide()
-				end
-			end,
-			UpdateBarConfig = function(self)
-				if self.db.progress == "Time" then
-					self.bar:SetMinMaxValues(0, 1)
-				elseif self.db.progress == "Charges" then
-					self.bar:SetMinMaxValues(0, addon.MAX_BONESHIELD_CHARGES)
-				elseif self.db.progress == "None" then
-					self.bar:SetMinMaxValues(0, 1)
-					self.bar:SetValue(1)
-				end
-				if self.db.show_time then
-					self.bar.secondaryValue:Show()
-				else
-					self.bar.secondaryValue:Hide()
-				end
-				self:SetSecondaryValuePoint()
-			end,
-			OnUpdate = function(self, elapsed)
-				self.lastUpdate = (self.lastUpdate or 0) + elapsed
-				self.timer = self.timer - elapsed
-				if self.lastUpdate >= 0.1 then
-					if self.active then
-						local profile = self.parent.db
-						if self.timer > 0 then
-							if profile.show_time then
-								self.secondaryValue:SetText(tostring(round(self.timer)))
-							end
-							self:Show()
-							if profile.progress == "Time" then
-								self:SetValue(self.timer)
-							elseif profile.progress == "Charges" then
-								self:SetValue(self.count)
-							end
-						else
-							self.timer = 0
-							self.active = false
-							self:SetScript("OnUpdate", nil)
-							self:Hide()
-						end
-					else
-						self:Hide()
-					end
-					self.lastUpdate = 0
-				end
-			end
-		},
-	})
+                        if self.db.progress == "Time" then
+                            self.bar:SetMinMaxValues(0, aura.duration)
+                        elseif self.db.progress == "Charges" then
+                            self.bar:SetMinMaxValues(0, addon.MAX_BONESHIELD_CHARGES)
+                        else
+                            self.bar:SetMinMaxValues(0, 1)
+                            self.bar:SetValue(1)
+                        end
+                        self.bar:SetAlpha(1)
+                        self.bar.value:Show()
+                        self.bar:Show()
+                        self.bar:SetScript("OnUpdate", self.OnUpdate)
+                    else
+                        self.bar.active = false
+                        self.bar.timer = 0
+                        self.bar:SetScript("OnUpdate", nil)
+                        self.bar:Hide()
+                    end
+                else
+                    self.bar:Hide()
+                end
+            end,
+            UpdateBarConfig = function(self)
+                if self.db.progress == "Time" then
+                    self.bar:SetMinMaxValues(0, 1)
+                elseif self.db.progress == "Charges" then
+                    self.bar:SetMinMaxValues(0, addon.MAX_BONESHIELD_CHARGES)
+                elseif self.db.progress == "None" then
+                    self.bar:SetMinMaxValues(0, 1)
+                    self.bar:SetValue(1)
+                end
+                if self.db.show_time then
+                    self.bar.secondaryValue:Show()
+                else
+                    self.bar.secondaryValue:Hide()
+                end
+                self:SetSecondaryValuePoint()
+            end,
+            OnUpdate = function(self, elapsed)
+                self.lastUpdate = (self.lastUpdate or 0) + elapsed
+                self.timer = self.timer - elapsed
+                if self.lastUpdate >= 0.1 then
+                    if self.active then
+                        local profile = self.parent.db
+                        if self.timer > 0 then
+                            if profile.show_time then
+                                self.secondaryValue:SetText(tostring(round(self.timer)))
+                            end
+                            self:Show()
+                            if profile.progress == "Time" then
+                                self:SetValue(self.timer)
+                            elseif profile.progress == "Charges" then
+                                self:SetValue(self.count)
+                            end
+                        else
+                            self.timer = 0
+                            self.active = false
+                            self:SetScript("OnUpdate", nil)
+                            self:Hide()
+                        end
+                    else
+                        self:Hide()
+                    end
+                    self.lastUpdate = 0
+                end
+            end
+        },
+    })
 
-	self.amsbar = Bar:Create({
-		name = "AMSBar",
-		friendlyName = "Anti-Magic Shell Bar",
-		initTimer = true,
-		disableAnchor = true,
-		hasSecondaryValue = true,
-		hasBorder = true,
-		hasOwnTexture = true,
-		functions = {
-			GetWidth = function(self)
-				return self.db.width
-			end,
-			GetHeight = function(self)
-				return self.db.height
-			end,
-			SetPoint = addon.SetPointWithAnchor,
-			SetSecondaryValuePoint = addon.SetSecondaryValuePoint,
-			IsEnabled = function(self)
-				return addon:IsTrackerEnabled() and self.db.enabled and
-					_G.IsSpellKnown(SpellIds["Anti-Magic Shell"])
-			end,
-			OnTalentUpdate = function(self)
-				if self.IsEnabled and self:IsEnabled() then
-					self.active = true
-					addon:BarDisplayAdd("PlayerAura", self)
-					self:UpdateBarConfig()
-					self:UpdateDisplay()
-				else
-					self.active = false
-					addon:BarDisplayRemove("PlayerAura", self)
-					self:Hide()
-				end
-			end,
-			UpdateDisplay = function(self)
-				if self.active then
-					local aura = C_UnitAuras.GetAuraDataBySpellName("player", SpellNames["Anti-Magic Shell"])
-					if aura then
-						local timeLeft = aura.expirationTime - GetTime()
-						self.bar.timer = timeLeft
-						self.bar.active = true
-						local shieldValue = aura.points and aura.points[1] or 0
-						if shieldValue ~= self.bar.shieldValue then
-							self.bar.value:SetText(addon.FormatNumber(shieldValue))
-						end
-						self.bar.shieldValue = shieldValue
-						self.bar:SetMinMaxValues(0, aura.duration)
-						self.bar:SetAlpha(1)
-						self.bar.value:Show()
-						self.bar:Show()
-						self.bar:SetScript("OnUpdate", self.OnUpdate)
-					else
-						self.bar.active = false
-						self.bar.timer = 0
-						self.bar:SetScript("OnUpdate", nil)
-						self.bar:Hide()
-					end
-				else
-					self.bar:Hide()
-				end
-			end,
-			UpdateBarConfig = function(self)
-				if self.db.show_time then
-					self.bar.secondaryValue:Show()
-				else
-					self.bar.secondaryValue:Hide()
-				end
-				self:SetSecondaryValuePoint()
-			end,
-			OnUpdate = function(self, elapsed)
-				self.lastUpdate = (self.lastUpdate or 0) + elapsed
-				self.timer = self.timer - elapsed
-				if self.lastUpdate >= 0.1 then
-					if self.active then
-						local profile = self.parent.db
-						if self.timer < 0 then
-							self.timer = 0
-							self.active = false
-							self:SetScript("OnUpdate", nil)
-							self:Hide()
-						else
-							if profile.show_time then
-								self.secondaryValue:SetText(tostring(round(self.timer)))
-							end
-							self:SetValue(self.timer)
-							self:Show()
-						end
-					else
-						self:Hide()
-					end
-					self.lastUpdate = 0
-				end
-			end,
-		},
-	})
-
+    self.amsbar = Bar:Create({
+        name = "AMSBar",
+        friendlyName = "Anti-Magic Shell Bar",
+        initTimer = true,
+        disableAnchor = true,
+        hasSecondaryValue = true,
+        hasBorder = true,
+        hasOwnTexture = true,
+        functions = {
+            GetWidth = function(self)
+                return self.db.width
+            end,
+            GetHeight = function(self)
+                return self.db.height
+            end,
+            SetPoint = addon.SetPointWithAnchor,
+            SetSecondaryValuePoint = addon.SetSecondaryValuePoint,
+            IsEnabled = function(self)
+                return addon:IsTrackerEnabled() and self.db.enabled and
+                    _G.IsSpellKnown(SpellIds["Anti-Magic Shell"])
+            end,
+            OnTalentUpdate = function(self)
+                if self.IsEnabled and self:IsEnabled() then
+                    self.active = true
+                    addon:BarDisplayAdd("PlayerAura", self)
+                    self:UpdateBarConfig()
+                    self:UpdateDisplay()
+                else
+                    self.active = false
+                    addon:BarDisplayRemove("PlayerAura", self)
+                    self:Hide()
+                end
+            end,
+            UpdateDisplay = function(self)
+                if self.active then
+                    local aura = C_UnitAuras.GetAuraDataBySpellName("player", SpellNames["Anti-Magic Shell"])
+                    if aura then
+                        local timeLeft = aura.expirationTime - GetTime()
+                        self.bar.timer = timeLeft
+                        self.bar.active = true
+                        local shieldValue = aura.points and aura.points[1] or 0
+                        if shieldValue ~= self.bar.shieldValue then
+                            self.bar.value:SetText(addon.FormatNumber(shieldValue))
+                        end
+                        self.bar.shieldValue = shieldValue
+                        self.bar:SetMinMaxValues(0, aura.duration)
+                        self.bar:SetAlpha(1)
+                        self.bar.value:Show()
+                        self.bar:Show()
+                        self.bar:SetScript("OnUpdate", self.OnUpdate)
+                    else
+                        self.bar.active = false
+                        self.bar.timer = 0
+                        self.bar:SetScript("OnUpdate", nil)
+                        self.bar:Hide()
+                    end
+                else
+                    self.bar:Hide()
+                end
+            end,
+            UpdateBarConfig = function(self)
+                if self.db.show_time then
+                    self.bar.secondaryValue:Show()
+                else
+                    self.bar.secondaryValue:Hide()
+                end
+                self:SetSecondaryValuePoint()
+            end,
+            OnUpdate = function(self, elapsed)
+                self.lastUpdate = (self.lastUpdate or 0) + elapsed
+                self.timer = self.timer - elapsed
+                if self.lastUpdate >= 0.1 then
+                    if self.active then
+                        local profile = self.parent.db
+                        if self.timer < 0 then
+                            self.timer = 0
+                            self.active = false
+                            self:SetScript("OnUpdate", nil)
+                            self:Hide()
+                        else
+                            if profile.show_time then
+                                self.secondaryValue:SetText(tostring(round(self.timer)))
+                            end
+                            self:SetValue(self.timer)
+                            self:Show()
+                        end
+                    else
+                        self:Hide()
+                    end
+                    self.lastUpdate = 0
+                end
+            end,
+        },
+    })
 end
 
 function BloodShieldTracker:OnInitialize()
-	self:CheckClass()
-	if not addon.isDK then return end
+    self:CheckClass()
+    if not addon.isDK then return end
 
-  	-- Load the settings
-  self.db = _G.LibStub("AceDB-3.0"):New(
-		"BloodShieldTrackerDB", addon.defaults, "Default")
-	addon.db = self.db
+    -- Load the settings
+    self.db = _G.LibStub("AceDB-3.0"):New(
+        "BloodShieldTrackerDB", addon.defaults, "Default")
+    addon.db = self.db
 
-	-- Migrate the settings
-	self:MigrateSettings()
+    -- Migrate the settings
+    self:MigrateSettings()
 
-	addon.DEBUG_OUTPUT = self.db.profile.debug
+    addon.DEBUG_OUTPUT = self.db.profile.debug
 
-	-- Set the number format
-	addon:SetNumberFormat(self.db.profile.numberFormat)
+    -- Set the number format
+    addon:SetNumberFormat(self.db.profile.numberFormat)
 
     -- Set the precision
-	addon:SetNumberPrecision()
+    addon:SetNumberPrecision()
 
-	self:CreateDisplay()
+    self:CreateDisplay()
 
-	-- Register for profile callbacks
-	self.db.RegisterCallback(self, "OnProfileChanged", "Reset")
-	self.db.RegisterCallback(self, "OnProfileCopied", "Reset")
-	self.db.RegisterCallback(self, "OnProfileReset", "Reset")
+    -- Register for profile callbacks
+    self.db.RegisterCallback(self, "OnProfileChanged", "Reset")
+    self.db.RegisterCallback(self, "OnProfileCopied", "Reset")
+    self.db.RegisterCallback(self, "OnProfileReset", "Reset")
 
     -- Set the LDB options
-  DataFeed.display = self.db.profile.ldb_data_feed
-  if DataFeed.display ~= "None" then
-    addon.LDBDataFeed = true
-  end
-  addon:SetBrokerLabel()
+    DataFeed.display = self.db.profile.ldb_data_feed
+    if DataFeed.display ~= "None" then
+        addon.LDBDataFeed = true
+    end
+    addon:SetBrokerLabel()
 
-	icon:Register("BloodShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
-	LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
+    icon:Register("BloodShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
+    LSM.RegisterCallback(BloodShieldTracker, "LibSharedMedia_Registered")
 
-	for name, obj in pairs(addon.modules) do
-		if obj and obj.OnInitialize then
-			obj:OnInitialize()
-		end
-	end
+    for name, obj in pairs(addon.modules) do
+        if obj and obj.OnInitialize then
+            obj:OnInitialize()
+        end
+    end
 
-	self:UpdatePositions()
-	self:Skin()
+    self:UpdatePositions()
+    self:Skin()
 end
 
 function BloodShieldTracker:Reset()
-	addon.db = self.db
-	-- Reset positions
-	for name,bar in pairs(addon.bars) do
-		bar.db = self.db.profile.bars[bar.name]
-		bar:Reset()
-	end
+    addon.db = self.db
+    -- Reset positions
+    for name, bar in pairs(addon.bars) do
+        bar.db = self.db.profile.bars[bar.name]
+        bar:Reset()
+    end
 
-	self:ResetFonts()
-	self:ResetStats()
-	addon:FireCallback("ProfileUpdate")
+    self:ResetFonts()
+    self:ResetStats()
+    addon:FireCallback("ProfileUpdate")
 end
 
 function addon:GetFontFlags()
@@ -1191,13 +1194,13 @@ function addon:GetFontFlags()
 end
 
 function addon:GetFontSettings()
-	local ff, fh, fontFlags
+    local ff, fh, fontFlags
 
     -- If a custom font is set, then override the settings
     if CustomUI.font then
         ff = CustomUI.font
     else
-	    ff = LSM:Fetch("font", addon.db.profile.font_face)
+        ff = LSM:Fetch("font", addon.db.profile.font_face)
     end
     if CustomUI.fontSize then
         fh = CustomUI.fontSize
@@ -1210,7 +1213,7 @@ function addon:GetFontSettings()
         fontFlags = addon:GetFontFlags()
     end
 
-	return ff, fh, fontFlags
+    return ff, fh, fontFlags
 end
 
 function BloodShieldTracker:Skin()
@@ -1232,9 +1235,9 @@ function BloodShieldTracker:Skin()
             end
             if self.db.profile.skinning.tukui.borders then
                 self:SetCustomShowBorders(false)
-				for name, bar in pairs(addon.bars) do
-					bar.bar:CreateBackdrop()
-				end
+                for name, bar in pairs(addon.bars) do
+                    bar.bar:CreateBackdrop()
+                end
             end
         else
             self:Print("Could not find Tukui config.")
@@ -1256,9 +1259,9 @@ function BloodShieldTracker:Skin()
             end
             if self.db.profile.skinning.elvui.borders then
                 self:SetCustomShowBorders(false)
-				for name, bar in pairs(addon.bars) do
-					bar.bar:CreateBackdrop()
-				end
+                for name, bar in pairs(addon.bars) do
+                    bar.bar:CreateBackdrop()
+                end
             end
         else
             self:Print("Could not find the ElvUI config.")
@@ -1267,12 +1270,12 @@ function BloodShieldTracker:Skin()
 end
 
 function addon.SkinFrame(frame)
-	local skinning = addon.db.profile.skinning
-	local tukui = Tukui and skinning.tukui.enabled and skinning.tukui.borders
-	local elvui = ElvUI and skinning.elvui.enabled and skinning.elvui.borders
-	if (tukui or elvui) and frame.CreateBackdrop then
-		frame:CreateBackdrop()
-	end
+    local skinning = addon.db.profile.skinning
+    local tukui = Tukui and skinning.tukui.enabled and skinning.tukui.borders
+    local elvui = ElvUI and skinning.elvui.enabled and skinning.elvui.borders
+    if (tukui or elvui) and frame.CreateBackdrop then
+        frame:CreateBackdrop()
+    end
 end
 
 function BloodShieldTracker:SetCustomTexture(texture)
@@ -1311,521 +1314,522 @@ function BloodShieldTracker:SetCustomShowBorders(show)
 end
 
 function BloodShieldTracker:ResetFonts()
-	for name, bar in pairs(addon.bars) do
-		bar:ResetFonts()
-	end
+    for name, bar in pairs(addon.bars) do
+        bar:ResetFonts()
+    end
 end
 
 function BloodShieldTracker:UpdateTextures()
-	for name, bar in pairs(addon.bars) do
-		bar:UpdateTexture()
-	end
+    for name, bar in pairs(addon.bars) do
+        bar:UpdateTexture()
+    end
 end
 
 function BloodShieldTracker:UpdateBorders()
-	for name, bar in pairs(addon.bars) do
-		bar:UpdateBorder()
-	end
+    for name, bar in pairs(addon.bars) do
+        bar:UpdateBorder()
+    end
 end
 
 function BloodShieldTracker:UpdatePositions()
-	for name, bar in pairs(addon.bars) do
-		if bar.SetPoint then
-			bar:SetPoint()
-		end
-	end
+    for name, bar in pairs(addon.bars) do
+        if bar.SetPoint then
+            bar:SetPoint()
+        end
+    end
 end
 
 function BloodShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
-	if _G.strlen(self.db.profile.font_face) > 1 and mediatype == "font" then
-		if self.db.profile.font_face == key then
-			self:ResetFonts()
-		end
-	end
-	if mediatype == "statusbar" then
-	    self:UpdateTextures()
-	end
+    if _G.strlen(self.db.profile.font_face) > 1 and mediatype == "font" then
+        if self.db.profile.font_face == key then
+            self:ResetFonts()
+        end
+    end
+    if mediatype == "statusbar" then
+        self:UpdateTextures()
+    end
 end
 
 function BloodShieldTracker:OnEnable()
-	if not addon.isDK then return end
+    if not addon.isDK then return end
 
-	-- Try to load the spell and item names one more time.
-	addon.LoadItemNames()
-	addon.LoadSpellNames()
-	if not self.optionsFrame then
-		-- Register Options
-		local displayName = addon.addonTitle
-		local options = self:GetOptions()
-		_G.LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(displayName, options)
+    -- Try to load the spell and item names one more time.
+    addon.LoadItemNames()
+    addon.LoadSpellNames()
+    if not self.optionsFrame then
+        -- Register Options
+        local displayName = addon.addonTitle
+        local options = self:GetOptions()
+        _G.LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(displayName, options)
 
-		self.optionsFrame = {}
-		local ACD = _G.LibStub("AceConfigDialog-3.0")
-		self.optionsFrame.Main = ACD:AddToBlizOptions(
-			displayName, displayName, nil, "core")
-		self.optionsFrame.ShieldBar = ACD:AddToBlizOptions(
-			displayName, L["Blood Shield Bar"], displayName, "shieldBarOpts")
-		self.optionsFrame.BoneShieldBar = ACD:AddToBlizOptions(
-			displayName, L["Bone Shield Bar"], displayName, "boneShieldOpts")
-		self.optionsFrame.PriestBar = ACD:AddToBlizOptions(
-			displayName, L["PW:S Bar"], displayName, "pwsBarOpts")
-		self.optionsFrame.AbsorbsBar = ACD:AddToBlizOptions(
-			displayName, L["Total Absorbs Bar"], displayName, "absorbsBarOpts")
-		self.optionsFrame.AMSBar = ACD:AddToBlizOptions(
-			displayName, L["Anti-Magic Shell Bar"], displayName, "amsBarOpts")
-		self.optionsFrame.PurgatoryBar = ACD:AddToBlizOptions(
-			displayName, L["Purgatory Bar"], displayName, "purgatoryBarOpts")
+        self.optionsFrame = {}
+        local ACD = _G.LibStub("AceConfigDialog-3.0")
+        self.optionsFrame.Main = ACD:AddToBlizOptions(
+            displayName, displayName, nil, "core")
+        self.optionsFrame.ShieldBar = ACD:AddToBlizOptions(
+            displayName, L["Blood Shield Bar"], displayName, "shieldBarOpts")
+        self.optionsFrame.BoneShieldBar = ACD:AddToBlizOptions(
+            displayName, L["Bone Shield Bar"], displayName, "boneShieldOpts")
+        self.optionsFrame.PriestBar = ACD:AddToBlizOptions(
+            displayName, L["PW:S Bar"], displayName, "pwsBarOpts")
+        self.optionsFrame.AbsorbsBar = ACD:AddToBlizOptions(
+            displayName, L["Total Absorbs Bar"], displayName, "absorbsBarOpts")
+        self.optionsFrame.AMSBar = ACD:AddToBlizOptions(
+            displayName, L["Anti-Magic Shell Bar"], displayName, "amsBarOpts")
+        self.optionsFrame.PurgatoryBar = ACD:AddToBlizOptions(
+            displayName, L["Purgatory Bar"], displayName, "purgatoryBarOpts")
 
-		-- Add options for modules
-		for name, obj in pairs(addon.modules) do
-			if obj and obj.AddOptions then
-				local name, sectionName, tableName = obj.AddOptions()
-				self.optionsFrame[name] = ACD:AddToBlizOptions(
-					displayName, sectionName, displayName, tableName)
-			end
-		end
+        -- Add options for modules
+        for name, obj in pairs(addon.modules) do
+            if obj and obj.AddOptions then
+                local name, sectionName, tableName = obj.AddOptions()
+                self.optionsFrame[name] = ACD:AddToBlizOptions(
+                    displayName, sectionName, displayName, tableName)
+            end
+        end
 
-		self.optionsFrame.Skinning = ACD:AddToBlizOptions(
-			displayName, L["Skinning"], displayName, "skinningOpts")
-		ACD:AddToBlizOptions(
-			displayName, options.args.profile.name, displayName, "profile")
+        self.optionsFrame.Skinning = ACD:AddToBlizOptions(
+            displayName, L["Skinning"], displayName, "skinningOpts")
+        ACD:AddToBlizOptions(
+            displayName, options.args.profile.name, displayName, "profile")
 
-		-- Register the chat command
-		self:RegisterChatCommand("bst", "ChatCommand")
-		self:RegisterChatCommand("bloodshield", "ChatCommand")
-	end
+        -- Register the chat command
+        self:RegisterChatCommand("bst", "ChatCommand")
+        self:RegisterChatCommand("bloodshield", "ChatCommand")
+    end
 
-	self:CheckClass()
-	self:CheckGear()
+    self:CheckClass()
+    self:CheckGear()
 
-	self:CheckTalents()
-	self:RegisterEvent("PLAYER_TALENT_UPDATE", "CheckTalents")
-	self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED","CheckTalents")
-	self:RegisterEvent("TRAIT_CONFIG_UPDATED", "CheckTalents")
+    self:CheckTalents()
+    self:RegisterEvent("PLAYER_TALENT_UPDATE", "CheckTalents")
+    self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED", "CheckTalents")
+    self:RegisterEvent("TRAIT_CONFIG_UPDATED", "CheckTalents")
 
-	-- TODO: Check if anything here needs to be updated or just removed.
-	--self:RegisterEvent("GLYPH_ADDED", "CheckGlyphs")
-	--self:RegisterEvent("GLYPH_REMOVED", "CheckGlyphs")
-	--self:RegisterEvent("GLYPH_UPDATED", "CheckGlyphs")
+    -- TODO: Check if anything here needs to be updated or just removed.
+    --self:RegisterEvent("GLYPH_ADDED", "CheckGlyphs")
+    --self:RegisterEvent("GLYPH_REMOVED", "CheckGlyphs")
+    --self:RegisterEvent("GLYPH_UPDATED", "CheckGlyphs")
 
-	for name, obj in pairs(addon.modules) do
-		if obj and obj.Enable then
-			obj:Enable()
-		end
-	end
+    for name, obj in pairs(addon.modules) do
+        if obj and obj.Enable then
+            obj:Enable()
+        end
+    end
 end
 
 local UnitEvents = {
-	["player"] = {
-		["UNIT_AURA"] = true,
-	},
+    ["player"] = {
+        ["UNIT_AURA"] = true,
+    },
 }
 local function EventFrame_OnEvent(frame, event, ...)
-	BloodShieldTracker[event](BloodShieldTracker, event, ...)
+    BloodShieldTracker[event](BloodShieldTracker, event, ...)
 end
 local EventFrames = {}
 function addon.CreateEventFrames()
-	for unit, events in pairs(UnitEvents) do
-		local frame = _G.CreateFrame("Frame", ADDON_NAME.."_EventFrame_"..unit)
-		frame:SetScript("OnEvent", EventFrame_OnEvent)
-		EventFrames[unit] = frame
-	end
+    for unit, events in pairs(UnitEvents) do
+        local frame = _G.CreateFrame("Frame", ADDON_NAME .. "_EventFrame_" .. unit)
+        frame:SetScript("OnEvent", EventFrame_OnEvent)
+        EventFrames[unit] = frame
+    end
 end
+
 addon.CreateEventFrames()
 function addon.RegisterUnitEvents(frames, events)
-	for unit, events in pairs(events) do
-		local frame = frames[unit]
-		if frame then
-			for event, val in pairs(events) do
-				frame:RegisterUnitEvent(event, unit)
-			end
-		else
-			BST:Print("Missing event frame for "..tostring(unit).."!")
-		end
-	end
+    for unit, events in pairs(events) do
+        local frame = frames[unit]
+        if frame then
+            for event, val in pairs(events) do
+                frame:RegisterUnitEvent(event, unit)
+            end
+        else
+            BST:Print("Missing event frame for " .. tostring(unit) .. "!")
+        end
+    end
 end
+
 function addon.UnregisterUnitEvents(frames, events)
-	for unit, events in pairs(events) do
-		local frame = frames[unit]
-		if frame then
-			for event, val in pairs(events) do
-				frame:UnregisterEvent(event, unit)
-			end
-		end
-	end
+    for unit, events in pairs(events) do
+        local frame = frames[unit]
+        if frame then
+            for event, val in pairs(events) do
+                frame:UnregisterEvent(event, unit)
+            end
+        end
+    end
 end
 
 function BloodShieldTracker:Load()
-	if self.loaded then return end
+    if self.loaded then return end
 
-	self.loaded = true
+    self.loaded = true
 
-	if self.db.profile.verbose then
-		self:Print("Loading.")
-	end
-	self:RegisterEvent("PLAYER_REGEN_ENABLED")
-	self:RegisterEvent("PLAYER_REGEN_DISABLED")
-	self:RegisterEvent("PLAYER_DEAD")
-	self:RegisterEvent("PLAYER_ENTERING_WORLD")
-	self:RegisterEvent("PLAYER_ALIVE")
-	self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
+    if self.db.profile.verbose then
+        self:Print("Loading.")
+    end
+    self:RegisterEvent("PLAYER_REGEN_ENABLED")
+    self:RegisterEvent("PLAYER_REGEN_DISABLED")
+    self:RegisterEvent("PLAYER_DEAD")
+    self:RegisterEvent("PLAYER_ENTERING_WORLD")
+    self:RegisterEvent("PLAYER_ALIVE")
+    self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 
-	addon.RegisterUnitEvents(EventFrames, UnitEvents)
+    addon.RegisterUnitEvents(EventFrames, UnitEvents)
 
-	self.shieldbar:UpdateUI()
+    self.shieldbar:UpdateUI()
 end
 
 function BloodShieldTracker:Unload()
-	if not self.loaded then return end
+    if not self.loaded then return end
 
-	self.loaded = false
-	if self.db.profile.verbose then
-		self:Print("Unloading.")
-	end
-	self:UnregisterEvent("PLAYER_REGEN_ENABLED")
-	self:UnregisterEvent("PLAYER_REGEN_DISABLED")
-	self:UnregisterEvent("PLAYER_DEAD")
-	self:UnregisterEvent("PLAYER_ENTERING_WORLD")
-	self:UnregisterEvent("PLAYER_ALIVE")
-	self:UnregisterEvent("PLAYER_EQUIPMENT_CHANGED")
+    self.loaded = false
+    if self.db.profile.verbose then
+        self:Print("Unloading.")
+    end
+    self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+    self:UnregisterEvent("PLAYER_REGEN_DISABLED")
+    self:UnregisterEvent("PLAYER_DEAD")
+    self:UnregisterEvent("PLAYER_ENTERING_WORLD")
+    self:UnregisterEvent("PLAYER_ALIVE")
+    self:UnregisterEvent("PLAYER_EQUIPMENT_CHANGED")
 
-	addon.UnregisterUnitEvents(EventFrames, UnitEvents)
+    addon.UnregisterUnitEvents(EventFrames, UnitEvents)
 
-	for k, v in pairs(addon.bars) do
-		if v then
-			v.bar:Hide()
-		end
-	end
+    for k, v in pairs(addon.bars) do
+        if v then
+            v.bar:Hide()
+        end
+    end
 end
 
 function BloodShieldTracker:OnDisable()
 end
 
 function addon:UpdateBarsForTalents()
-	for name, bar in pairs(addon.bars) do
-		if bar and bar.OnTalentUpdate and type(bar.OnTalentUpdate) == "function" then
-			bar:OnTalentUpdate()
-		end
-	end
+    for name, bar in pairs(addon.bars) do
+        if bar and bar.OnTalentUpdate and type(bar.OnTalentUpdate) == "function" then
+            bar:OnTalentUpdate()
+        end
+    end
 end
 
 function BloodShieldTracker:CheckClass()
-	local class, className = _G.UnitClass("player")
-	if className then
-		if (className == 'DEATH KNIGHT' or className == 'DEATHKNIGHT') then
-			addon.isDK = true
-		else
-			addon.isDK = false
-		end
-	end
+    local class, className = _G.UnitClass("player")
+    if className then
+        if (className == 'DEATH KNIGHT' or className == 'DEATHKNIGHT') then
+            addon.isDK = true
+        else
+            addon.isDK = false
+        end
+    end
 end
 
 -- New method to check talents for MoP
 function BloodShieldTracker:CheckTalents5()
-	if addon.isDK == nil then
-		self:CheckClass()
-	end
+    if addon.isDK == nil then
+        self:CheckClass()
+    end
 
-	if addon.isDK then
-		-- Check spec: Blood, Frost, or Unholy spec?
-		addon.currentSpec = self:GetSpec() or "Blood"
+    if addon.isDK then
+        -- Check spec: Blood, Frost, or Unholy spec?
+        addon.currentSpec = self:GetSpec() or "Blood"
 
-		if addon.currentSpec == "Blood" then
-			addon.IsBloodTank = true
-			-- For 6.0+, the Mastery spell isn't known, just use level for now
-			if _G.UnitLevel("player") >= 80 then
-				hasBloodShield = true
-			end
-			-- Check for Mastery so we know if BS is active
-			if _G.IsSpellKnown(SpellIds["Mastery: Blood Shield"]) then
-				hasBloodShield = true
-			end
-			-- Check for VB
-			if _G.IsSpellKnown(SpellIds["Vampiric Blood"]) then
-				HasVampBlood = true
-			end
-		else
-			addon.IsBloodTank = false
-		end
-		dsHealAPMod = addon.DsHealAPModifiers[addon.currentSpec] or 1
-		--self:CheckGlyphs()
-	end
+        if addon.currentSpec == "Blood" then
+            addon.IsBloodTank = true
+            -- For 6.0+, the Mastery spell isn't known, just use level for now
+            if _G.UnitLevel("player") >= 80 then
+                hasBloodShield = true
+            end
+            -- Check for Mastery so we know if BS is active
+            if _G.IsSpellKnown(SpellIds["Mastery: Blood Shield"]) then
+                hasBloodShield = true
+            end
+            -- Check for VB
+            if _G.IsSpellKnown(SpellIds["Vampiric Blood"]) then
+                HasVampBlood = true
+            end
+        else
+            addon.IsBloodTank = false
+        end
+        dsHealAPMod = addon.DsHealAPModifiers[addon.currentSpec] or 1
+        --self:CheckGlyphs()
+    end
 
-	if addon:IsTrackerEnabled() then
-		self:Load()
-	else
-		self:Unload()
-	end
+    if addon:IsTrackerEnabled() then
+        self:Load()
+    else
+        self:Unload()
+    end
 end
 
 function BloodShieldTracker:CheckTalents(event)
-	addon.IsBloodTank = false
-	hasBloodShield = false
-	HasVampBlood = false
+    addon.IsBloodTank = false
+    hasBloodShield = false
+    HasVampBlood = false
 
-	self:CheckTalents5()
-	self:UpdateTierBonus()
-	addon:FireCallback("GearUpdate")
-	addon:FireCallback("WeaponUpdate")
-	addon:FireCallback("TalentUpdate")
-	addon:UpdateBarsForTalents()
+    self:CheckTalents5()
+    self:UpdateTierBonus()
+    addon:FireCallback("GearUpdate")
+    addon:FireCallback("WeaponUpdate")
+    addon:FireCallback("TalentUpdate")
+    addon:UpdateBarsForTalents()
 
-	if self.db.profile.debug then
-		local trackerOutputFmt = "Check Talents [DK=%s,BT=%s,MA=%s,VB=%s,Event=%s]"
-		self:Print(trackerOutputFmt:format(tostring(addon.isDK),
-			tostring(addon.IsBloodTank),tostring(hasBloodShield),tostring(HasVampBlood),
-			tostring(event or "")))
-	end
+    if self.db.profile.debug then
+        local trackerOutputFmt = "Check Talents [DK=%s,BT=%s,MA=%s,VB=%s,Event=%s]"
+        self:Print(trackerOutputFmt:format(tostring(addon.isDK),
+            tostring(addon.IsBloodTank), tostring(hasBloodShield), tostring(HasVampBlood),
+            tostring(event or "")))
+    end
 end
 
 function BloodShieldTracker:GetSpec()
-	if _G.GetSpecialization and _G.GetSpecializationInfo then
-		return self:GetSpec5()
-	elseif _G.GetPrimaryTalentTree then
-		return self:GetSpec4()
-	else
-		return nil
-	end
+    if _G.GetSpecialization and _G.GetSpecializationInfo then
+        return self:GetSpec5()
+    elseif _G.GetPrimaryTalentTree then
+        return self:GetSpec4()
+    else
+        return nil
+    end
 end
 
 -- For Classic Cata API
 function BloodShieldTracker:GetSpec4()
-	local id = _G.GetPrimaryTalentTree()
-	if id == 1 then
-		return "Blood"
-	elseif id == 2 then
-		return "Frost"
-	elseif id == 3 then
-		return "Unholy"
-	else
-		if addon.db.profile.debug then
-			local fmt = "Could not detect player spec. [%s]"
-			self:Print(fmt:format(_G.tostring(id)))
-		end
-	end
+    local id = _G.GetPrimaryTalentTree()
+    if id == 1 then
+        return "Blood"
+    elseif id == 2 then
+        return "Frost"
+    elseif id == 3 then
+        return "Unholy"
+    else
+        if addon.db.profile.debug then
+            local fmt = "Could not detect player spec. [%s]"
+            self:Print(fmt:format(_G.tostring(id)))
+        end
+    end
 end
 
 -- MoP+ check
 function BloodShieldTracker:GetSpec5()
-	local activeSpecNum = _G.GetSpecialization()
-	if activeSpecNum and activeSpecNum > 0 then
-		local id, name, desc, texture = _G.GetSpecializationInfo(activeSpecNum)
-		if id == 250 then
-			return "Blood"
-		elseif id == 251 then
-			return "Frost"
-		elseif id == 252 then
-			return "Unholy"
-		else
-			if addon.db.profile.debug then
-				local fmt = "Could not detect player spec. [%s,%s,%s,%s]"
-				self:Print(fmt:format(_G.tostring(activeSpecNum), _G.tostring(id),
-					_G.tostring(name), _G.tostring(texture)))
-			end
-			addon.currentSpec = addon.currentSpec or "Blood"
-		end
-	end
+    local activeSpecNum = _G.GetSpecialization()
+    if activeSpecNum and activeSpecNum > 0 then
+        local id, name, desc, texture = _G.GetSpecializationInfo(activeSpecNum)
+        if id == 250 then
+            return "Blood"
+        elseif id == 251 then
+            return "Frost"
+        elseif id == 252 then
+            return "Unholy"
+        else
+            if addon.db.profile.debug then
+                local fmt = "Could not detect player spec. [%s,%s,%s,%s]"
+                self:Print(fmt:format(_G.tostring(activeSpecNum), _G.tostring(id),
+                    _G.tostring(name), _G.tostring(texture)))
+            end
+            addon.currentSpec = addon.currentSpec or "Blood"
+        end
+    end
 end
 
 function addon:IsTrackerEnabled()
-	if addon.IsBloodTank or (addon.isDK and
-		not addon.db.profile.enable_only_for_blood) then
-		return true
-	else
-		return false
-	end
+    if addon.IsBloodTank or (addon.isDK and
+            not addon.db.profile.enable_only_for_blood) then
+        return true
+    else
+        return false
+    end
 end
 
 function BloodShieldTracker:CheckGlyphs()
-	hasVBGlyphed = false
-	--if not HasVampBlood then return end -- Dont bother with glyph check if he doesnt have the talent
-	for id = 1, _G.GetNumGlyphSockets() do
-		local enabled, glyphType, glyphTooltipIndex,
-		glyphSpell, iconFilename = _G.GetGlyphSocketInfo(id, nil)
-		if enabled then
-			if glyphSpell == GlyphIds["Vampiric Blood"] then
-				hasVBGlyphed = true
-			end
-		end
-	end
+    hasVBGlyphed = false
+    --if not HasVampBlood then return end -- Dont bother with glyph check if he doesnt have the talent
+    for id = 1, _G.GetNumGlyphSockets() do
+        local enabled, glyphType, glyphTooltipIndex,
+        glyphSpell, iconFilename = _G.GetGlyphSocketInfo(id, nil)
+        if enabled then
+            if glyphSpell == GlyphIds["Vampiric Blood"] then
+                hasVBGlyphed = true
+            end
+        end
+    end
 
-	if self.db.profile.debug then
-		local trackerOutputFmt = "Check Glyphs [VB=%s]"
-		self:Print(trackerOutputFmt:format(tostring(hasVBGlyphed)))
-	end
+    if self.db.profile.debug then
+        local trackerOutputFmt = "Check Glyphs [VB=%s]"
+        self:Print(trackerOutputFmt:format(tostring(hasVBGlyphed)))
+    end
 end
 
 local TierSlotIds = {
-	["Head"] = _G.GetInventorySlotInfo("HeadSlot"),
-	["Shoulder"] = _G.GetInventorySlotInfo("ShoulderSlot"),
-	["Chest"] = _G.GetInventorySlotInfo("ChestSlot"),
-	["Legs"] = _G.GetInventorySlotInfo("LegsSlot"),
-	["Hands"] = _G.GetInventorySlotInfo("HandsSlot"),
+    ["Head"] = _G.GetInventorySlotInfo("HeadSlot"),
+    ["Shoulder"] = _G.GetInventorySlotInfo("ShoulderSlot"),
+    ["Chest"] = _G.GetInventorySlotInfo("ChestSlot"),
+    ["Legs"] = _G.GetInventorySlotInfo("LegsSlot"),
+    ["Hands"] = _G.GetInventorySlotInfo("HandsSlot"),
 }
 
 local TierIds = {
-	["T14 Tank"] = {
-		["Head"] = {
-			[86656] = true,
-			[85316] = true,
-			[86920] = true,
-			},
-		["Shoulder"] = {
-			[86654] = true,
-			[85314] = true,
-			[86922] = true,
-			},
-		["Chest"] = {
-			[86658] = true,
-			[85318] = true,
-			[86918] = true,
-			},
-		["Legs"] = {
-			[86655] = true,
-			[85315] = true,
-			[86921] = true,
-			},
-		["Hands"] = {
-			[86657] = true,
-			[85317] = true,
-			[86919] = true,
-			},
-	},
-	["T16 Tank"] = {
-		["Head"] = {
-			[99049] = true,
-			[99190] = true,
-			[99323] = true,
-			},
-		["Shoulder"] = {
-			[99040] = true,
-			[99179] = true,
-			[99325] = true,
-			},
-		["Chest"] = {
-			[99060] = true,
-			[99188] = true,
-			[99330] = true,
-			},
-		["Legs"] = {
-			[99039] = true,
-			[99191] = true,
-			[99324] = true,
-			},
-		["Hands"] = {
-			[99048] = true,
-			[99189] = true,
-			[99331] = true,
-			},
-	},
+    ["T14 Tank"] = {
+        ["Head"] = {
+            [86656] = true,
+            [85316] = true,
+            [86920] = true,
+        },
+        ["Shoulder"] = {
+            [86654] = true,
+            [85314] = true,
+            [86922] = true,
+        },
+        ["Chest"] = {
+            [86658] = true,
+            [85318] = true,
+            [86918] = true,
+        },
+        ["Legs"] = {
+            [86655] = true,
+            [85315] = true,
+            [86921] = true,
+        },
+        ["Hands"] = {
+            [86657] = true,
+            [85317] = true,
+            [86919] = true,
+        },
+    },
+    ["T16 Tank"] = {
+        ["Head"] = {
+            [99049] = true,
+            [99190] = true,
+            [99323] = true,
+        },
+        ["Shoulder"] = {
+            [99040] = true,
+            [99179] = true,
+            [99325] = true,
+        },
+        ["Chest"] = {
+            [99060] = true,
+            [99188] = true,
+            [99330] = true,
+        },
+        ["Legs"] = {
+            [99039] = true,
+            [99191] = true,
+            [99324] = true,
+        },
+        ["Hands"] = {
+            [99048] = true,
+            [99189] = true,
+            [99331] = true,
+        },
+    },
 }
 
 local TierSlots = {}
 for k, v in pairs(TierSlotIds) do
-	TierSlots[v] = true
+    TierSlots[v] = true
 end
 
 function BloodShieldTracker:CheckGear()
-	GearChangeTimer = nil
-	local count = 0
-	local changed = false
+    GearChangeTimer = nil
+    local count = 0
+    local changed = false
 
-	for tier, ids in pairs(TierIds) do
-		count = 0
-		for slot, slotid in pairs(TierSlotIds) do
-			local id = _G.GetInventoryItemID("player", slotid)
-			if ids[slot][id] then
-				count = count + 1
-			end
-		end
+    for tier, ids in pairs(TierIds) do
+        count = 0
+        for slot, slotid in pairs(TierSlotIds) do
+            local id = _G.GetInventoryItemID("player", slotid)
+            if ids[slot][id] then
+                count = count + 1
+            end
+        end
 
-		if count ~= addon.tierCount[tier] then
-			addon.tierCount[tier] = count
-			if self.db.profile.debug and not _G.UnitAffectingCombat("player") then
-				local fmt = "%s Detected: %d/5"
-				self:Print(fmt:format(tier, addon.tierCount[tier]))
-			end
-			changed = true
-		end
-	end
+        if count ~= addon.tierCount[tier] then
+            addon.tierCount[tier] = count
+            if self.db.profile.debug and not _G.UnitAffectingCombat("player") then
+                local fmt = "%s Detected: %d/5"
+                self:Print(fmt:format(tier, addon.tierCount[tier]))
+            end
+            changed = true
+        end
+    end
 
-	if changed then
-		self:UpdateTierBonus()
-		addon:FireCallback("GearUpdate")
-	end
+    if changed then
+        self:UpdateTierBonus()
+        addon:FireCallback("GearUpdate")
+    end
 end
 
 function BloodShieldTracker:UpdateTierBonus()
 end
 
 function BloodShieldTracker:PLAYER_EQUIPMENT_CHANGED(event, slot, hasItem)
-	if TierSlots[slot] and not GearChangeTimer then
-		GearChangeTimer = self:ScheduleTimer("CheckGear", 1.5)
-	end
-	if slot == _G.INVSLOT_MAINHAND then
-		addon:FireCallback("WeaponUpdate")
-	end
+    if TierSlots[slot] and not GearChangeTimer then
+        GearChangeTimer = self:ScheduleTimer("CheckGear", 1.5)
+    end
+    if slot == _G.INVSLOT_MAINHAND then
+        addon:FireCallback("WeaponUpdate")
+    end
 end
 
 function BloodShieldTracker:GetEffectiveHealingBuffModifiers()
-    return (1+iccBuffAmt) * (1+vbHealingInc) * (1+gsHealModifier) * (1+luckOfTheDrawAmt)
+    return (1 + iccBuffAmt) * (1 + vbHealingInc) * (1 + gsHealModifier) * (1 + luckOfTheDrawAmt)
 end
 
 function BloodShieldTracker:GetEffectiveHealingDebuffModifiers()
-    return (1-healingDebuffMultiplier)
+    return (1 - healingDebuffMultiplier)
 end
 
 function BloodShieldTracker:PLAYER_REGEN_DISABLED()
-	-- Reset the per fight stats
-	LastFightStats:Reset()
-	LastFightStats:StartCombat()
+    -- Reset the per fight stats
+    LastFightStats:Reset()
+    LastFightStats:StartCombat()
 
-	if addon.DEBUG_OUTPUT == true then
-		addon.DEBUG_BUFFER = ""
-	end
+    if addon.DEBUG_OUTPUT == true then
+        addon.DEBUG_BUFFER = ""
+    end
 
-	addon:FireCallback("CombatStart")
-	addon:BarDisplayUpdateForEvent("CombatStart")
+    addon:FireCallback("CombatStart")
+    addon:BarDisplayUpdateForEvent("CombatStart")
 end
 
 function BloodShieldTracker:PLAYER_REGEN_ENABLED()
-	LastFightStats:EndCombat()
-	addon:FireCallback("CombatEnd")
-	addon:BarDisplayUpdateForEvent("CombatEnd")
+    LastFightStats:EndCombat()
+    addon:FireCallback("CombatEnd")
+    addon:BarDisplayUpdateForEvent("CombatEnd")
 end
 
 function BloodShieldTracker:PLAYER_ENTERING_WORLD()
-	self:CheckAuras()
+    self:CheckAuras()
 end
 
 function BloodShieldTracker:PLAYER_ALIVE()
-	self:CheckAuras()
-	addon:FireCallback("PlayerAlive")
+    self:CheckAuras()
+    addon:FireCallback("PlayerAlive")
 end
 
 function BloodShieldTracker:PLAYER_DEAD()
-	self:CheckAuras()
-	addon:FireCallback("PlayerDead")
+    self:CheckAuras()
+    addon:FireCallback("PlayerDead")
 end
 
 function BloodShieldTracker:COMBAT_LOG_EVENT_UNFILTERED(...)
-	local event, timestamp, eventtype, hideCaster,
-		srcGUID, srcName, srcFlags, srcRaidFlags,
-		destGUID, destName, destFlags, destRaidFlags,
-		param9, param10, param11, param12, param13, param14,
-		param15, param16, param17, param18, param19, param20
+    local event, timestamp, eventtype, hideCaster,
+    srcGUID, srcName, srcFlags, srcRaidFlags,
+    destGUID, destName, destFlags, destRaidFlags,
+    param9, param10, param11, param12, param13, param14,
+    param15, param16, param17, param18, param19, param20
 
-	timestamp, eventtype, hideCaster,
-	srcGUID, srcName, srcFlags, srcRaidFlags,
-	destGUID, destName, destFlags, destRaidFlags,
-	param9, param10, param11, param12, param13, param14,
-	param15, param16, param17, param18, param19, param20 = CombatLogGetCurrentEventInfo()
-	event = "COMBAT_LOG_EVENT_UNFILTERED"
+    timestamp, eventtype, hideCaster,
+    srcGUID, srcName, srcFlags, srcRaidFlags,
+    destGUID, destName, destFlags, destRaidFlags,
+    param9, param10, param11, param12, param13, param14,
+    param15, param16, param17, param18, param19, param20 = CombatLogGetCurrentEventInfo()
+    event = "COMBAT_LOG_EVENT_UNFILTERED"
 
-	if not event or not eventtype or not destName then return end
+    if not event or not eventtype or not destName then return end
 
-	local spellName, spellAbsorb = "", ""
-
+    local spellName, spellAbsorb = "", ""
 end
 
 function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, expires)
@@ -1853,7 +1857,7 @@ function BloodShieldTracker:NewBloodShield(timestamp, shieldValue, expires)
 
         if addon.DEBUG_OUTPUT then
             addon.DEBUG_BUFFER = addon.DEBUG_BUFFER ..
-                shieldFormat:format(shieldValue) .."\n"
+                shieldFormat:format(shieldValue) .. "\n"
         end
     end
 
@@ -1882,86 +1886,86 @@ end
 
 local shieldRefreshedFormat = "Blood Shield Refreshed: %d%s"
 function BloodShieldTracker:BloodShieldUpdated(type, timestamp, current, expires)
-	if not addon.IsBloodTank then return end
+    if not addon.IsBloodTank then return end
 
-	if type == "refreshed" then
-		self.shieldbar.active = true
-		elseif type == "removed" then
-			self.shieldbar.active = false
-		end
+    if type == "refreshed" then
+        self.shieldbar.active = true
+    elseif type == "removed" then
+        self.shieldbar.active = false
+    end
 
-		local curr = self.shieldbar.shield_curr or 0
+    local curr = self.shieldbar.shield_curr or 0
 
-		-- Calculate how much was added or absorbed
-		local added = 0
-		local absorbed = 0
-		-- Check if the shield was increased due to a new DS/BS
-		if current > curr then
-			-- A new BS shield amount was added.  Update all of the stats.
-			added = current - curr
+    -- Calculate how much was added or absorbed
+    local added = 0
+    local absorbed = 0
+    -- Check if the shield was increased due to a new DS/BS
+    if current > curr then
+        -- A new BS shield amount was added.  Update all of the stats.
+        added = current - curr
 
-			self:UpdateStatsNewShield(added, true)
-			self.shieldbar.expires = expires
-			self.shieldbar.shield_max = self.shieldbar.shield_max + added
+        self:UpdateStatsNewShield(added, true)
+        self.shieldbar.expires = expires
+        self.shieldbar.shield_max = self.shieldbar.shield_max + added
 
-			-- Update the LDB data feed
-			DataFeed.lastBS = added
-			if addon.LDBDataFeed then
-				addon:UpdateLDBData()
-			end
+        -- Update the LDB data feed
+        DataFeed.lastBS = added
+        if addon.LDBDataFeed then
+            addon:UpdateLDBData()
+        end
 
-			if addon.DEBUG_OUTPUT then
-				local shieldInd = ""
-				addon.DEBUG_BUFFER = addon.DEBUG_BUFFER ..
-				shieldRefreshedFormat:format(added,shieldInd) .. "\n"
-			end
+        if addon.DEBUG_OUTPUT then
+            local shieldInd = ""
+            addon.DEBUG_BUFFER = addon.DEBUG_BUFFER ..
+                shieldRefreshedFormat:format(added, shieldInd) .. "\n"
+        end
 
-			if self.shieldbar.db.sound_enabled and self.shieldbar.db.sound_applied then
-				_G.PlaySoundFile(LSM:Fetch("sound", self.shieldbar.db.sound_applied))
-			end
-		elseif current == curr and type == "refreshed" then
-			-- No damage taken but refresh the time.
-			-- This can happen if we hit the max shield value of maximum health.
-			self.shieldbar.expires = expires
-		else
-			absorbed = curr - current
-			self:UpdateStatsShieldAbsorb(absorbed)
-		end
+        if self.shieldbar.db.sound_enabled and self.shieldbar.db.sound_applied then
+            _G.PlaySoundFile(LSM:Fetch("sound", self.shieldbar.db.sound_applied))
+        end
+    elseif current == curr and type == "refreshed" then
+        -- No damage taken but refresh the time.
+        -- This can happen if we hit the max shield value of maximum health.
+        self.shieldbar.expires = expires
+    else
+        absorbed = curr - current
+        self:UpdateStatsShieldAbsorb(absorbed)
+    end
 
-		self.shieldbar.shield_curr = current
-		curr = current
+    self.shieldbar.shield_curr = current
+    curr = current
 
-		local max = self.shieldbar.shield_max
+    local max = self.shieldbar.shield_max
 
-		local currPerc = 0
-		if max > 0 then
-			currPerc = curr / max * 100
-		end
+    local currPerc = 0
+    if max > 0 then
+        currPerc = curr / max * 100
+    end
 
-		if self.db.profile.debug then
-			local bsRemovedFmt = "Blood Shield %s [%d/%d %d%%]%s"
-			local addedFmt = "[Added %d]"
-			local statusStr = ""
-			if added > 0 then
-				statusStr = addedFmt:format(added)
-			elseif added == 0 and absorbed == 0 then
-				statusStr = "[No change]"
-			end
-			self:Print(bsRemovedFmt:format(type, curr, max, currPerc, statusStr))
-		end
+    if self.db.profile.debug then
+        local bsRemovedFmt = "Blood Shield %s [%d/%d %d%%]%s"
+        local addedFmt = "[Added %d]"
+        local statusStr = ""
+        if added > 0 then
+            statusStr = addedFmt:format(added)
+        elseif added == 0 and absorbed == 0 then
+            statusStr = "[No change]"
+        end
+        self:Print(bsRemovedFmt:format(type, curr, max, currPerc, statusStr))
+    end
 
-		if type == "removed" then
-			self.shieldbar.expires = 0
-			--self.shieldbar.bar:Hide()
-			self:UpdateStatsRemoveShield()
-			self.shieldbar.shield_max = 0
-			self.shieldbar.shield_curr = 0
+    if type == "removed" then
+        self.shieldbar.expires = 0
+        --self.shieldbar.bar:Hide()
+        self:UpdateStatsRemoveShield()
+        self.shieldbar.shield_max = 0
+        self.shieldbar.shield_curr = 0
 
-			if self.shieldbar.db.sound_enabled and self.shieldbar.db.sound_removed then
-				_G.PlaySoundFile(LSM:Fetch("sound", self.shieldbar.db.sound_removed))
-			end
-		end
-	end
+        if self.shieldbar.db.sound_enabled and self.shieldbar.db.sound_removed then
+            _G.PlaySoundFile(LSM:Fetch("sound", self.shieldbar.db.sound_removed))
+        end
+    end
+end
 
 function BloodShieldTracker:ResetStats()
     TotalShieldStats:Reset()
@@ -1969,21 +1973,21 @@ function BloodShieldTracker:ResetStats()
 end
 
 function BloodShieldTracker:UNIT_AURA(event, unit, ...)
-	if unit == "player" then
-		self:CheckAuras(unit)
-		addon:BarDisplayUpdateForEvent("PlayerAura")
-	end
+    if unit == "player" then
+        self:CheckAuras(unit)
+        addon:BarDisplayUpdateForEvent("PlayerAura")
+    end
 end
 
 -- Define auras which require extra data.  Boolean indicates if an absorb.
 local TrackWithDataNames = {
-	["Blood Shield"] = true,
---	["Bone Shield"] = false,
-	["Anti-Magic Shell"] = true,
+    ["Blood Shield"] = true,
+    --	["Bone Shield"] = false,
+    ["Anti-Magic Shell"] = true,
 }
 local TrackWithData = {}
 for k, v in pairs(TrackWithDataNames) do
-	TrackWithData[SpellIds[k]] = k
+    TrackWithData[SpellIds[k]] = k
 end
 local BSAuraPresent = false
 local BSAuraValue = 0
@@ -1991,91 +1995,89 @@ local BSAuraExpires = 0
 local AurasFound = {}
 local AuraData = {}
 for k, v in pairs(TrackWithDataNames) do
-	AuraData[k] = {}
+    AuraData[k] = {}
 end
 local OtherShields = {}
 addon.OtherShields = OtherShields
 
 local errorReadingFmt = "Error reading the %s value."
 function BloodShieldTracker:CheckAuras(unit)
-	-- Reset variables
-	wipe(AurasFound)
-	wipe(OtherShields)
+    -- Reset variables
+    wipe(AurasFound)
+    wipe(OtherShields)
 
-	local Results
+    local Results
 
-	-- Loop through unit auras to find ones of interest.
-	local i = 1
-	repeat
-		local aura = C_UnitAuras.GetAuraDataByIndex("player", i)
-		if not aura then break end
+    -- Loop through unit auras to find ones of interest.
+    local i = 1
+    repeat
+        local aura = C_UnitAuras.GetAuraDataByIndex("player", i)
+        if not aura then break end
 
-		local shieldValue = aura.points and aura.points[1] or 0
-		local tracked = AbsorbShields[aura.spellId]
-		local trackedWithData = TrackWithData[aura.spellId]
+        local shieldValue = aura.points and aura.points[1] or 0
+        local tracked = AbsorbShields[aura.spellId]
+        local trackedWithData = TrackWithData[aura.spellId]
 
-		if aura.spellId == SpellIds["Scent of Blood"] then
-			scentBloodStacks = aura.applications
+        if aura.spellId == SpellIds["Scent of Blood"] then
+            scentBloodStacks = aura.applications
+        elseif tracked or trackedWithData then
+            if trackedWithData then
+                AurasFound[trackedWithData] = true
+                AuraData[trackedWithData].value = shieldValue
+                AuraData[trackedWithData].expires = aura.expirationTime
+                AuraData[trackedWithData].duration = aura.duration
+                AuraData[trackedWithData].applications = aura.applications
+            end
+            if tracked then
+                AurasFound[tracked] = true
+                if shieldValue then
+                    OtherShields[tracked] = (OtherShields[tracked] or 0) + shieldValue
+                elseif self.db.profile.debug == true then
+                    self:Print(errorReadingFmt:format(SpellNames[tracked]))
+                end
+            end
+        end
+        i = i + 1
+    until name == nil
 
-		elseif tracked or trackedWithData then
-			if trackedWithData then
-				AurasFound[trackedWithData] = true
-				AuraData[trackedWithData].value = shieldValue
-				AuraData[trackedWithData].expires = aura.expirationTime
-				AuraData[trackedWithData].duration = aura.duration
-				AuraData[trackedWithData].applications = aura.applications
-			end
-			if tracked then
-				AurasFound[tracked] = true
-				if shieldValue then
-					OtherShields[tracked] = (OtherShields[tracked] or 0) + shieldValue
-				elseif self.db.profile.debug == true then
-					self:Print(errorReadingFmt:format(SpellNames[tracked]))
-				end
-			end
+    if AurasFound["Blood Shield"] then
+        local data = AuraData["Blood Shield"]
+        if data.value then
+            if BSAuraPresent == false then
+                -- Blood Shield applied
+                if self.db.profile.debug == true then
+                    self:Print("AURA: Blood Shield applied. " .. data.value)
+                end
+                self:NewBloodShield(GetTime(), data.value, data.expires)
+            else
+                if data.value ~= BSAuraValue or
+                    (data.expires ~= BSAuraExpires and data.value > 0) then
+                    self:BloodShieldUpdated("refreshed", GetTime(),
+                        data.value, data.expires)
+                end
+            end
+            BSAuraValue = data.value
+            BSAuraExpires = data.expires
+        else
+            if self.db.profile.debug == true then
+                self:Print("Error reading the Blood Shield value.")
+            end
+        end
+        BSAuraPresent = true
+    else
+        if BSAuraPresent == true then
+            -- Blood Shield removed
+            self:BloodShieldUpdated("removed", GetTime(), BSAuraValue, 0)
+        end
+        BSAuraPresent = false
+        BSAuraValue = 0
 
-		end
-		i = i + 1
-	until name == nil
+        local bar = self.shieldbar.bar
+        bar.active = false
+        bar.timer = 0
+        bar:SetScript("OnUpdate", nil)
+        bar.parent:Hide()
+    end
 
-	if AurasFound["Blood Shield"] then
-		local data = AuraData["Blood Shield"]
-		if data.value then
-			if BSAuraPresent == false then
-				-- Blood Shield applied
-				if self.db.profile.debug == true then
-					self:Print("AURA: Blood Shield applied. "..data.value)
-				end
-				self:NewBloodShield(GetTime(), data.value, data.expires)
-			else
-				if data.value ~= BSAuraValue or
-					(data.expires ~= BSAuraExpires and data.value > 0) then
-					self:BloodShieldUpdated("refreshed", GetTime(),
-						data.value, data.expires)
-				end
-			end
-			BSAuraValue = data.value
-			BSAuraExpires = data.expires
-		else
-			if self.db.profile.debug == true then
-				self:Print("Error reading the Blood Shield value.")
-			end
-		end
-		BSAuraPresent = true
-	else
-		if BSAuraPresent == true then
-			-- Blood Shield removed
-			self:BloodShieldUpdated("removed", GetTime(), BSAuraValue, 0)
-		end
-		BSAuraPresent = false
-		BSAuraValue = 0
-
-		local bar = self.shieldbar.bar
-		bar.active = false
-		bar.timer = 0
-		bar:SetScript("OnUpdate", nil)
-		bar.parent:Hide()
-	end
-
-	addon:FireCallback("Auras")
+    addon:FireCallback("Auras")
 end

@@ -93,20 +93,20 @@ addon.Talents = {
 }
 
 local function HasTalent(talentId)
-	local configId = C_ClassTalents.GetActiveConfigID()
-	if not configId then return false, -1 end
-	local configInfo = C_Traits.GetConfigInfo(configId)
-	if not configInfo then return false, -1 end
-	for _, treeId in ipairs(configInfo.treeIDs) do
-		local nodes = C_Traits.GetTreeNodes(treeId)
-		for i, nodeId in ipairs(nodes) do
-			nodeInfo = C_Traits.GetNodeInfo(configId, nodeId)
+    local configId = C_ClassTalents.GetActiveConfigID()
+    if not configId then return false, -1 end
+    local configInfo = C_Traits.GetConfigInfo(configId)
+    if not configInfo then return false, -1 end
+    for _, treeId in ipairs(configInfo.treeIDs) do
+        local nodes = C_Traits.GetTreeNodes(treeId)
+        for i, nodeId in ipairs(nodes) do
+            nodeInfo = C_Traits.GetNodeInfo(configId, nodeId)
             if nodeInfo.ranksPurchased and nodeInfo.ranksPurchased > 0 then
-    			local activeEntry = nodeInfo.activeEntry
-	    		for _, entryId in ipairs(nodeInfo.entryIDs) do
-		    	   local entryInfo = C_Traits.GetEntryInfo(configId, entryId)
-			       if entryInfo and entryInfo.definitionID then
-				      local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
+                local activeEntry = nodeInfo.activeEntry
+                for _, entryId in ipairs(nodeInfo.entryIDs) do
+                    local entryInfo = C_Traits.GetEntryInfo(configId, entryId)
+                    if entryInfo and entryInfo.definitionID then
+                        local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
                         if definitionInfo.spellID then
                             if definitionInfo.spellID == talentId then
                                 local activeEntryId = activeEntry.entryID
@@ -118,15 +118,15 @@ local function HasTalent(talentId)
                     end
                 end
             end
-		end
-	end
-	return false
+        end
+    end
+    return false
 end
 
 function addon.HasActiveTalent(talent)
     if addon.Cata then return false end
-	local talentId = addon.Talents[talent]
-	if not talentId then return false end
+    local talentId = addon.Talents[talent]
+    if not talentId then return false end
     local enabled, rank, maxRanks = HasTalent(talentId)
     if addon.db.profile.debug then
         local fmt = "%s talent: %s [%s,%s]"
