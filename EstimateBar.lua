@@ -73,7 +73,7 @@ local damageTaken = {}
 local removeList = {}
 
 -- Constants from abilities / gear.
-local dsHealModifierBase = addon.Cata and 0.20 or 0.25 -- Percent of the DS Heal from the tooltip.
+local dsHealModifierBase = addon.CataMists and 0.20 or 0.25 -- Percent of the DS Heal from the tooltip.
 local dsHealModifier = dsHealModifierBase
 local dsMinHealPercent = 0.07
 local dsMinHealPercentSuccor = 0.20
@@ -216,7 +216,7 @@ local UnitEventsCurrent = {
         -- "UNIT_AURA",
     },
 }
-local UnitEvents = addon.Cata and UnitEventsClassic or UnitEventsCurrent
+local UnitEvents = addon.CataMists and UnitEventsClassic or UnitEventsCurrent
 
 local function EventFrame_OnEvent(frame, event, ...)
     if event == "PLAYER_REGEN_DISABLED" then
@@ -285,7 +285,7 @@ function module:GetDSModifier()
             end
         end
     end
-    if addon.Cata then
+    if addon.CataMists then
         -- Add the appropriate modifier for damage-based heals.
         local impDSRanks = _G.select(5, _G.GetTalentInfo(1, 12)) or 0
         if _G.type(impDSRanks) == "number" and impDSRanks <= 3 then
@@ -321,7 +321,7 @@ function module:OnEnable()
     vbHealingBonus = self:GetVBBonus()
     voraciousBonus = self:GetVoraciousBonus()
 
-    if addon.Cata then
+    if addon.CataMists then
         -- Cata's Improved DS does not affect minimum heal
         impDSModifierCurrent = 1.0
         dsMinHealCurrent = dsMinHealPercent
@@ -341,7 +341,7 @@ function module:OnEnable()
         addon:Print("VB Healing Bonus: " .. _G.tostring(vbHealingBonus))
         addon:Print("Voracious Bonus: " .. _G.tostring(voraciousBonus))
     end
-    module.UpdateRatings = addon.Cata and module.UpdateRatingsClassic or module.UpdateRatingsCurrent
+    module.UpdateRatings = addon.CataMists and module.UpdateRatingsClassic or module.UpdateRatingsCurrent
     self:UpdateRatings()
     self:UpdateAlternateMinimum()
 

@@ -41,6 +41,8 @@ addon.CURRENT_BUILD, addon.CURRENT_INTERNAL,
 addon.CURRENT_BUILD_DATE, addon.CURRENT_UI_VERSION = _G.GetBuildInfo()
 addon.BfA = addon.CURRENT_UI_VERSION >= 80000
 addon.Cata = versionInRange(addon.CURRENT_UI_VERSION, 40000, 50000)
+addon.Mists = versionInRange(addon.CURRENT_UI_VERSION, 50000, 60000)
+addon.CataMists = addon.Cata or addon.Mists
 
 local function round(number)
     if not number then return 0 end

@@ -123,7 +123,7 @@ local function HasTalent(talentId)
 end
 
 function addon.HasActiveTalent(talent)
-    if addon.Cata then return false end
+    if addon.CataMists then return false end
     local talentId = addon.Talents[talent]
     if not talentId then return false end
     local enabled, rank, maxRanks = HasTalent(talentId)
