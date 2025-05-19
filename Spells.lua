@@ -85,7 +85,7 @@ function addon.LoadItemNames()
     for k, v in pairs(ItemIds) do
         local name = ItemNames[k]
         if not name then
-            ItemNames[k] = (_G.GetItemInfo(ItemIds[k]))
+            ItemNames[k] = (C_Item.GetItemInfo(ItemIds[k]))
         end
     end
 end
