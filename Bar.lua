@@ -1,4 +1,3 @@
-local _G = getfenv(0)
 local ADDON_NAME, addon = ...
 
 local LSM = _G.LibStub:GetLibrary("LibSharedMedia-3.0")
