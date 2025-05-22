@@ -321,7 +321,7 @@ function module:OnEnable()
     vbHealingBonus = self:GetVBBonus()
     voraciousBonus = self:GetVoraciousBonus()
 
-    if addon.CataMists then
+    if addon.Cata then
         -- Cata's Improved DS does not affect minimum heal
         impDSModifierCurrent = 1.0
         dsMinHealCurrent = dsMinHealPercent
