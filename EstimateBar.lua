@@ -79,6 +79,8 @@ local dsMinHealPercent = 0.07
 local dsMinHealPercentSuccor = 0.20
 local bsStaticModifier = 1.0
 local impDSModifierCurrent = 1.0
+local scentOfBloodModifier = 0.0
+local scentOfBloodPerStack = 0.20
 local BaseVBHealingBonus = 0.30
 local staticModifiers = {
     ds = {
@@ -427,6 +429,7 @@ function module:UpdateEstimateBar(timestamp)
 
         local predictedValue, minimumValue = 0, 0
         local baseValue = recentDamage * dsHealModifier *
+            (1 + scentOfBloodModifier) *
             (1 + versatilityPercent)
 
         if self.estimatebar.db.bar_mode == "BS" then
@@ -511,6 +514,7 @@ function module:UpdateMinHeal(event, unit)
         local maxHealth = UnitHealthMax("player")
         baseValue = maxHealth *
             (DarkSuccorBuff and dsMinHealPercentSuccor or dsMinHealCurrent) *
+            (1 + scentOfBloodModifier) *
             (1 + versatilityPercent)
         local newMin = round(baseValue *
             self:GetEffectiveHealingBuffModifiers() *
@@ -796,6 +800,7 @@ function module:CheckAuras()
     luckOfTheDrawAmt = 0
     healingDebuffMultiplier = 0
     gsHealModifier = 0.0
+    scentOfBloodModifier = 0.0
 
     -- Loop through unit auras to find ones of interest.
     local i = 1
@@ -814,6 +819,9 @@ function module:CheckAuras()
             vampBloodFound = true
             vbBuff = true
             vbHealingInc = vbHealingBonus
+        elseif spellId == SpellIds["Scent of Blood"] then
+            local stacks = max(aura.applications or 0, 1)
+            scentOfBloodModifier = stacks * scentOfBloodPerStack
         elseif HealingBuffs[spellId] then
             local stacks = max(aura.applications or 0, 1)
             HealingBuffsFound[spellId] = HealingBuffs[spellId] * stacks
@@ -1100,6 +1108,7 @@ function module:COMBAT_LOG_EVENT_UNFILTERED(...)
             end
             predictedHeal = round(
                 recentDmg * dsHealModifier *
+                (1 + scentOfBloodModifier) *
                 (1 + versatilityPercent) *
                 self:GetEffectiveHealingBuffModifiers() *
                 self:GetEffectiveHealingDebuffModifiers()
