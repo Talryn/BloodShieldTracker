@@ -285,7 +285,7 @@ function module:GetDSModifier()
             end
         end
     end
-    if addon.CataMists then
+    if addon.Cata then
         -- Add the appropriate modifier for damage-based heals.
         local impDSRanks = _G.select(5, _G.GetTalentInfo(1, 12)) or 0
         if _G.type(impDSRanks) == "number" and impDSRanks <= 3 then
