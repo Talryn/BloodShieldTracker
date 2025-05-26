@@ -27,7 +27,9 @@ local talentSpecs = {
 }
 
 function addon.GetSpecLocalization(index)
-    if _G.GetSpecializationInfo then
+    if C_SpecializationInfo.GetSpecializationInfo then
+        return _G.select(2, C_SpecializationInfo.GetSpecializationInfo(index))
+    elseif _G.GetSpecializationInfo then
         return _G.select(2, _G.GetSpecializationInfo(index))
     elseif _G.GetTalentTabInfo then
         return _G.select(2, _G.GetTalentTabInfo(index))
